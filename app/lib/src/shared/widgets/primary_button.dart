@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String text;
@@ -13,18 +14,17 @@ class PrimaryButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: AppColors.saffron,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          elevation: 8, // ⭐ 3D effect
-          shadowColor: AppColors.primary.withOpacity(0.4), // ⭐ glow shadow
+          elevation: 10,
+          shadowColor: AppColors.saffronDark.withOpacity(0.5),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30), // ⭐ round edges
+            borderRadius: BorderRadius.circular(30),
           ),
-          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         onPressed: onPressed,
-        child: Text(text),
+        child: Text(text, style: AppTextStyles.button),
       ),
     );
   }
