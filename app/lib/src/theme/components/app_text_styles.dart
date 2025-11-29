@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:app/src/theme/components/app_colors.dart';
+import 'app_colors.dart';
 
 class AppTextStyles {
   static const TextStyle title = TextStyle(
-    fontSize: 32,
-    fontWeight: FontWeight.bold,
-    color: AppColors.textPrimary,
-    letterSpacing: 0.4,
+    fontSize: 30,
+    fontWeight: FontWeight.w700,
+    color: AppColors.saffronDark,
+    letterSpacing: 0.2,
   );
 
   static const TextStyle subtitle = TextStyle(
-    fontSize: 16,
-    height: 1.5,
-    fontWeight: FontWeight.w400,
-    color: AppColors.textSecondary,
+    fontSize: 15,
+    fontWeight: FontWeight.w500,
+    color: Colors.black87,
+    height: 1.4,
   );
 
   static const TextStyle button = TextStyle(
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: Colors.white,
+    color: AppColors.white,
   );
 }

@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:app/src/theme/components/app_colors.dart';
-import 'package:app/src/theme/components/app_text_styles.dart';
+import 'app_colors.dart';
 
 ThemeData buildAppTheme() {
+  final seed = AppColors.saffron;
   return ThemeData(
-    scaffoldBackgroundColor: AppColors.scaffold,
-    colorScheme: ColorScheme.light(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: seed,
       primary: AppColors.saffron,
       secondary: AppColors.gold,
+      background: AppColors.bg,
+    ),
+    scaffoldBackgroundColor: AppColors.bg,
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.saffron,
+        foregroundColor: AppColors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+      ),
     ),
     textTheme: const TextTheme(
-      headlineMedium: AppTextStyles.title,
-      bodyMedium: AppTextStyles.subtitle,
+      headlineSmall: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+      titleMedium: TextStyle(fontSize: 16),
     ),
-    useMaterial3: true,
   );
 }
