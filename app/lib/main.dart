@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
-import 'src/foundation/routing/app_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'src/core/routing/app_router.dart';
 import 'src/theme/components/app_theme.dart';
 
 void main() {
-  runApp(const PoojaHavanApp());
+  runApp(
+    const ProviderScope(
+      child: PoojaHavanApp(),
+    ),
+  );
 }
 
 class PoojaHavanApp extends StatelessWidget {

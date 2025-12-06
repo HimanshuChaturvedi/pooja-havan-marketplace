@@ -1,24 +1,35 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
 
 class AppTextStyles {
-  static const TextStyle title = TextStyle(
-    fontSize: 30,
+  // ORIGINAL TEXT STYLES (for old screens)
+  static const title = TextStyle(
+    fontSize: 22,
     fontWeight: FontWeight.w700,
-    color: AppColors.saffronDark,
-    letterSpacing: 0.2,
   );
 
-  static const TextStyle subtitle = TextStyle(
-    fontSize: 15,
-    fontWeight: FontWeight.w500,
-    color: Colors.black87,
-    height: 1.4,
+  static const subtitle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
   );
 
-  static const TextStyle button = TextStyle(
+  static const button = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: AppColors.white,
+  );
+
+  // NEW THEME-D TEXT STYLES (for updated UI)
+  static const titleLarge = TextStyle(
+    fontSize: 26,
+    fontWeight: FontWeight.w700,
+  );
+
+  static const bodyLarge = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w500,
+  );
+
+  static const bodyMedium = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
   );
 }
