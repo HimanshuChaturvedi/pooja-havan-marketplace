@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
+import 'package:app/src/features/services/presentation/services_page.dart';
+
 
 class LandingPage extends StatelessWidget {
   static const routeName = '/landing';
@@ -60,22 +62,26 @@ class LandingPage extends StatelessWidget {
                     _LandingCard(
                       icon: "assets/icons/bell.png",
                       label: "Book a Pooja",
-                      onTap: () => context.go('/services'),
+                      onTap: () => context.go(ServicesPage.routeName)
+
                     ),
                     _LandingCard(
                       icon: "assets/icons/samagri_box.png",
                       label: "Buy Samagri",
-                      onTap: () => context.go('/services'),
+                      onTap: () => context.go(ServicesPage.routeName)
+
                     ),
                     _LandingCard(
                       icon: "assets/icons/temple.png",
                       label: "Havan at Temple",
-                      onTap: () => context.go('/services'),
+                      onTap: () => context.go(ServicesPage.routeName)
+
                     ),
                     _LandingCard(
                       icon: "assets/icons/lotus.png",
                       label: "Explore Services",
-                      onTap: () => context.go('/services'),
+                      onTap: () => context.go(ServicesPage.routeName)
+
                     ),
                   ],
                 ),
