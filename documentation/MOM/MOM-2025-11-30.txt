@@ -29,3 +29,35 @@ MOM – 30 Nov 2025 (Pooja & Havan Service Marketplace App)
 
 Prepared by:
 Himanshu + ChatGPT (AI SME)
+
+doc/MOM — Minutes of Meeting (Internal memory summary)
+
+Maintained internally but now documented:
+
+✔ Phase 1 Completed Items
+
+Project structure finalized
+
+Landing page with 4-option grid
+
+Location module (search + detect)
+
+Splash screen
+
+Routing configured
+
+Clean architecture enforced
+
+UI theme + gradients created
+
+✔ Pending for next phase:
+
+Service screens (Book Pooja → ritual list)
+
+Explore Services module
+
+Pandit selection screen
+
+Slot booking
+
+Payment integration
