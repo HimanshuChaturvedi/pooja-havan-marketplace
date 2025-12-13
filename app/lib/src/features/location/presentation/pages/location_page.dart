@@ -112,8 +112,15 @@ class _LocationPageState extends State<LocationPage> {
   });
 
   // ⭐ AUTO-NAVIGATE TO TEMPLE LIST PAGE
-  final encodedCity = Uri.encodeComponent(city);
-  context.push('/temples/$encodedCity');
+  context.push(
+  '/at-home-or-temple',
+  extra: {
+    'city': selectedCity,
+    'ritualSlug': widget.ritualSlug,
+    'ritualName': widget.ritualName,
+  },
+);
+
 }
 
 
@@ -237,9 +244,20 @@ class _LocationPageState extends State<LocationPage> {
                         .map(
                           (city) => GestureDetector(
                             onTap: () {
-                              final encoded = Uri.encodeComponent(city);
-                              context.push('/temples/$encoded');
-                            },
+  setState(() {
+    selectedCity = city;
+  });
+
+  context.push(
+    '/at-home-or-temple',
+    extra: {
+      'city': city,
+      'ritualSlug': widget.ritualSlug,
+      'ritualName': widget.ritualName,
+    },
+  );
+},
+
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(14),

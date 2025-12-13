@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/pooja_flow/presentation/at_home_or_temple/at_home_or_temple_page.dart';
+import '../../features/home_booking/presentation/home_booking_page.dart';
+import '../../features/home_booking/presentation/address/home_address_page.dart';
+import '../../features/home_booking/presentation/date_time/home_date_time_page.dart';
+import '../../features/samagri_flow/presentation/requirement/samagri_requirement_page.dart';
+import '../../features/samagri_flow/presentation/list/samagri_list_page.dart';
+import '../../features/samagri_flow/presentation/cart/samagri_cart_page.dart';
+import '../../features/home_booking/presentation/summary/booking_summary_page.dart';
+import '../../features/payment/presentation/payment_page.dart';
+import '../../features/payment/presentation/payment_success_page.dart';
+
 import '../../features/splash/presentation/splash_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
 import '../../features/services/presentation/services_page.dart';
@@ -8,6 +19,7 @@ import '../../features/services/presentation/pooja_details_page.dart';
 import '../../features/location/presentation/pages/location_page.dart';
 import '../../features/temple/presentation/pages/temple_list_page.dart';
 import '../../features/pandit/presentation/pages/pandit_list_page.dart';
+
 
 
 final GoRouter appRouter = GoRouter(
@@ -81,6 +93,90 @@ final GoRouter appRouter = GoRouter(
         );
       },
     ),
+
+    
+// HOME OR TEMPLE CHOICE
+GoRoute(
+  path: '/at-home-or-temple',
+  name: 'at-home-or-temple',
+  builder: (context, state) {
+    final extra = state.extra as Map<String, dynamic>;
+
+    return AtHomeOrTemplePage(
+      city: extra['city'],
+      ritualSlug: extra['ritualSlug'],
+      ritualName: extra['ritualName'],
+    );
+  },
+),
+
+// HOME BOOKING (TEMP)
+// HOME ADDRESS
+GoRoute(
+  path: '/home-address',
+  name: 'home-address',
+  builder: (context, state) {
+    final extra = state.extra as Map<String, dynamic>;
+    return HomeAddressPage(
+      city: extra['city'],
+    );
+  },
+),
+
+
+// HOME DATE & TIME
+GoRoute(
+  path: '/home-date-time',
+  name: 'home-date-time',
+  builder: (context, state) => const HomeDateTimePage(),
+),
+
+// SAMAGRI REQUIRED?
+GoRoute(
+  path: '/home-samagri',
+  name: 'home-samagri',
+  builder: (context, state) => const SamagriRequirementPage(),
+),
+
+// SAMAGRI LIST
+GoRoute(
+  path: '/samagri-list',
+  name: 'samagri-list',
+  builder: (context, state) => const SamagriListPage(),
+),
+
+// SAMAGRI CART
+GoRoute(
+  path: '/samagri-cart',
+  name: 'samagri-cart',
+  builder: (context, state) => const SamagriCartPage(),
+),
+
+
+// BOOKING SUMMARY
+GoRoute(
+  path: '/home-summary',
+  name: 'home-summary',
+  builder: (context, state) => const BookingSummaryPage(),
+),
+
+// PAYMENT
+GoRoute(
+  path: '/payment',
+  name: 'payment',
+  builder: (context, state) => const PaymentPage(),
+),
+
+// PAYMENT SUCCESS
+GoRoute(
+  path: '/payment-success',
+  name: 'payment-success',
+  builder: (context, state) => const PaymentSuccessPage(),
+),
+
+
+
+
 
     // TEMPLES LIST
     GoRoute(
