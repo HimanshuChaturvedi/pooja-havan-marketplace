@@ -3,8 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
-import 'package:app/src/features/services/presentation/services_page.dart';
-
+import '../../services/presentation/services_page.dart';
 
 class LandingPage extends StatelessWidget {
   static const routeName = '/landing';
@@ -14,8 +13,6 @@ class LandingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-
-    // max width for centered layout (mobile-first)
     final contentWidth = screenWidth > 480 ? 420.0 : screenWidth;
 
     return Scaffold(
@@ -28,7 +25,6 @@ class LandingPage extends StatelessWidget {
             children: [
               const SizedBox(height: 70),
 
-              // TITLE
               Text(
                 "Shubh Pooja",
                 style: AppTextStyles.titleLarge.copyWith(
@@ -39,7 +35,6 @@ class LandingPage extends StatelessWidget {
 
               const SizedBox(height: 6),
 
-              // SUBTITLE
               Text(
                 "Divine Rituals, Modern Convenience",
                 style: AppTextStyles.bodyMedium.copyWith(
@@ -50,7 +45,6 @@ class LandingPage extends StatelessWidget {
 
               const SizedBox(height: 40),
 
-              // 2×2 GRID OF OPTIONS
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -59,29 +53,32 @@ class LandingPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   childAspectRatio: 0.85,
                   children: [
+                    // ✅ Book a Pooja (HOME FLOW)
                     _LandingCard(
                       icon: "assets/icons/bell.png",
                       label: "Book a Pooja",
-                      onTap: () => context.go(ServicesPage.routeName)
-
+                      onTap: () => context.go(ServicesPage.routeName),
                     ),
+
+                    // ✅ Buy Samagri
                     _LandingCard(
                       icon: "assets/icons/samagri_box.png",
                       label: "Buy Samagri",
-                      onTap: () => context.go(ServicesPage.routeName)
-
+                      onTap: () => context.go('/samagri-list'),
                     ),
+
+                    // 🔥 Havan at Temple (DIRECT TEMPLE FLOW)
                     _LandingCard(
                       icon: "assets/icons/temple.png",
                       label: "Havan at Temple",
-                      onTap: () => context.go(ServicesPage.routeName)
-
+                      onTap: () => context.go('/temples/Delhi'),
                     ),
+
+                    // ✅ Explore Services
                     _LandingCard(
                       icon: "assets/icons/lotus.png",
                       label: "Explore Services",
-                      onTap: () => context.go(ServicesPage.routeName)
-
+                      onTap: () => context.go(ServicesPage.routeName),
                     ),
                   ],
                 ),

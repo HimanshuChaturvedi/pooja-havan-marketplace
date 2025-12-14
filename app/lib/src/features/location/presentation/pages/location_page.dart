@@ -1,5 +1,3 @@
-// lib/src/features/location/presentation/pages/location_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
@@ -8,6 +6,9 @@ import 'dart:convert';
 
 import '../../../../theme/components/app_colors.dart';
 import '../../../../theme/components/app_text_styles.dart';
+
+import '../../../booking/application/booking_session.dart';
+import '../../../booking/domain/booking_draft.dart';
 
 class LocationPage extends StatefulWidget {
   final String ritualSlug;
@@ -27,7 +28,7 @@ class _LocationPageState extends State<LocationPage> {
   final TextEditingController _controller = TextEditingController();
   String selectedCity = "";
 
-  List<String> suggestions = [
+  final List<String> suggestions = [
     "Haridwar",
     "Rishikesh",
     "Varanasi",
@@ -62,67 +63,53 @@ class _LocationPageState extends State<LocationPage> {
   // Detect location
   // -------------------------------------------------------------------
   Future<void> _detectLocation() async {
-  // Check if location service is ON
-  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please enable Location Services")),
-    );
-    return;
-  }
-
-  // Check permissions
-  LocationPermission perm = await Geolocator.checkPermission();
-  if (perm == LocationPermission.denied) {
-    perm = await Geolocator.requestPermission();
-    if (perm == LocationPermission.denied) {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Location permission denied")),
+        const SnackBar(content: Text("Please enable Location Services")),
       );
       return;
     }
-  }
 
-  if (perm == LocationPermission.deniedForever) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Enable location permission from settings")),
+    LocationPermission perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+      if (perm == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Location permission denied")),
+        );
+        return;
+      }
+    }
+
+    if (perm == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("Enable location permission from settings")),
+      );
+      return;
+    }
+
+    final position = await Geolocator.getCurrentPosition();
+    final city =
+        await _getCityFromCoordinates(position.latitude, position.longitude);
+
+    if (!mounted || city == null) return;
+
+    setState(() {
+      selectedCity = city;
+    });
+
+    // ✅ IMPORTANT — CREATE BOOKING SESSION HERE
+    BookingSession.current = BookingDraft(
+      bookingType: BookingType.home, // temporary, next screen decides
+      ritualName: widget.ritualName,
+      city: city,
     );
-    return;
+
+    // ✅ SIMPLE NAVIGATION (NO EXTRA)
+    context.push('/at-home-or-temple');
   }
-
-  // Get coordinates
-  final position = await Geolocator.getCurrentPosition();
-
-  // Convert to city
-  final city =
-      await _getCityFromCoordinates(position.latitude, position.longitude);
-
-  if (!mounted) return;
-
-  if (city == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Could not detect city")),
-    );
-    return;
-  }
-
-  // Update UI
-  setState(() {
-    selectedCity = city;
-  });
-
-  // ⭐ AUTO-NAVIGATE TO TEMPLE LIST PAGE
-  context.push(
-  '/at-home-or-temple',
-  extra: {
-    'city': selectedCity,
-    'ritualSlug': widget.ritualSlug,
-    'ritualName': widget.ritualName,
-  },
-);
-
-}
-
 
   // -------------------------------------------------------------------
   // UI
@@ -133,7 +120,6 @@ class _LocationPageState extends State<LocationPage> {
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         backgroundColor: AppColors.saffron,
-        elevation: 0,
         centerTitle: true,
         title: Text(
           "Select Location",
@@ -147,7 +133,6 @@ class _LocationPageState extends State<LocationPage> {
           )
         ],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
         child: Column(
@@ -160,10 +145,8 @@ class _LocationPageState extends State<LocationPage> {
                 fontSize: 16,
               ),
             ),
-
             const SizedBox(height: 16),
 
-            // MAIN WHITE CARD
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -177,11 +160,10 @@ class _LocationPageState extends State<LocationPage> {
                   ),
                 ],
               ),
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // DETECT LOCATION BUTTON
+                  // DETECT LOCATION
                   GestureDetector(
                     onTap: _detectLocation,
                     child: Container(
@@ -194,9 +176,8 @@ class _LocationPageState extends State<LocationPage> {
                       child: Center(
                         child: Text(
                           "Detect My Location",
-                          style: AppTextStyles.button.copyWith(
-                            color: Colors.white,
-                          ),
+                          style: AppTextStyles.button
+                              .copyWith(color: Colors.white),
                         ),
                       ),
                     ),
@@ -207,22 +188,17 @@ class _LocationPageState extends State<LocationPage> {
                   if (selectedCity.isNotEmpty)
                     Text(
                       "Detected: $selectedCity",
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: AppColors.textDark,
-                      ),
+                      style: AppTextStyles.bodyLarge,
                     ),
 
                   const SizedBox(height: 22),
 
-                  // SEARCH FIELD
+                  // SEARCH
                   TextField(
                     controller: _controller,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       hintText: "Enter city name...",
-                      hintStyle: AppTextStyles.subtitle.copyWith(
-                        color: Colors.grey,
-                      ),
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
                       fillColor: AppColors.backgroundLight,
@@ -244,20 +220,19 @@ class _LocationPageState extends State<LocationPage> {
                         .map(
                           (city) => GestureDetector(
                             onTap: () {
-  setState(() {
-    selectedCity = city;
-  });
+                              setState(() {
+                                selectedCity = city;
+                              });
 
-  context.push(
-    '/at-home-or-temple',
-    extra: {
-      'city': city,
-      'ritualSlug': widget.ritualSlug,
-      'ritualName': widget.ritualName,
-    },
-  );
-},
+                              // ✅ CREATE BOOKING SESSION
+                              BookingSession.current = BookingDraft(
+                                bookingType: BookingType.home,
+                                ritualName: widget.ritualName,
+                                city: city,
+                              );
 
+                              context.push('/at-home-or-temple');
+                            },
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(14),
@@ -268,15 +243,13 @@ class _LocationPageState extends State<LocationPage> {
                               ),
                               child: Text(
                                 city,
-                                style: AppTextStyles.bodyLarge.copyWith(
-                                  color: AppColors.textDark,
-                                ),
+                                style: AppTextStyles.bodyLarge,
                               ),
                             ),
                           ),
                         )
                         .toList(),
-                  )
+                  ),
                 ],
               ),
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../booking/application/booking_session.dart';
 import 'widgets/samagri_item_card.dart';
 
 class SamagriListPage extends StatefulWidget {
@@ -19,8 +20,7 @@ class _SamagriListPageState extends State<SamagriListPage> {
     'Kumkum': 0,
   };
 
-  bool get hasItems =>
-      samagri.values.any((qty) => qty > 0);
+  bool get hasItems => samagri.values.any((qty) => qty > 0);
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +51,15 @@ class _SamagriListPageState extends State<SamagriListPage> {
         child: ElevatedButton(
           onPressed: hasItems
               ? () {
+                  // 🔥 CLEAR + SAVE SELECTED ITEMS
+                  BookingSession.current?.samagriItems.clear();
+
+                  samagri.forEach((item, qty) {
+                    if (qty > 0) {
+                      BookingSession.current?.samagriItems.add(item);
+                    }
+                  });
+
                   context.push('/samagri-cart');
                 }
               : null,

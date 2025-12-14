@@ -4,7 +4,7 @@ import 'app_colors.dart';
 ThemeData buildAppTheme() {
   final seed = AppColors.saffron;
   return ThemeData(
-    useMaterial3: true,
+    useMaterial3: false,
     colorScheme: ColorScheme.fromSeed(
       seedColor: seed,
       primary: AppColors.saffron,

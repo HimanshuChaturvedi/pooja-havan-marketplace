@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../booking/application/booking_session.dart';
 import 'widgets/address_text_field.dart';
 
 class HomeAddressPage extends StatefulWidget {
@@ -17,22 +18,22 @@ class HomeAddressPage extends StatefulWidget {
 
 class _HomeAddressPageState extends State<HomeAddressPage> {
   final TextEditingController _addressController = TextEditingController();
-    @override
+
+  bool get isAddressValid => _addressController.text.trim().isNotEmpty;
+
+  @override
   void initState() {
     super.initState();
     _addressController.addListener(() {
-      setState(() {});
+      setState(() {}); // 🔥 THIS WAS MISSING
     });
   }
-
 
   @override
   void dispose() {
     _addressController.dispose();
     super.dispose();
   }
-
-  bool get isAddressValid => _addressController.text.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -47,18 +48,10 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
           children: [
             const Text(
               'Please provide the address where the pooja will be performed.',
-              style: TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 20),
 
-            // CITY (READ ONLY)
-            Text(
-              'City',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
-              ),
-            ),
+            const Text('City', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Container(
               width: double.infinity,
@@ -72,31 +65,20 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
 
             const SizedBox(height: 20),
 
-            // ADDRESS FIELD
-            Text(
-              'Complete Address',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(height: 6),
-
             AddressTextField(
-  controller: _addressController,
-  hintText: 'House No, Area, Society, Landmark',
-),
-
-
+              controller: _addressController,
+              hintText: 'House No, Area, Society, Landmark',
+            ),
 
             const Spacer(),
 
-            // CONTINUE BUTTON
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: isAddressValid
                     ? () {
+                        BookingSession.current?.address =
+                            _addressController.text.trim();
                         context.push('/home-date-time');
                       }
                     : null,

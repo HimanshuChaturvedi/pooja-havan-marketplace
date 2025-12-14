@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
 
-class ServicesPage extends StatelessWidget {
+import '../../booking/application/booking_session.dart';
+import '../../booking/domain/booking_draft.dart';
 
+class ServicesPage extends StatelessWidget {
   static const routeName = '/services';
 
   const ServicesPage({super.key});
@@ -21,30 +23,31 @@ class ServicesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🔑 READ ENTRY INTENT FROM LANDING
+    final uri = GoRouterState.of(context).uri;
+    final entryType = uri.queryParameters['type']; // home | temple | null
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-  elevation: 0,
-  backgroundColor: AppColors.saffron,
-  centerTitle: true,
-  title: Text(
-    'Service Categories',
-    style: AppTextStyles.title.copyWith(
-      color: AppColors.white,
-      fontSize: 20,
-    ),
-  ),
-  iconTheme: const IconThemeData(color: Colors.white),
-
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.home, color: Colors.white),
-      onPressed: () => context.go('/landing'),
-    )
-  ],
-),
-
-
+        elevation: 0,
+        backgroundColor: AppColors.saffron,
+        centerTitle: true,
+        title: Text(
+          'Service Categories',
+          style: AppTextStyles.title.copyWith(
+            color: AppColors.white,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home, color: Colors.white),
+            onPressed: () => context.go('/landing'),
+          )
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
         child: Column(
@@ -57,7 +60,6 @@ class ServicesPage extends StatelessWidget {
                 fontSize: 15,
               ),
             ),
-
             const SizedBox(height: 16),
 
             // Ritual List
@@ -69,7 +71,23 @@ class ServicesPage extends StatelessWidget {
                   final slug = ritual['slug']!;
                   final name = ritual['name']!;
 
-                  /// FIXED ROUTING
+                  // ✅ SET BOOKING SESSION HERE (CRITICAL FIX)
+                  if (entryType == 'temple') {
+                    BookingSession.current = BookingDraft(
+                      bookingType: BookingType.temple,
+                      ritualName: slug,
+                      city: '',
+                    );
+                  } else {
+                    // default = home pooja
+                    BookingSession.current = BookingDraft(
+                      bookingType: BookingType.home,
+                      ritualName: slug,
+                      city: '',
+                    );
+                  }
+
+                  // Continue existing flow
                   context.push(
                     '/service/$slug/${Uri.encodeComponent(name)}',
                   );
@@ -84,6 +102,12 @@ class ServicesPage extends StatelessWidget {
               title: "More Services",
               slug: "more",
               onTap: () {
+                BookingSession.current = BookingDraft(
+                  bookingType: BookingType.home,
+                  ritualName: 'more',
+                  city: '',
+                );
+
                 context.push(
                   '/service/more/${Uri.encodeComponent("More Services")}',
                 );
@@ -128,8 +152,11 @@ class _RitualCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.local_fire_department,
-                color: AppColors.primaryGold, size: 32),
+            Icon(
+              Icons.local_fire_department,
+              color: AppColors.primaryGold,
+              size: 32,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
@@ -139,8 +166,11 @@ class _RitualCard extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(Icons.arrow_forward_ios,
-                color: Colors.grey, size: 16),
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.grey,
+              size: 16,
+            ),
           ],
         ),
       ),

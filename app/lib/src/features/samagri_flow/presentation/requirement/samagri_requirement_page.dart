@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../booking/application/booking_session.dart';
+import '../../../booking/domain/booking_draft.dart';
 import 'widgets/samagri_option_card.dart';
 
 enum SamagriChoice { yes, no }
@@ -19,29 +21,22 @@ class _SamagriRequirementPageState extends State<SamagriRequirementPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Samagri Requirement'),
-      ),
+      appBar: AppBar(title: const Text('Samagri Requirement')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Would you like us to arrange the pooja samagri for you?',
-              style: TextStyle(fontSize: 14),
+              'Would you like us to arrange the pooja samagri?',
             ),
-
             const SizedBox(height: 24),
 
             SamagriOptionCard(
               title: 'Yes, arrange Samagri',
               isSelected: selectedChoice == SamagriChoice.yes,
-              onTap: () {
-                setState(() {
-                  selectedChoice = SamagriChoice.yes;
-                });
-              },
+              onTap: () => setState(() {
+                selectedChoice = SamagriChoice.yes;
+              }),
             ),
 
             const SizedBox(height: 16),
@@ -49,11 +44,9 @@ class _SamagriRequirementPageState extends State<SamagriRequirementPage> {
             SamagriOptionCard(
               title: 'No, I already have Samagri',
               isSelected: selectedChoice == SamagriChoice.no,
-              onTap: () {
-                setState(() {
-                  selectedChoice = SamagriChoice.no;
-                });
-              },
+              onTap: () => setState(() {
+                selectedChoice = SamagriChoice.no;
+              }),
             ),
 
             const Spacer(),
@@ -65,11 +58,18 @@ class _SamagriRequirementPageState extends State<SamagriRequirementPage> {
                     ? null
                     : () {
                         if (selectedChoice == SamagriChoice.yes) {
-                          // Go to Samagri module (next step)
+                          BookingSession.current?.samagriRequired = true;
+                          BookingSession.current?.samagriItems.clear();
                           context.push('/samagri-list');
                         } else {
-                          // Skip Samagri
-                          context.push('/home-summary');
+                          BookingSession.current?.samagriRequired = false;
+
+                          if (BookingSession.current?.bookingType ==
+                              BookingType.temple) {
+                            context.push('/pandit-selection');
+                          } else {
+                            context.push('/home-summary');
+                          }
                         }
                       },
                 child: const Text('Continue'),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../booking/application/booking_session.dart';
+import '../../../booking/domain/booking_draft.dart';
+
 
 import 'widgets/choice_card.dart';
 
@@ -85,17 +88,24 @@ class _AtHomeOrTemplePageState extends State<AtHomeOrTemplePage> {
     ? null
     : () {
         if (selectedType == PoojaLocationType.temple) {
-          final encodedCity = Uri.encodeComponent(widget.city);
-          context.push('/temples/$encodedCity');
-        } else {
-          context.push(
-  '/home-address',
-  extra: {
-    'city': widget.city,
-  },
-);
+  BookingSession.current = BookingDraft(
+    bookingType: BookingType.temple,
+    ritualName: widget.ritualName,
+    city: widget.city,
+  );
 
-        }
+  final encodedCity = Uri.encodeComponent(widget.city);
+  context.push('/temples/$encodedCity');
+} else {
+  BookingSession.current = BookingDraft(
+    bookingType: BookingType.home,
+    ritualName: widget.ritualName,
+    city: widget.city,
+  );
+
+  context.push('/home-address');
+}
+
       },
 
           child: const Text('Continue'),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../booking/application/booking_session.dart';
+import '../../../booking/domain/booking_draft.dart';
+
 class HomeDateTimePage extends StatefulWidget {
   const HomeDateTimePage({super.key});
 
@@ -47,8 +50,7 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> {
   String _formatDate(DateTime date) =>
       '${date.day}/${date.month}/${date.year}';
 
-  String _formatTime(TimeOfDay time) =>
-      time.format(context);
+  String _formatTime(TimeOfDay time) => time.format(context);
 
   @override
   Widget build(BuildContext context) {
@@ -129,8 +131,20 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> {
               child: ElevatedButton(
                 onPressed: isValid
                     ? () {
-                        // Next step (not created yet)
-                        context.push('/home-samagri');
+                        // ✅ SAVE DATE
+                        BookingSession.current?.selectedDate = selectedDate;
+
+                        // ✅ SAVE TIME (TimeOfDay → String)
+                        final formattedTime = selectedTime!.format(context);
+                        BookingSession.current?.selectedTime = formattedTime;
+
+                        // 🔀 NEXT FLOW
+                        if (BookingSession.current?.bookingType == BookingType.temple) {
+  context.push('/samagri-required');
+} else {
+  context.push('/samagri-required');
+}
+
                       }
                     : null,
                 child: const Text('Continue'),
