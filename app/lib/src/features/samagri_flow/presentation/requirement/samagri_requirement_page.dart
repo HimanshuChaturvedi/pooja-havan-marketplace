@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../booking/application/booking_session.dart';
-import '../../../booking/domain/booking_draft.dart';
 import 'widgets/samagri_option_card.dart';
 
 enum SamagriChoice { yes, no }
@@ -16,7 +15,7 @@ class SamagriRequirementPage extends StatefulWidget {
 }
 
 class _SamagriRequirementPageState extends State<SamagriRequirementPage> {
-  SamagriChoice? selectedChoice;
+  SamagriChoice? choice;
 
   @override
   Widget build(BuildContext context) {
@@ -26,50 +25,33 @@ class _SamagriRequirementPageState extends State<SamagriRequirementPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text(
-              'Would you like us to arrange the pooja samagri?',
-            ),
-            const SizedBox(height: 24),
-
             SamagriOptionCard(
               title: 'Yes, arrange Samagri',
-              isSelected: selectedChoice == SamagriChoice.yes,
-              onTap: () => setState(() {
-                selectedChoice = SamagriChoice.yes;
-              }),
+              isSelected: choice == SamagriChoice.yes,
+              onTap: () => setState(() => choice = SamagriChoice.yes),
             ),
-
             const SizedBox(height: 16),
-
             SamagriOptionCard(
               title: 'No, I already have Samagri',
-              isSelected: selectedChoice == SamagriChoice.no,
-              onTap: () => setState(() {
-                selectedChoice = SamagriChoice.no;
-              }),
+              isSelected: choice == SamagriChoice.no,
+              onTap: () => setState(() => choice = SamagriChoice.no),
             ),
-
             const Spacer(),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: selectedChoice == null
+                onPressed: choice == null
                     ? null
                     : () {
-                        if (selectedChoice == SamagriChoice.yes) {
-                          BookingSession.current?.samagriRequired = true;
-                          BookingSession.current?.samagriItems.clear();
+                        BookingSession.current!.samagriRequired =
+                            choice == SamagriChoice.yes;
+
+                        if (choice == SamagriChoice.yes) {
+                          // 🔑 GO TO SAMAGRI LIST
                           context.push('/samagri-list');
                         } else {
-                          BookingSession.current?.samagriRequired = false;
-
-                          if (BookingSession.current?.bookingType ==
-                              BookingType.temple) {
-                            context.push('/pandit-selection');
-                          } else {
-                            context.push('/home-summary');
-                          }
+                          // 🔑 SKIP → SUMMARY
+                          context.push('/home-summary');
                         }
                       },
                 child: const Text('Continue'),

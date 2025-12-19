@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../booking/application/booking_session.dart';
-import '../../../booking/domain/booking_draft.dart';
 
 class TempleDetailsPage extends StatelessWidget {
   const TempleDetailsPage({super.key});
@@ -64,7 +63,8 @@ class TempleDetailsPage extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  context.push('/temple-date-time');
+                  // 🔑 NEXT → PANDIT SELECTION
+                  context.push('/pandit-selection');
                 },
                 child: const Text('Continue Booking'),
               ),

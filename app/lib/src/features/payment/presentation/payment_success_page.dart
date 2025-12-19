@@ -6,47 +6,49 @@ class PaymentSuccessPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // MOCK booking ID
-    const String bookingId = 'BK-POOJA-1024';
-
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Booking Confirmed'),
+        title: const Text('Success'),
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.check_circle,
-                color: Colors.green, size: 72),
+            const Icon(
+              Icons.check_circle,
+              size: 80,
+              color: Colors.green,
+            ),
+
             const SizedBox(height: 16),
 
             const Text(
-              'Payment Successful',
+              'Booking Confirmed!',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
 
             const SizedBox(height: 8),
 
-            Text(
-              'Booking ID: $bookingId',
-              style: const TextStyle(fontSize: 14),
+            const Text(
+              'Your pooja has been successfully booked.',
+              textAlign: TextAlign.center,
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
 
             SizedBox(
               width: double.infinity,
+              height: 48,
               child: ElevatedButton(
                 onPressed: () {
                   context.go('/landing');
                 },
-                child: const Text('Go to Home'),
+                child: const Text('Back to Home'),
               ),
             ),
           ],

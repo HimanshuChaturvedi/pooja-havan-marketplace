@@ -1,23 +1,52 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../booking/application/booking_session.dart';
+import '../../state/samagri_cart_notifier.dart';
+import '../../state/samagri_item.dart';
 import 'widgets/samagri_item_card.dart';
 
-class SamagriListPage extends StatefulWidget {
+class SamagriListPage extends ConsumerStatefulWidget {
   const SamagriListPage({super.key});
 
   @override
-  State<SamagriListPage> createState() => _SamagriListPageState();
+  ConsumerState<SamagriListPage> createState() =>
+      _SamagriListPageState();
 }
 
-class _SamagriListPageState extends State<SamagriListPage> {
-  final Map<String, int> samagri = {
-    'Havan Samagri': 0,
-    'Ghee': 0,
-    'Dhoop': 0,
-    'Agarbatti': 0,
-    'Kumkum': 0,
+class _SamagriListPageState
+    extends ConsumerState<SamagriListPage> {
+  final Map<SamagriItem, int> samagri = {
+    const SamagriItem(
+      id: 'havan',
+      name: 'Havan Samagri',
+      price: 500,
+      categoryId: 'basic',
+    ): 0,
+    const SamagriItem(
+      id: 'ghee',
+      name: 'Ghee',
+      price: 300,
+      categoryId: 'basic',
+    ): 0,
+    const SamagriItem(
+      id: 'dhoop',
+      name: 'Dhoop',
+      price: 150,
+      categoryId: 'basic',
+    ): 0,
+    const SamagriItem(
+      id: 'agarbatti',
+      name: 'Agarbatti',
+      price: 100,
+      categoryId: 'basic',
+    ): 0,
+    const SamagriItem(
+      id: 'kumkum',
+      name: 'Kumkum',
+      price: 50,
+      categoryId: 'basic',
+    ): 0,
   };
 
   bool get hasItems => samagri.values.any((qty) => qty > 0);
@@ -29,38 +58,44 @@ class _SamagriListPageState extends State<SamagriListPage> {
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: samagri.entries.map((entry) {
+          final item = entry.key;
+          final qty = entry.value;
+
           return SamagriItemCard(
-            name: entry.key,
-            quantity: entry.value,
+            name: item.name,
+            quantity: qty,
             onAdd: () {
               setState(() {
-                samagri[entry.key] = entry.value + 1;
+                samagri[item] = qty + 1;
               });
             },
             onRemove: () {
               setState(() {
-                samagri[entry.key] =
-                    entry.value > 0 ? entry.value - 1 : 0;
+                samagri[item] = qty > 0 ? qty - 1 : 0;
               });
             },
           );
         }).toList(),
       ),
+
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: ElevatedButton(
           onPressed: hasItems
               ? () {
-                  // 🔥 CLEAR + SAVE SELECTED ITEMS
-                  BookingSession.current?.samagriItems.clear();
+                  // 🔥 RESET CART FIRST
+                  ref.read(samagriCartProvider.notifier).clearCart();
 
+                  // 🔥 PUSH SELECTED ITEMS INTO RIVERPOD CART
                   samagri.forEach((item, qty) {
-                    if (qty > 0) {
-                      BookingSession.current?.samagriItems.add(item);
+                    for (int i = 0; i < qty; i++) {
+                      ref
+                          .read(samagriCartProvider.notifier)
+                          .addItem(item);
                     }
                   });
 
-                  context.push('/samagri-cart');
+                  context.go('/samagri-cart');
                 }
               : null,
           child: const Text('View Cart'),

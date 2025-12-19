@@ -25,7 +25,7 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
   void initState() {
     super.initState();
     _addressController.addListener(() {
-      setState(() {}); // 🔥 THIS WAS MISSING
+      setState(() {});
     });
   }
 
@@ -79,7 +79,9 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
                     ? () {
                         BookingSession.current?.address =
                             _addressController.text.trim();
-                        context.push('/home-date-time');
+
+                        // 🔑 NEXT → PANDIT SELECTION
+                        context.push('/pandit-selection');
                       }
                     : null,
                 child: const Text('Continue'),

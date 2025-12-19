@@ -13,85 +13,93 @@ class BookingSummaryPage extends StatelessWidget {
 
     if (booking == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('No booking data found'),
-        ),
+        body: Center(child: Text('No booking data found')),
       );
     }
 
     const int poojaCost = 2100;
-    const int samagriCost = 900;
+    const int samagriItemCost = 300;
 
-    final int totalAmount =
-        poojaCost + (booking.samagriRequired ? samagriCost : 0);
+    // 🔒 Aggregate samagri items
+    final Map<String, int> samagriCount = {};
+    for (final item in booking.samagriItems) {
+      samagriCount[item] = (samagriCount[item] ?? 0) + 1;
+    }
+
+    final int samagriCost =
+        booking.samagriRequired ? samagriCount.length * samagriItemCost : 0;
+
+    final int totalAmount = poojaCost + samagriCost;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking Summary'),
+        centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ADDRESS (HOME) OR TEMPLE (TEMPLE FLOW)
-            _sectionTitle(
-              booking.bookingType == BookingType.home
-                  ? 'Address'
-                  : 'Temple',
+      body: Column(
+        children: [
+          // 🔥 SCROLLABLE CONTENT
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _sectionTitle(
+                    booking.bookingType == BookingType.home
+                        ? 'Address'
+                        : 'Temple',
+                  ),
+                  _infoTile(
+                    booking.bookingType == BookingType.home
+                        ? '${booking.address}\n${booking.city}'
+                        : '${booking.templeName}\n${booking.city}',
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _sectionTitle('Date & Time'),
+                  _infoTile(
+                    '${booking.selectedDate?.day}/${booking.selectedDate?.month}/${booking.selectedDate?.year}'
+                    ' at ${booking.selectedTime}',
+                  ),
+
+                  if (booking.panditName != null) ...[
+                    const SizedBox(height: 16),
+                    _sectionTitle('Pandit'),
+                    _infoTile(booking.panditName!),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  _sectionTitle('Samagri'),
+
+                  if (!booking.samagriRequired)
+                    _infoTile('Samagri will be arranged by the user')
+                  else
+                    _samagriList(samagriCount, samagriItemCost),
+
+                  const SizedBox(height: 20),
+
+                  _sectionTitle('Price Breakdown'),
+                  _priceRow('Pooja Charges', poojaCost),
+                  if (booking.samagriRequired)
+                    _priceRow('Samagri Charges', samagriCost),
+                  const Divider(),
+                  _priceRow('Total Amount', totalAmount, isBold: true),
+
+                  const SizedBox(height: 80), // space for button
+                ],
+              ),
             ),
-            _infoTile(
-              booking.bookingType == BookingType.home
-                  ? '${booking.address ?? ''}\n${booking.city}'
-                  : '${booking.templeName ?? 'Selected Temple'}\n${booking.city}',
-            ),
+          ),
 
-            const SizedBox(height: 16),
-
-            // DATE & TIME
-            _sectionTitle('Date & Time'),
-            _infoTile(
-              '${booking.selectedDate?.day}/${booking.selectedDate?.month}/${booking.selectedDate?.year}'
-              ' at ${booking.selectedTime}',
-            ),
-
-            // PANDIT (ONLY FOR TEMPLE FLOW)
-            if (booking.panditName != null) ...[
-              const SizedBox(height: 16),
-              _sectionTitle('Pandit'),
-              _infoTile(booking.panditName!),
-            ],
-
-            const SizedBox(height: 16),
-
-            // SAMAGRI
-            _sectionTitle('Samagri'),
-            _infoTile(
-              booking.samagriRequired
-                  ? booking.samagriItems.isNotEmpty
-                      ? booking.samagriItems.join(', ')
-                      : 'Standard pooja samagri will be arranged'
-                  : 'I already have Samagri',
-            ),
-
-            const SizedBox(height: 16),
-
-            // PRICE BREAKDOWN
-            _sectionTitle('Price Breakdown'),
-            _priceRow('Pooja Charges', poojaCost),
-            if (booking.samagriRequired)
-              _priceRow('Samagri Charges', samagriCost),
-            const Divider(),
-            _priceRow(
-              'Total Amount',
-              totalAmount,
-              isBold: true,
-            ),
-
-            const Spacer(),
-
-            SizedBox(
+          // 🔒 FIXED BOTTOM CTA (NO OVERFLOW)
+          SafeArea(
+            minimum: const EdgeInsets.all(16),
+            child: SizedBox(
               width: double.infinity,
+              height: 48,
               child: ElevatedButton(
                 onPressed: () {
                   context.push('/payment');
@@ -99,8 +107,8 @@ class BookingSummaryPage extends StatelessWidget {
                 child: const Text('Proceed to Payment'),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -110,10 +118,7 @@ class BookingSummaryPage extends StatelessWidget {
   Widget _sectionTitle(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-      ),
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
     );
   }
 
@@ -130,11 +135,33 @@ class BookingSummaryPage extends StatelessWidget {
     );
   }
 
-  Widget _priceRow(
-    String label,
-    int amount, {
-    bool isBold = false,
-  }) {
+  Widget _samagriList(Map<String, int> items, int costPerItem) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: items.entries.map((entry) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${entry.key} × ${entry.value}'),
+                Text('₹${entry.value * costPerItem}'),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _priceRow(String label, int amount, {bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -143,15 +170,13 @@ class BookingSummaryPage extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontWeight:
-                  isBold ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
           Text(
             '₹$amount',
             style: TextStyle(
-              fontWeight:
-                  isBold ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ],

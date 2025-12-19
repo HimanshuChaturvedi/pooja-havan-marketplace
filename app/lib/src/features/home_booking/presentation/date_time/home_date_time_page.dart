@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../booking/application/booking_session.dart';
-import '../../../booking/domain/booking_draft.dart';
 
 class HomeDateTimePage extends StatefulWidget {
   const HomeDateTimePage({super.key});
@@ -19,7 +18,6 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> {
 
   Future<void> _pickDate() async {
     final today = DateTime.now();
-
     final picked = await showDatePicker(
       context: context,
       initialDate: today,
@@ -57,98 +55,135 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Date & Time'),
+        centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Choose a convenient date and time for the pooja.',
-              style: TextStyle(fontSize: 14),
-            ),
-
-            const SizedBox(height: 24),
-
-            // DATE
-            Text(
-              'Date',
+              'Choose a convenient date and time for the pooja',
               style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
-            InkWell(
+
+            const SizedBox(height: 28),
+
+            // DATE CARD
+            _SelectionCard(
+              label: 'Date',
+              value: selectedDate == null
+                  ? 'Select date'
+                  : _formatDate(selectedDate!),
+              icon: Icons.calendar_today,
               onTap: _pickDate,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  selectedDate == null
-                      ? 'Select date'
-                      : _formatDate(selectedDate!),
-                ),
-              ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-            // TIME
-            Text(
-              'Time',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
+            // TIME CARD
+            _SelectionCard(
+              label: 'Time',
+              value: selectedTime == null
+                  ? 'Select time'
+                  : _formatTime(selectedTime!),
+              icon: Icons.access_time,
               onTap: _pickTime,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  selectedTime == null
-                      ? 'Select time'
-                      : _formatTime(selectedTime!),
-                ),
-              ),
             ),
 
             const Spacer(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: isValid
+                ? () {
+                    BookingSession.current?.selectedDate = selectedDate;
+                    BookingSession.current?.selectedTime =
+                        selectedTime!.format(context);
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isValid
-                    ? () {
-                        // ✅ SAVE DATE
-                        BookingSession.current?.selectedDate = selectedDate;
-
-                        // ✅ SAVE TIME (TimeOfDay → String)
-                        final formattedTime = selectedTime!.format(context);
-                        BookingSession.current?.selectedTime = formattedTime;
-
-                        // 🔀 NEXT FLOW
-                        if (BookingSession.current?.bookingType == BookingType.temple) {
-  context.push('/samagri-required');
-} else {
-  context.push('/samagri-required');
+                    // 🔑 FLOW CONTINUES (UNCHANGED)
+                    context.push('/samagri-required');
+                  }
+                : null,
+            child: const Text('Continue'),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-                      }
-                    : null,
-                child: const Text('Continue'),
+class _SelectionCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _SelectionCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.orange),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.grey,
             ),
           ],
         ),

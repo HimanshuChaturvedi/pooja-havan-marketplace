@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../booking/application/booking_session.dart';
 import '../../../booking/domain/booking_draft.dart';
-
-
 import 'widgets/choice_card.dart';
 
 enum PoojaLocationType { home, temple }
@@ -20,7 +19,6 @@ class AtHomeOrTemplePage extends StatefulWidget {
     required this.ritualName,
   });
 
-
   @override
   State<AtHomeOrTemplePage> createState() => _AtHomeOrTemplePageState();
 }
@@ -33,30 +31,37 @@ class _AtHomeOrTemplePageState extends State<AtHomeOrTemplePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pooja Location'),
+        centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Where would you like to perform the Pooja?',
+              'Where would you like to perform the pooja?',
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
+
             const SizedBox(height: 8),
-            const Text(
-              'You can choose to perform the ritual at your home or at a temple.',
-              style: TextStyle(fontSize: 14),
+
+            Text(
+              'Choose the location that suits you best.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 28),
 
             ChoiceCard(
               title: 'At Home',
               description:
-                  'Pandit will perform the pooja at your home location.',
+                  'Pandit will visit your home and perform the pooja.',
               isSelected: selectedType == PoojaLocationType.home,
               onTap: () {
                 setState(() {
@@ -78,37 +83,35 @@ class _AtHomeOrTemplePageState extends State<AtHomeOrTemplePage> {
                 });
               },
             ),
+
+            const Spacer(),
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ElevatedButton(
-          onPressed: selectedType == null
-    ? null
-    : () {
-        if (selectedType == PoojaLocationType.temple) {
-  BookingSession.current = BookingDraft(
-    bookingType: BookingType.temple,
-    ritualName: widget.ritualName,
-    city: widget.city,
-  );
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: selectedType == null
+                ? null
+                : () {
+                    if (BookingSession.current == null) return;
 
-  final encodedCity = Uri.encodeComponent(widget.city);
-  context.push('/temples/$encodedCity');
-} else {
-  BookingSession.current = BookingDraft(
-    bookingType: BookingType.home,
-    ritualName: widget.ritualName,
-    city: widget.city,
-  );
-
-  context.push('/home-address');
-}
-
-      },
-
-          child: const Text('Continue'),
+                    if (selectedType == PoojaLocationType.home) {
+                      BookingSession.current!.bookingType = BookingType.home;
+                      context.push('/home-address');
+                    } else {
+                      BookingSession.current!.bookingType =
+                          BookingType.temple;
+                      final city =
+                          Uri.encodeComponent(widget.city);
+                      context.push('/temples/$city');
+                    }
+                  },
+            child: const Text('Continue'),
+          ),
         ),
       ),
     );

@@ -27,6 +27,8 @@ import '../../features/temple/presentation/pages/temple_list_page.dart';
 import '../../features/temple/presentation/pages/temple_details_page.dart';
 
 import '../../features/pandit/presentation/pages/pandit_selection_page.dart';
+import '../../features/pandit/presentation/pages/pandit_details_page.dart';
+
 
 final GoRouter appRouter = GoRouter(
   debugLogDiagnostics: true,
@@ -216,5 +218,14 @@ final GoRouter appRouter = GoRouter(
         );
       },
     ),
+
+    GoRoute(
+  path: '/pandit-details',
+  builder: (context, state) {
+    final panditName = state.extra as String;
+    return PanditDetailsPage(panditName: panditName);
+  },
+),
+
   ],
 );
