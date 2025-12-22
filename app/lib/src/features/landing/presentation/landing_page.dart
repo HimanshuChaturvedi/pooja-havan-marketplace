@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
 import '../../services/presentation/services_page.dart';
+import '../../../core/config/mvp_guard.dart';
+
+
 
 class LandingPage extends StatelessWidget {
   static const routeName = '/landing';
@@ -61,11 +64,13 @@ class LandingPage extends StatelessWidget {
                     ),
 
                     // ✅ Buy Samagri
-                    _LandingCard(
-                      icon: "assets/icons/samagri_box.png",
-                      label: "Buy Samagri",
-                      onTap: () => context.go('/samagri-list'),
-                    ),
+                    // ✅ Buy Samagri
+_LandingCard(
+  icon: "assets/icons/samagri_box.png",
+  label: "Buy Samagri",
+  onTap: () => context.go('/samagri-list'),
+),
+
 
                     // 🔥 Havan at Temple (DIRECT TEMPLE FLOW)
                     _LandingCard(
