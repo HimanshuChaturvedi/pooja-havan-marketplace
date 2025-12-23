@@ -28,6 +28,8 @@ import '../../features/temple/presentation/pages/temple_details_page.dart';
 
 import '../../features/pandit/presentation/pages/pandit_selection_page.dart';
 import '../../features/pandit/presentation/pages/pandit_details_page.dart';
+import '../../features/samagri_flow/presentation/summary/samagri_summary_page.dart';
+
 
 
 final GoRouter appRouter = GoRouter(
@@ -226,6 +228,12 @@ final GoRouter appRouter = GoRouter(
     return PanditDetailsPage(panditName: panditName);
   },
 ),
+
+GoRoute(
+  path: '/samagri-summary',
+  builder: (context, state) => const SamagriSummaryPage(),
+),
+
 
   ],
 );

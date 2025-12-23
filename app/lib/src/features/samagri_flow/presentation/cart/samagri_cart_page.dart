@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../booking/application/booking_session.dart';
+import '../../application/samagri_session.dart';
 import '../../state/samagri_cart_notifier.dart';
 
 class SamagriCartPage extends ConsumerWidget {
@@ -63,25 +63,27 @@ class SamagriCartPage extends ConsumerWidget {
           child: ElevatedButton(
             onPressed: hasItems
                 ? () {
-                    final booking = BookingSession.current;
+                    // ✅ CREATE FRESH SAMAGRI SESSION
+                    SamagriSession.createFromCart(
+                      items: cart.items.entries.map((entry) {
+                        final item = entry.key;
+                        final qty = entry.value;
 
-                    if (booking != null) {
-                      // 🔑 SYNC CART → BOOKING SESSION (THIS WAS MISSING)
-                      booking.samagriRequired = true;
-                      booking.samagriItems.clear();
+                        return SamagriItem(
+                          itemId: item.id,
+                          name: item.name,
+                          unitPrice: item.price.round(), // double → int
+                          quantity: qty,
+                        );
+                      }).toList(),
+                    );
 
-                      for (final entry in cart.items.entries) {
-                        for (int i = 0; i < entry.value; i++) {
-                          booking.samagriItems.add(entry.key.name);
-                        }
-                      }
-                    }
-
-                    context.push('/home-summary');
+                    // 👉 Go to Samagri Summary
+                    context.push('/samagri-summary');
                   }
                 : null,
             child: Text(
-              'Continue • ₹${cart.totalAmount.toStringAsFixed(0)}',
+              'Continue • ₹${cart.totalAmount.round()}',
             ),
           ),
         ),
