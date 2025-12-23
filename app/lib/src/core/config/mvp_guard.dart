@@ -1,3 +1,3 @@
 class MvpGuard {
-  static const bool enabled = true; // investor safe
+  static const bool enabled = false; // investor safe
 }
