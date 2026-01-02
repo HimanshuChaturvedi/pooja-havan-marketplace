@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/samagri_session.dart';
 import '../../state/samagri_cart_notifier.dart';
+import '../../../booking/application/booking_session.dart';
 
 class SamagriCartPage extends ConsumerWidget {
   const SamagriCartPage({super.key});
@@ -11,7 +12,8 @@ class SamagriCartPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(samagriCartProvider);
-    final hasItems = cart.items.isNotEmpty;
+    final items = cart.items.entries.toList();
+    final bool hasItems = items.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -19,9 +21,11 @@ class SamagriCartPage extends ConsumerWidget {
         centerTitle: true,
       ),
       body: hasItems
-          ? ListView(
+          ? ListView.builder(
               padding: const EdgeInsets.all(12),
-              children: cart.items.entries.map((entry) {
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final entry = items[index];
                 final item = entry.key;
                 final qty = entry.value;
 
@@ -50,11 +54,10 @@ class SamagriCartPage extends ConsumerWidget {
                     ],
                   ),
                 );
-              }).toList(),
+              },
             )
-          : const Center(
-              child: Text('No items in cart'),
-            ),
+          : const Center(child: Text('No items in cart')),
+
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
         child: SizedBox(
@@ -63,23 +66,32 @@ class SamagriCartPage extends ConsumerWidget {
           child: ElevatedButton(
             onPressed: hasItems
                 ? () {
-                    // ✅ CREATE FRESH SAMAGRI SESSION
+                    final bool isBookingFlow =
+                        BookingSession.current != null;
+
+                    // ✅ Create Samagri session
                     SamagriSession.createFromCart(
-                      items: cart.items.entries.map((entry) {
+                      items: items.map((entry) {
                         final item = entry.key;
                         final qty = entry.value;
-
                         return SamagriItem(
                           itemId: item.id,
                           name: item.name,
-                          unitPrice: item.price.round(), // double → int
+                          unitPrice: item.price.round(),
                           quantity: qty,
                         );
                       }).toList(),
+                      isPartOfBooking: isBookingFlow,
                     );
 
-                    // 👉 Go to Samagri Summary
-                    context.push('/samagri-summary');
+                    // 🔥 CRITICAL FIX
+                    if (isBookingFlow) {
+                      // 👉 Booking flow NEVER goes to Samagri Summary
+                      context.go('/home-summary');
+                    } else {
+                      // 👉 Standalone Buy Samagri
+                      context.push('/samagri-summary');
+                    }
                   }
                 : null,
             child: Text(

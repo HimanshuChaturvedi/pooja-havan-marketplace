@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/booking/application/booking_session.dart';
-import '../../features/booking/domain/booking_draft.dart';
 
 import '../../features/splash/presentation/splash_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
@@ -19,18 +18,20 @@ import '../../features/home_booking/presentation/summary/booking_summary_page.da
 import '../../features/samagri_flow/presentation/requirement/samagri_requirement_page.dart';
 import '../../features/samagri_flow/presentation/list/samagri_list_page.dart';
 import '../../features/samagri_flow/presentation/cart/samagri_cart_page.dart';
+import '../../features/samagri_flow/presentation/summary/samagri_summary_page.dart';
+import '../../features/samagri_flow/presentation/address/samagri_address_page.dart';
 
-import '../../features/payment/presentation/payment_page.dart';
-import '../../features/payment/presentation/payment_success_page.dart';
+import '../../features/booking/presentation/payment_page.dart';
+import '../../features/booking/presentation/booking_success_page.dart';
 
 import '../../features/temple/presentation/pages/temple_list_page.dart';
 import '../../features/temple/presentation/pages/temple_details_page.dart';
 
 import '../../features/pandit/presentation/pages/pandit_selection_page.dart';
 import '../../features/pandit/presentation/pages/pandit_details_page.dart';
-import '../../features/samagri_flow/presentation/summary/samagri_summary_page.dart';
 
-
+import '../../features/services/domain/explore_service.dart';
+import '../../features/services/presentation/explore_service_detail_page.dart';
 
 final GoRouter appRouter = GoRouter(
   debugLogDiagnostics: true,
@@ -84,7 +85,7 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // LOCATION (used after selecting ritual)
+    // LOCATION
     GoRoute(
       path: '/location/:slug/:name',
       builder: (context, state) {
@@ -97,14 +98,13 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // ENTRY: START BOOKING (SAFE ENTRY)
+    // START BOOKING (SAFE)
     GoRoute(
       path: '/start-booking',
       redirect: (context, state) {
-        final booking = BookingSession.current;
-        if (booking == null) return '/landing';
-
-        // default redirect after landing
+        if (BookingSession.current == null) {
+          return '/landing';
+        }
         return '/services';
       },
     ),
@@ -119,7 +119,6 @@ final GoRouter appRouter = GoRouter(
             body: Center(child: Text('No booking found')),
           );
         }
-
         return AtHomeOrTemplePage(
           city: booking.city,
           ritualSlug: booking.ritualName,
@@ -148,6 +147,24 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const HomeDateTimePage(),
     ),
 
+    // BOOKING SUMMARY
+    GoRoute(
+      path: '/home-summary',
+      builder: (context, state) => const BookingSummaryPage(),
+    ),
+
+    // BOOKING PAYMENT
+    GoRoute(
+      path: '/payment',
+      builder: (context, state) => const PaymentPage(),
+    ),
+
+    // BOOKING SUCCESS
+    GoRoute(
+      path: '/booking-success',
+      builder: (context, state) => const BookingSuccessPage(),
+    ),
+
     // SAMAGRI REQUIRED
     GoRoute(
       path: '/samagri-required',
@@ -166,25 +183,19 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SamagriCartPage(),
     ),
 
-    // BOOKING SUMMARY
+    // SAMAGRI SUMMARY (NO GUARDS)
     GoRoute(
-      path: '/home-summary',
-      builder: (context, state) => const BookingSummaryPage(),
+      path: '/samagri-summary',
+      builder: (context, state) => const SamagriSummaryPage(),
     ),
 
-    // PAYMENT
+    // SAMAGRI ADDRESS (NO GUARDS)
     GoRoute(
-      path: '/payment',
-      builder: (context, state) => const PaymentPage(),
+      path: '/samagri-address',
+      builder: (context, state) => const SamagriAddressPage(),
     ),
 
-    // PAYMENT SUCCESS
-    GoRoute(
-      path: '/payment-success',
-      builder: (context, state) => const PaymentSuccessPage(),
-    ),
-
-    // TEMPLE LIST (CITY REQUIRED)
+    // TEMPLE LIST
     GoRoute(
       path: '/temples/:city',
       builder: (context, state) {
@@ -222,18 +233,43 @@ final GoRouter appRouter = GoRouter(
     ),
 
     GoRoute(
-  path: '/pandit-details',
-  builder: (context, state) {
-    final panditName = state.extra as String;
-    return PanditDetailsPage(panditName: panditName);
-  },
-),
+      path: '/pandit-details',
+      builder: (context, state) {
+        final panditName = state.extra as String;
+        return PanditDetailsPage(panditName: panditName);
+      },
+    ),
 
-GoRoute(
-  path: '/samagri-summary',
-  builder: (context, state) => const SamagriSummaryPage(),
-),
-
-
+    // EXPLORE SERVICES
+    GoRoute(
+      path: '/explore-services',
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Explore Services')),
+          body: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: exploreServices.length,
+            itemBuilder: (context, index) {
+              final service = exploreServices[index];
+              return Card(
+                child: ListTile(
+                  title: Text(service.title),
+                  subtitle: Text(service.description),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ExploreServiceDetailPage(service: service),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
+    ),
   ],
 );

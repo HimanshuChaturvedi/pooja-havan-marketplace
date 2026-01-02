@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../booking/application/booking_session.dart';
 import '../../../booking/domain/booking_draft.dart';
+import '../../../samagri_flow/application/samagri_session.dart';
 
 class BookingSummaryPage extends StatelessWidget {
   const BookingSummaryPage({super.key});
@@ -18,16 +19,17 @@ class BookingSummaryPage extends StatelessWidget {
     }
 
     const int poojaCost = 2100;
-    const int samagriItemCost = 300;
 
-    // 🔒 Aggregate samagri items
-    final Map<String, int> samagriCount = {};
-    for (final item in booking.samagriItems) {
-      samagriCount[item] = (samagriCount[item] ?? 0) + 1;
-    }
+    // 🔑 FINAL SOURCE OF TRUTH
+    final bool samagriRequired =
+        BookingSession.samagriDecisionTaken;
+
+    final samagriSession = SamagriSession.current;
 
     final int samagriCost =
-        booking.samagriRequired ? samagriCount.length * samagriItemCost : 0;
+        samagriRequired && samagriSession != null
+            ? samagriSession.totalAmount
+            : 0;
 
     final int totalAmount = poojaCost + samagriCost;
 
@@ -35,23 +37,26 @@ class BookingSummaryPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Booking Summary'),
         centerTitle: true,
+        leading: const BackButton(),
       ),
       body: Column(
         children: [
-          // 🔥 SCROLLABLE CONTENT
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   _sectionTitle(
-                    booking.bookingType == BookingType.home
+                    booking.bookingType ==
+                            BookingType.home
                         ? 'Address'
                         : 'Temple',
                   ),
                   _infoTile(
-                    booking.bookingType == BookingType.home
+                    booking.bookingType ==
+                            BookingType.home
                         ? '${booking.address}\n${booking.city}'
                         : '${booking.templeName}\n${booking.city}',
                   ),
@@ -72,29 +77,41 @@ class BookingSummaryPage extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
+                  // ------------------------
+                  // SAMAGRI SECTION (FINAL)
+                  // ------------------------
                   _sectionTitle('Samagri'),
 
-                  if (!booking.samagriRequired)
-                    _infoTile('Samagri will be arranged by the user')
+                  if (!samagriRequired)
+                    _infoTile(
+                      'Samagri will be arranged by the user',
+                    )
+                  else if (samagriSession == null ||
+                      samagriSession.items.isEmpty)
+                    _infoTile(
+                      'Samagri will be arranged by us',
+                    )
                   else
-                    _samagriList(samagriCount, samagriItemCost),
+                    _samagriList(samagriSession),
 
                   const SizedBox(height: 20),
 
                   _sectionTitle('Price Breakdown'),
                   _priceRow('Pooja Charges', poojaCost),
-                  if (booking.samagriRequired)
-                    _priceRow('Samagri Charges', samagriCost),
+                  if (samagriRequired)
+                    _priceRow(
+                        'Samagri Charges', samagriCost),
                   const Divider(),
-                  _priceRow('Total Amount', totalAmount, isBold: true),
+                  _priceRow(
+                      'Total Amount', totalAmount,
+                      isBold: true),
 
-                  const SizedBox(height: 80), // space for button
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
           ),
 
-          // 🔒 FIXED BOTTOM CTA (NO OVERFLOW)
           SafeArea(
             minimum: const EdgeInsets.all(16),
             child: SizedBox(
@@ -102,9 +119,13 @@ class BookingSummaryPage extends StatelessWidget {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
+                  // 🔑 READY FOR PAYMENT
+                  BookingSession.status =
+                      BookingStatus.paymentPending;
                   context.push('/payment');
                 },
-                child: const Text('Proceed to Payment'),
+                child:
+                    const Text('Proceed to Payment'),
               ),
             ),
           ),
@@ -118,7 +139,10 @@ class BookingSummaryPage extends StatelessWidget {
   Widget _sectionTitle(String text) {
     return Text(
       text,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
     );
   }
 
@@ -135,7 +159,7 @@ class BookingSummaryPage extends StatelessWidget {
     );
   }
 
-  Widget _samagriList(Map<String, int> items, int costPerItem) {
+  Widget _samagriList(SamagriSession session) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 6),
@@ -145,38 +169,60 @@ class BookingSummaryPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-        children: items.entries.map((entry) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${entry.key} × ${entry.value}'),
-                Text('₹${entry.value * costPerItem}'),
-              ],
-            ),
-          );
-        }).toList(),
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Samagri will be arranged by us',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ...session.items.map((item) {
+            return Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                      '${item.name} × ${item.quantity}'),
+                  Text('₹${item.unitPrice * item.quantity}'),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
       ),
     );
   }
 
-  Widget _priceRow(String label, int amount, {bool isBold = false}) {
+  Widget _priceRow(
+    String label,
+    int amount, {
+    bool isBold = false,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: TextStyle(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isBold
+                  ? FontWeight.bold
+                  : FontWeight.normal,
             ),
           ),
           Text(
             '₹$amount',
             style: TextStyle(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isBold
+                  ? FontWeight.bold
+                  : FontWeight.normal,
             ),
           ),
         ],

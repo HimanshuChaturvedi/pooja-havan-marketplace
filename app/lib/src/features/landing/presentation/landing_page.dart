@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
 import '../../services/presentation/services_page.dart';
-import '../../../core/config/mvp_guard.dart';
+
 
 
 
@@ -83,7 +83,7 @@ _LandingCard(
                     _LandingCard(
                       icon: "assets/icons/lotus.png",
                       label: "Explore Services",
-                      onTap: () => context.go(ServicesPage.routeName),
+                      onTap: () => context.push('/explore-services'),
                     ),
                   ],
                 ),

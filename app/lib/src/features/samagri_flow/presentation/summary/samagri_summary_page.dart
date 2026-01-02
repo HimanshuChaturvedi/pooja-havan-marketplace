@@ -25,20 +25,24 @@ class SamagriSummaryPage extends StatelessWidget {
       ),
       body: Column(
         children: [
+          // -----------------------------
+          // ITEMS LIST
+          // -----------------------------
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 _sectionTitle('Items'),
+                const SizedBox(height: 8),
+
                 ...session.items.map((item) {
                   return ListTile(
                     title: Text(item.name),
+                    subtitle:
+                        Text('₹${item.unitPrice} × ${item.quantity}'),
                     trailing: Text(
                       '₹${item.lineTotal}',
                       style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      '₹${item.unitPrice} × ${item.quantity}',
                     ),
                   );
                 }),
@@ -56,6 +60,9 @@ class SamagriSummaryPage extends StatelessWidget {
             ),
           ),
 
+          // -----------------------------
+          // CONTINUE → ADDRESS
+          // -----------------------------
           SafeArea(
             minimum: const EdgeInsets.all(16),
             child: SizedBox(
@@ -63,10 +70,10 @@ class SamagriSummaryPage extends StatelessWidget {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  // reuse existing mock payment
-                  context.push('/payment');
+                  // 🔑 Next step is ADDRESS (not payment)
+                  context.push('/samagri-address');
                 },
-                child: const Text('Proceed to Payment'),
+                child: const Text('Continue'),
               ),
             ),
           ),
@@ -75,6 +82,9 @@ class SamagriSummaryPage extends StatelessWidget {
     );
   }
 
+  // -----------------------------
+  // UI HELPERS
+  // -----------------------------
   Widget _sectionTitle(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),

@@ -1,6 +1,5 @@
 import 'dart:math';
 
-/// Represents one Samagri item in the cart / order
 class SamagriItem {
   final String itemId;
   final String name;
@@ -17,17 +16,13 @@ class SamagriItem {
   int get lineTotal => unitPrice * quantity;
 }
 
-/// Order lifecycle for Samagri
 enum SamagriOrderStatus {
   draft,
   summary,
   paid,
 }
 
-/// In-memory Samagri session (Phase-2 ready)
-/// Completely isolated from BookingSession
 class SamagriSession {
-  /// Current active session (null if none)
   static SamagriSession? current;
 
   final String sessionId;
@@ -35,8 +30,13 @@ class SamagriSession {
   final int totalAmount;
   final String vendorLabel;
 
-  /// ✅ Phase-2: Address linkage (only ID, not full object)
-  final String? addressId;
+  /// ✅ RAW ADDRESS TEXT
+  final String? addressText;
+
+  /// ✅ VERY IMPORTANT FLAG
+  /// true = booking ke saath samagri
+  /// false = standalone buy samagri
+  final bool isPartOfBooking;
 
   final SamagriOrderStatus status;
   final DateTime createdAt;
@@ -48,14 +48,15 @@ class SamagriSession {
     required this.vendorLabel,
     required this.status,
     required this.createdAt,
-    this.addressId,
+    required this.isPartOfBooking,
+    this.addressText,
   });
 
-  /// Create a fresh Samagri session from cart items
   static void createFromCart({
     required List<SamagriItem> items,
+    bool isPartOfBooking = false,
   }) {
-    final int total = items.fold(
+    final total = items.fold(
       0,
       (sum, item) => sum + item.lineTotal,
     );
@@ -65,14 +66,14 @@ class SamagriSession {
       items: items,
       totalAmount: total,
       vendorLabel: 'Trusted Samagri Partner',
-      addressId: null, // 🔒 Phase-2 default
+      addressText: null,
       status: SamagriOrderStatus.summary,
       createdAt: DateTime.now(),
+      isPartOfBooking: isPartOfBooking,
     );
   }
 
-  /// 🔗 Phase-2: Attach selected address to session
-  static void attachAddress(String addressId) {
+  static void attachAddress(String addressText) {
     if (current == null) return;
 
     current = SamagriSession._internal(
@@ -80,13 +81,13 @@ class SamagriSession {
       items: current!.items,
       totalAmount: current!.totalAmount,
       vendorLabel: current!.vendorLabel,
-      addressId: addressId,
+      addressText: addressText,
       status: current!.status,
       createdAt: current!.createdAt,
+      isPartOfBooking: current!.isPartOfBooking,
     );
   }
 
-  /// Mark order as paid (after mock payment)
   static void markPaid() {
     if (current == null) return;
 
@@ -95,18 +96,17 @@ class SamagriSession {
       items: current!.items,
       totalAmount: current!.totalAmount,
       vendorLabel: current!.vendorLabel,
-      addressId: current!.addressId,
+      addressText: current!.addressText,
       status: SamagriOrderStatus.paid,
       createdAt: current!.createdAt,
+      isPartOfBooking: current!.isPartOfBooking,
     );
   }
 
-  /// Clear session completely (after success or exit)
   static void clear() {
     current = null;
   }
 
-  /// Simple unique id (Phase-1 & Phase-2 safe)
   static String _generateSessionId() {
     final rand = Random().nextInt(999999);
     return 'SMG-${DateTime.now().millisecondsSinceEpoch}-$rand';
