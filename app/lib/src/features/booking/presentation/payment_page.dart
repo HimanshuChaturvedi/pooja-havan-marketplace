@@ -10,13 +10,13 @@ class PaymentPage extends ConsumerWidget {
   const PaymentPage({super.key});
 
   bool canPayNow() {
-    // ✅ BOOKING FLOW (Samagri ho ya na ho)
+    // BOOKING FLOW
     if (BookingSession.current != null) {
       return BookingSession.status ==
           BookingStatus.paymentPending;
     }
 
-    // ✅ STANDALONE SAMAGRI FLOW
+    // STANDALONE SAMAGRI FLOW
     final samagri = SamagriSession.current;
     if (samagri == null) return false;
 
@@ -30,8 +30,8 @@ class PaymentPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final samagri = SamagriSession.current;
     final booking = BookingSession.current;
+    final samagri = SamagriSession.current;
 
     final amount =
         samagri != null ? samagri.totalAmount : 3000;
@@ -40,6 +40,20 @@ class PaymentPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Payment'),
         centerTitle: true,
+        leading: BackButton(
+          onPressed: () {
+            // 🔒 HARD-LOCKED BACK BEHAVIOR
+
+            if (booking != null) {
+              // Book a Pooja (with or without samagri)
+              context.go('/home-address');
+              return;
+            }
+
+            // Standalone Buy Samagri
+            context.go('/samagri-summary');
+          },
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -49,8 +63,9 @@ class PaymentPage extends ConsumerWidget {
             const Text(
               'Review Amount',
               style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 12),
             _amountTile('Total Payable', amount),
@@ -62,7 +77,8 @@ class PaymentPage extends ConsumerWidget {
                 onPressed: canPayNow()
                     ? () async {
                         await Future.delayed(
-                            const Duration(seconds: 1));
+                          const Duration(seconds: 1),
+                        );
 
                         // BOOKING PAYMENT SUCCESS
                         if (booking != null) {
@@ -75,14 +91,15 @@ class PaymentPage extends ConsumerWidget {
                         // STANDALONE SAMAGRI PAYMENT
                         if (samagri != null) {
                           SamagriSession.markPaid();
-                          SamagriSession.clear();
                           ref
                               .read(
-                                  samagriCartProvider
-                                      .notifier)
+                                samagriCartProvider
+                                    .notifier,
+                              )
                               .clearCart();
 
-                          context.go('/landing');
+                          // 🔑 CHANGE: go to Samagri Success
+                          context.go('/samagri-success');
                         }
                       }
                     : null,
@@ -101,8 +118,7 @@ class PaymentPage extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
-        borderRadius:
-            BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment:
@@ -112,7 +128,8 @@ class PaymentPage extends ConsumerWidget {
           Text(
             '₹$amount',
             style: const TextStyle(
-                fontWeight: FontWeight.bold),
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),

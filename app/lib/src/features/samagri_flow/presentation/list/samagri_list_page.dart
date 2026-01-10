@@ -54,7 +54,15 @@ class _SamagriListPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Samagri')),
+      appBar: AppBar(
+        title: const Text('Select Samagri'),
+        leading: BackButton(
+          onPressed: () {
+            // 🔑 Buy Samagri → Back goes to Landing
+            context.go('/landing');
+          },
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: samagri.entries.map((entry) {
@@ -77,20 +85,22 @@ class _SamagriListPageState
           );
         }).toList(),
       ),
-
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: ElevatedButton(
           onPressed: hasItems
               ? () {
-                  // 🔥 RESET CART FIRST
-                  ref.read(samagriCartProvider.notifier).clearCart();
+                  // RESET CART FIRST
+                  ref
+                      .read(samagriCartProvider.notifier)
+                      .clearCart();
 
-                  // 🔥 PUSH SELECTED ITEMS INTO RIVERPOD CART
+                  // PUSH SELECTED ITEMS INTO CART
                   samagri.forEach((item, qty) {
                     for (int i = 0; i < qty; i++) {
                       ref
-                          .read(samagriCartProvider.notifier)
+                          .read(
+                              samagriCartProvider.notifier)
                           .addItem(item);
                     }
                   });

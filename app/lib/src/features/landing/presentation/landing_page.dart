@@ -5,9 +5,6 @@ import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
 import '../../services/presentation/services_page.dart';
 
-
-
-
 class LandingPage extends StatelessWidget {
   static const routeName = '/landing';
 
@@ -53,37 +50,45 @@ class LandingPage extends StatelessWidget {
                   crossAxisCount: 2,
                   mainAxisSpacing: 18,
                   crossAxisSpacing: 18,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10),
                   childAspectRatio: 0.85,
                   children: [
-                    // ✅ Book a Pooja (HOME FLOW)
+                    // Book a Pooja
                     _LandingCard(
-                      icon: "assets/icons/bell.png",
+                      iconAsset: "assets/icons/bell.png",
                       label: "Book a Pooja",
-                      onTap: () => context.go(ServicesPage.routeName),
+                      onTap: () =>
+                          context.go(ServicesPage.routeName),
                     ),
 
-                    // ✅ Buy Samagri
-                    // ✅ Buy Samagri
-_LandingCard(
-  icon: "assets/icons/samagri_box.png",
-  label: "Buy Samagri",
-  onTap: () => context.go('/samagri-list'),
-),
-
-
-                    // 🔥 Havan at Temple (DIRECT TEMPLE FLOW)
+                    // Buy Samagri
                     _LandingCard(
-                      icon: "assets/icons/temple.png",
+                      iconAsset: "assets/icons/samagri_box.png",
+                      label: "Buy Samagri",
+                      onTap: () => context.go('/samagri-list'),
+                    ),
+
+                    // Havan at Temple
+                    _LandingCard(
+                      iconAsset: "assets/icons/temple.png",
                       label: "Havan at Temple",
                       onTap: () => context.go('/temples/Delhi'),
                     ),
 
-                    // ✅ Explore Services
+                    // Explore Services
                     _LandingCard(
-                      icon: "assets/icons/lotus.png",
+                      iconAsset: "assets/icons/lotus.png",
                       label: "Explore Services",
-                      onTap: () => context.push('/explore-services'),
+                      onTap: () =>
+                          context.push('/explore-services'),
+                    ),
+
+                    // My Activity (NO ASSET – SAFE)
+                    _LandingCard(
+                      iconAsset: null,
+                      label: "My Activity",
+                      onTap: () => context.go('/my-activity'),
                     ),
                   ],
                 ),
@@ -99,12 +104,12 @@ _LandingCard(
 }
 
 class _LandingCard extends StatelessWidget {
-  final String icon;
+  final String? iconAsset;
   final String label;
   final VoidCallback onTap;
 
   const _LandingCard({
-    required this.icon,
+    required this.iconAsset,
     required this.label,
     required this.onTap,
   });
@@ -130,12 +135,18 @@ class _LandingCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              icon,
-              height: 48,
-              width: 48,
-              color: AppColors.primaryGold,
-            ),
+            iconAsset != null
+                ? Image.asset(
+                    iconAsset!,
+                    height: 48,
+                    width: 48,
+                    color: AppColors.primaryGold,
+                  )
+                : const Icon(
+                    Icons.history,
+                    size: 48,
+                    color: AppColors.primaryGold,
+                  ),
             const SizedBox(height: 12),
             Text(
               label,

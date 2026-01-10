@@ -32,6 +32,10 @@ import '../../features/pandit/presentation/pages/pandit_details_page.dart';
 
 import '../../features/services/domain/explore_service.dart';
 import '../../features/services/presentation/explore_service_detail_page.dart';
+import '../../features/activity/presentation/my_activity_page.dart';
+import '../../features/samagri_flow/presentation/success/samagri_success_page.dart';
+
+
 
 final GoRouter appRouter = GoRouter(
   debugLogDiagnostics: true,
@@ -239,6 +243,18 @@ final GoRouter appRouter = GoRouter(
         return PanditDetailsPage(panditName: panditName);
       },
     ),
+
+    GoRoute(
+  path: '/my-activity',
+  builder: (context, state) => const MyActivityPage(),
+),
+GoRoute(
+  path: '/samagri-success',
+  builder: (context, state) =>
+      const SamagriSuccessPage(),
+),
+
+
 
     // EXPLORE SERVICES
     GoRoute(

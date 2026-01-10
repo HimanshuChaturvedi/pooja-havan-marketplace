@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../application/samagri_session.dart';
+import '../../application/samagri_session.dart'
+    as session; // 👈 IMPORTANT: alias
 import '../../state/samagri_cart_notifier.dart';
+import '../../state/samagri_item.dart'
+    as cart; // 👈 IMPORTANT: alias
 import '../../../booking/application/booking_session.dart';
 
 class SamagriCartPage extends ConsumerWidget {
@@ -11,14 +14,20 @@ class SamagriCartPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(samagriCartProvider);
-    final items = cart.items.entries.toList();
+    final cartState = ref.watch(samagriCartProvider);
+    final items = cartState.items.entries.toList();
     final bool hasItems = items.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Samagri Cart'),
         centerTitle: true,
+        leading: BackButton(
+          onPressed: () {
+            // 🔑 Back always to Select Samagri
+            context.go('/samagri-list');
+          },
+        ),
       ),
       body: hasItems
           ? ListView.builder(
@@ -26,8 +35,8 @@ class SamagriCartPage extends ConsumerWidget {
               itemCount: items.length,
               itemBuilder: (context, index) {
                 final entry = items[index];
-                final item = entry.key;
-                final qty = entry.value;
+                final cart.SamagriItem item = entry.key;
+                final int qty = entry.value;
 
                 return ListTile(
                   title: Text(item.name),
@@ -39,7 +48,8 @@ class SamagriCartPage extends ConsumerWidget {
                         icon: const Icon(Icons.remove),
                         onPressed: () {
                           ref
-                              .read(samagriCartProvider.notifier)
+                              .read(
+                                  samagriCartProvider.notifier)
                               .removeItem(item);
                         },
                       ),
@@ -47,7 +57,8 @@ class SamagriCartPage extends ConsumerWidget {
                         icon: const Icon(Icons.add),
                         onPressed: () {
                           ref
-                              .read(samagriCartProvider.notifier)
+                              .read(
+                                  samagriCartProvider.notifier)
                               .addItem(item);
                         },
                       ),
@@ -56,8 +67,9 @@ class SamagriCartPage extends ConsumerWidget {
                 );
               },
             )
-          : const Center(child: Text('No items in cart')),
-
+          : const Center(
+              child: Text('No items in cart'),
+            ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
         child: SizedBox(
@@ -69,33 +81,39 @@ class SamagriCartPage extends ConsumerWidget {
                     final bool isBookingFlow =
                         BookingSession.current != null;
 
+                    // ✅ MAP CART ITEMS → SESSION ITEMS (CORRECT TYPE)
+                    final List<session.SamagriItem>
+                        sessionItems =
+                        items.map((entry) {
+                      final cart.SamagriItem item =
+                          entry.key;
+                      final int qty = entry.value;
+
+                      return session.SamagriItem(
+                        itemId: item.id,
+                        name: item.name,
+                        unitPrice:
+                            item.price.round(),
+                        quantity: qty,
+                      );
+                    }).toList();
+
                     // ✅ Create Samagri session
-                    SamagriSession.createFromCart(
-                      items: items.map((entry) {
-                        final item = entry.key;
-                        final qty = entry.value;
-                        return SamagriItem(
-                          itemId: item.id,
-                          name: item.name,
-                          unitPrice: item.price.round(),
-                          quantity: qty,
-                        );
-                      }).toList(),
+                    session.SamagriSession.createFromCart(
+                      items: sessionItems,
                       isPartOfBooking: isBookingFlow,
                     );
 
-                    // 🔥 CRITICAL FIX
+                    // 🔑 Navigation UNCHANGED
                     if (isBookingFlow) {
-                      // 👉 Booking flow NEVER goes to Samagri Summary
                       context.go('/home-summary');
                     } else {
-                      // 👉 Standalone Buy Samagri
                       context.push('/samagri-summary');
                     }
                   }
                 : null,
             child: Text(
-              'Continue • ₹${cart.totalAmount.round()}',
+              'Continue • ₹${cartState.totalAmount.round()}',
             ),
           ),
         ),
