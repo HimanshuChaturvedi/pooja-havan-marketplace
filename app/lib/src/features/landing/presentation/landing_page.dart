@@ -54,41 +54,37 @@ class LandingPage extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10),
                   childAspectRatio: 0.85,
                   children: [
-                    // Book a Pooja
                     _LandingCard(
-                      iconAsset: "assets/icons/bell.png",
+                      icon: "assets/icons/bell.png",
                       label: "Book a Pooja",
                       onTap: () =>
                           context.go(ServicesPage.routeName),
                     ),
 
-                    // Buy Samagri
                     _LandingCard(
-                      iconAsset: "assets/icons/samagri_box.png",
+                      icon: "assets/icons/samagri_box.png",
                       label: "Buy Samagri",
                       onTap: () => context.go('/samagri-list'),
                     ),
 
-                    // Havan at Temple
                     _LandingCard(
-                      iconAsset: "assets/icons/temple.png",
+                      icon: "assets/icons/temple.png",
                       label: "Havan at Temple",
                       onTap: () => context.go('/temples/Delhi'),
                     ),
 
-                    // Explore Services
                     _LandingCard(
-                      iconAsset: "assets/icons/lotus.png",
+                      icon: "assets/icons/lotus.png",
                       label: "Explore Services",
                       onTap: () =>
                           context.push('/explore-services'),
                     ),
 
-                    // My Activity (NO ASSET – SAFE)
+                    // ✅ FIXED: My Activity (PUSH, NOT GO)
                     _LandingCard(
-                      iconAsset: null,
+                      icon: "",
                       label: "My Activity",
-                      onTap: () => context.go('/my-activity'),
+                      onTap: () => context.push('/my-activity'),
                     ),
                   ],
                 ),
@@ -104,12 +100,12 @@ class LandingPage extends StatelessWidget {
 }
 
 class _LandingCard extends StatelessWidget {
-  final String? iconAsset;
+  final String icon;
   final String label;
   final VoidCallback onTap;
 
   const _LandingCard({
-    required this.iconAsset,
+    required this.icon,
     required this.label,
     required this.onTap,
   });
@@ -135,16 +131,16 @@ class _LandingCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            iconAsset != null
-                ? Image.asset(
-                    iconAsset!,
-                    height: 48,
-                    width: 48,
-                    color: AppColors.primaryGold,
-                  )
-                : const Icon(
+            icon.isEmpty
+                ? Icon(
                     Icons.history,
                     size: 48,
+                    color: AppColors.primaryGold,
+                  )
+                : Image.asset(
+                    icon,
+                    height: 48,
+                    width: 48,
                     color: AppColors.primaryGold,
                   ),
             const SizedBox(height: 12),

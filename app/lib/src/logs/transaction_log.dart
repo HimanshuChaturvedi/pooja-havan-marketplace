@@ -1,19 +1,16 @@
 import 'dart:collection';
 
-/// 🔒 TYPE OF TRANSACTION
 enum TransactionType {
   booking,
   samagri,
 }
 
-/// 🔒 STATUS
 enum TransactionStatus {
   created,
   paid,
   completed,
 }
 
-/// 🔒 SINGLE LOG ENTRY (IMMUTABLE)
 class TransactionLogEntry {
   final String id;
   final TransactionType type;
@@ -22,9 +19,16 @@ class TransactionLogEntry {
   final TransactionStatus status;
   final DateTime createdAt;
 
-  /// Optional references (no dependency)
-  final String? bookingId;
+  // USER (temporary)
+  final String userLabel;
+
+  // BOOKING-SPECIFIC
+  final DateTime? bookedForDate;
+  final String? bookedForTime;
+
+  // BACKWARD COMPAT
   final String? samagriSessionId;
+  final String? bookingId;
 
   const TransactionLogEntry({
     required this.id,
@@ -33,31 +37,32 @@ class TransactionLogEntry {
     required this.amount,
     required this.status,
     required this.createdAt,
-    this.bookingId,
+    required this.userLabel,
+    this.bookedForDate,
+    this.bookedForTime,
     this.samagriSessionId,
+    this.bookingId,
   });
 }
 
-/// 🔒 APPEND-ONLY, IN-MEMORY LOG
-/// ❌ No delete
-/// ❌ No update
-/// ❌ No backend
 class TransactionLogService {
   static final List<TransactionLogEntry> _logs = [];
 
-  /// ADD NEW ENTRY (APPEND ONLY)
+  /// 🔒 APPEND-ONLY, DUPLICATE SAFE
   static void append(TransactionLogEntry entry) {
+    final exists = _logs.any((e) => e.id == entry.id);
+    if (exists) return;
+
     _logs.add(entry);
   }
 
-  /// READ-ONLY ACCESS (LATEST FIRST)
   static UnmodifiableListView<TransactionLogEntry> all() {
     final sorted = List<TransactionLogEntry>.from(_logs)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return UnmodifiableListView(sorted);
   }
 
-  /// CLEAR ALL (ONLY FOR DEV / RESET)
+  /// ❌ NEVER CALL IN PROD FLOWS
   static void clear() {
     _logs.clear();
   }

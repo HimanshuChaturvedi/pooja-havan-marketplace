@@ -14,34 +14,10 @@ class MyActivityPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Activity'),
         centerTitle: true,
-        leading: BackButton(
-          onPressed: () {
-            // 🔑 FIX: go back explicitly to Landing
-            context.go('/landing');
-          },
-        ),
+        leading: BackButton(onPressed: () => context.pop()),
       ),
       body: logs.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(
-                    Icons.history,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'No activity yet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-            )
+          ? const Center(child: Text('No activity yet'))
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: logs.length,
@@ -49,35 +25,54 @@ class MyActivityPage extends StatelessWidget {
                   const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final log = logs[index];
+                final created = log.createdAt;
+
+                final createdText =
+                    '${created.day}/${created.month}/${created.year} '
+                    '${created.hour}:${created.minute.toString().padLeft(2, '0')}';
+
+                final bookedForText =
+                    log.bookedForDate != null
+                        ? '${log.bookedForDate!.day}/${log.bookedForDate!.month}/${log.bookedForDate!.year}'
+                        : '-';
 
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment:
                         CrossAxisAlignment.start,
                     children: [
                       Text(
-                        log.type == TransactionType.booking
-                            ? 'Pooja Booking'
-                            : 'Samagri Order',
+                        'Pooja Booking',
                         style: const TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Text(log.title),
+                      Text('User: ${log.userLabel}'),
+                      const SizedBox(height: 6),
+                      Text('Ritual: ${log.title}'),
+                      const SizedBox(height: 6),
+                      Text(
+                          'Booked For: $bookedForText ${log.bookedForTime ?? ''}'),
                       const SizedBox(height: 6),
                       Text('Amount: ₹${log.amount}'),
                       const SizedBox(height: 6),
                       Text(
-                        'Date: ${log.createdAt.day}/${log.createdAt.month}/${log.createdAt.year}',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                        ),
+                        'Created At: $createdText',
+                        style: const TextStyle(color: Colors.black54),
                       ),
                     ],
                   ),

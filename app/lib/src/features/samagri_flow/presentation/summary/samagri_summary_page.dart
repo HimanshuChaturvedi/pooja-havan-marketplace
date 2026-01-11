@@ -2,76 +2,74 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/samagri_session.dart';
+import '../../../booking/application/booking_session.dart';
 
 class SamagriSummaryPage extends StatelessWidget {
   const SamagriSummaryPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final session = SamagriSession.current;
+    final samagri = SamagriSession.current;
+    final isBookingFlow = BookingSession.current != null;
 
-    if (session == null) {
+    if (samagri == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('No Samagri order found'),
-        ),
+        body: Center(child: Text('No samagri data')),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Samagri Summary'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Samagri Summary')),
       body: Column(
         children: [
-          // -----------------------------
-          // ITEMS LIST
-          // -----------------------------
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _sectionTitle('Items'),
-                const SizedBox(height: 8),
-
-                ...session.items.map((item) {
-                  return ListTile(
-                    title: Text(item.name),
-                    subtitle:
-                        Text('₹${item.unitPrice} × ${item.quantity}'),
-                    trailing: Text(
-                      '₹${item.lineTotal}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                ...samagri.items.map(
+                  (i) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${i.name} × ${i.quantity}'),
+                        Text('₹${i.lineTotal}'),
+                      ],
                     ),
-                  );
-                }),
-
-                const SizedBox(height: 16),
-
-                _sectionTitle('Vendor'),
-                _infoTile(session.vendorLabel),
-
-                const SizedBox(height: 16),
-
-                _sectionTitle('Total'),
-                _priceRow('Total Amount', session.totalAmount),
+                  ),
+                ),
+                const Divider(height: 32),
+                Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '₹${samagri.totalAmount}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-
-          // -----------------------------
-          // CONTINUE → ADDRESS
-          // -----------------------------
-          SafeArea(
-            minimum: const EdgeInsets.all(16),
+          Padding(
+            padding: const EdgeInsets.all(16),
             child: SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  // 🔑 Next step is ADDRESS (not payment)
-                  context.push('/samagri-address');
+                  context.push(
+                    isBookingFlow
+                        ? '/samagri-success'
+                        : '/payment',
+                  );
                 },
                 child: const Text('Continue'),
               ),
@@ -79,47 +77,6 @@ class SamagriSummaryPage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  // -----------------------------
-  // UI HELPERS
-  // -----------------------------
-  Widget _sectionTitle(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _infoTile(String text) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(text),
-    );
-  }
-
-  Widget _priceRow(String label, int amount) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label),
-        Text(
-          '₹$amount',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ],
     );
   }
 }

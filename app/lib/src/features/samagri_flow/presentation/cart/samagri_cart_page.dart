@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../application/samagri_session.dart'
-    as session; // 👈 IMPORTANT: alias
+import '../../application/samagri_session.dart';
 import '../../state/samagri_cart_notifier.dart';
-import '../../state/samagri_item.dart'
-    as cart; // 👈 IMPORTANT: alias
+import '../../state/samagri_item.dart' as CatalogItem;
 import '../../../booking/application/booking_session.dart';
 
 class SamagriCartPage extends ConsumerWidget {
@@ -14,106 +12,65 @@ class SamagriCartPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cartState = ref.watch(samagriCartProvider);
-    final items = cartState.items.entries.toList();
-    final bool hasItems = items.isNotEmpty;
+    final cart = ref.watch(samagriCartProvider);
+    final items = cart.items.entries.toList();
+    final hasItems = items.isNotEmpty;
+    final isBookingFlow = BookingSession.current != null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Samagri Cart'),
-        centerTitle: true,
-        leading: BackButton(
-          onPressed: () {
-            // 🔑 Back always to Select Samagri
-            context.go('/samagri-list');
-          },
-        ),
-      ),
+      appBar: AppBar(title: const Text('Samagri Cart')),
       body: hasItems
-          ? ListView.builder(
-              padding: const EdgeInsets.all(12),
+          ? ListView.separated(
+              padding: const EdgeInsets.all(16),
               itemCount: items.length,
+              separatorBuilder: (_, __) => const Divider(),
               itemBuilder: (context, index) {
                 final entry = items[index];
-                final cart.SamagriItem item = entry.key;
-                final int qty = entry.value;
+                final CatalogItem.SamagriItem item = entry.key;
+                final qty = entry.value;
 
-                return ListTile(
-                  title: Text(item.name),
-                  subtitle: Text('₹${item.price} × $qty'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove),
-                        onPressed: () {
-                          ref
-                              .read(
-                                  samagriCartProvider.notifier)
-                              .removeItem(item);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () {
-                          ref
-                              .read(
-                                  samagriCartProvider.notifier)
-                              .addItem(item);
-                        },
-                      ),
-                    ],
-                  ),
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${item.name} × $qty'),
+                    Text('₹${item.price * qty}'),
+                  ],
                 );
               },
             )
-          : const Center(
-              child: Text('No items in cart'),
-            ),
+          : const Center(child: Text('No items in cart')),
       bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton(
-            onPressed: hasItems
-                ? () {
-                    final bool isBookingFlow =
-                        BookingSession.current != null;
-
-                    // ✅ MAP CART ITEMS → SESSION ITEMS (CORRECT TYPE)
-                    final List<session.SamagriItem>
-                        sessionItems =
-                        items.map((entry) {
-                      final cart.SamagriItem item =
-                          entry.key;
-                      final int qty = entry.value;
-
-                      return session.SamagriItem(
-                        itemId: item.id,
-                        name: item.name,
-                        unitPrice:
-                            item.price.round(),
-                        quantity: qty,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: hasItems
+                  ? () {
+                      SamagriSession.createFromCart(
+                        items: items.map((e) {
+                          final CatalogItem.SamagriItem i = e.key;
+                          return SamagriItem(
+                            itemId: i.id,
+                            name: i.name,
+                            unitPrice: i.price.round(),
+                            quantity: e.value,
+                          );
+                        }).toList(),
+                        isPartOfBooking: isBookingFlow,
                       );
-                    }).toList();
 
-                    // ✅ Create Samagri session
-                    session.SamagriSession.createFromCart(
-                      items: sessionItems,
-                      isPartOfBooking: isBookingFlow,
-                    );
-
-                    // 🔑 Navigation UNCHANGED
-                    if (isBookingFlow) {
-                      context.go('/home-summary');
-                    } else {
-                      context.push('/samagri-summary');
+                      context.push(
+                        isBookingFlow
+                            ? '/samagri-summary'
+                            : '/samagri-address',
+                      );
                     }
-                  }
-                : null,
-            child: Text(
-              'Continue • ₹${cartState.totalAmount.round()}',
+                  : null,
+              child: Text(
+                'Continue • ₹${cart.totalAmount.round()}',
+              ),
             ),
           ),
         ),
