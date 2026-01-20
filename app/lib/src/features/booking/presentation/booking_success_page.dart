@@ -29,20 +29,27 @@ class BookingSuccessPage extends StatelessWidget {
         if (booking != null &&
             snapshot.connectionState ==
                 ConnectionState.done) {
-          final txnId = BookingSession.transactionId ??=
-              DateTime.now()
-                  .millisecondsSinceEpoch
-                  .toString();
+          // 🔑 STABLE BOOKING TXN ID (USER / WHATSAPP)
+          BookingSession.transactionId ??=
+              'BKG-${DateTime.now().millisecondsSinceEpoch}';
+
+          // 🔑 INTERNAL UNIQUE LOG ID (DEDUP ONLY)
+          final uniqueLogId =
+              '${BookingSession.transactionId}-${DateTime.now().millisecondsSinceEpoch}';
 
           TransactionLogService.append(
             TransactionLogEntry(
-              id: txnId,
+              id: uniqueLogId, // internal
               type: TransactionType.booking,
               title: booking.ritualName,
               amount: 3000,
               status: TransactionStatus.completed,
               createdAt: DateTime.now(),
               userLabel: displayUserId,
+
+              // ✅ THIS IS THE KEY FIX
+              bookingId: BookingSession.transactionId,
+
               bookedForDate: booking.selectedDate,
               bookedForTime: booking.selectedTime,
             ),
@@ -78,23 +85,25 @@ class BookingSuccessPage extends StatelessWidget {
                   label: const Text(
                     'Send booking details to Pandit',
                   ),
-                  onPressed: () {
-                    WhatsAppHelper.openChat(
-                      message:
-                          'Namaste Pandit ji,\n\n'
-                          'A pooja has been booked via Shubh Pooja App.\n\n'
-                          'User ID: $displayUserId\n'
-                          'Transaction ID: ${BookingSession.transactionId}\n\n'
-                          'Ritual: ${booking?.ritualName}\n'
-                          'Pandit: ${booking?.panditName ?? 'Not assigned'}\n'
-                          'Date & Time: '
-                          '${booking?.selectedDate?.day}/${booking?.selectedDate?.month}/${booking?.selectedDate?.year} '
-                          '${booking?.selectedTime ?? ''}\n'
-                          'Address: ${booking?.address ?? 'NA'}\n\n'
-                          'Please confirm availability.\n\n'
-                          '— Shubh Pooja App',
-                    );
-                  },
+                  onPressed: booking == null
+                      ? null
+                      : () {
+                          WhatsAppHelper.openChat(
+                            message:
+                                'Namaste Pandit ji,\n\n'
+                                'A pooja has been booked via Shubh Pooja App.\n\n'
+                                'User ID: $displayUserId\n'
+                                'Transaction ID: ${BookingSession.transactionId}\n\n'
+                                'Ritual: ${booking.ritualName}\n'
+                                'Pandit: ${booking.panditName ?? 'Not assigned'}\n'
+                                'Date & Time: '
+                                '${booking.selectedDate?.day}/${booking.selectedDate?.month}/${booking.selectedDate?.year} '
+                                '${booking.selectedTime ?? ''}\n'
+                                'Address: ${booking.address ?? 'NA'}\n\n'
+                                'Please confirm availability.\n\n'
+                                '— Shubh Pooja App',
+                          );
+                        },
                 ),
 
                 const SizedBox(height: 12),

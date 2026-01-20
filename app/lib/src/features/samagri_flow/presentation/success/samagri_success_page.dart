@@ -19,7 +19,8 @@ class SamagriSuccessPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final samagri = SamagriSession.current;
-    final isBookingFlow = BookingSession.current != null;
+    final booking = BookingSession.current;
+    final isBookingFlow = booking != null;
 
     return FutureBuilder<String>(
       future: AppIdentity.userId,
@@ -28,7 +29,7 @@ class SamagriSuccessPage extends StatelessWidget {
             snapshot.hasData ? snapshot.data! : '0000';
         final displayUserId = _shortUserId(rawUserId);
 
-        // 🔒 LOG (REQUEST, NOT PAYMENT)
+        // 🔒 APPEND-ONLY TRANSACTION LOG
         if (samagri != null &&
             snapshot.connectionState == ConnectionState.done) {
           TransactionLogService.append(
@@ -44,6 +45,11 @@ class SamagriSuccessPage extends StatelessWidget {
             ),
           );
         }
+
+        // ✅ CORRECT DELIVERY ADDRESS LOGIC
+        final String deliveryAddress = isBookingFlow
+            ? '${booking!.address}, ${booking.city}'
+            : (samagri?.addressText ?? 'Address not provided');
 
         return Scaffold(
           appBar: AppBar(
@@ -70,7 +76,7 @@ class SamagriSuccessPage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 📲 WHATSAPP → SAMAGRI VENDOR (WITH USER ID)
+                // 📲 WHATSAPP → VENDOR
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -88,7 +94,7 @@ class SamagriSuccessPage extends StatelessWidget {
                             'Items:\n'
                             '${samagri?.items.map((e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
                             'Delivery Address:\n'
-                            '${samagri?.addressText ?? 'Same as booking'}\n\n'
+                            '$deliveryAddress\n\n'
                             'Please confirm availability.\n\n'
                             '— Shubh Pooja App',
                       );
