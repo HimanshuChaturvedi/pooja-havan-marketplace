@@ -1,4 +1,7 @@
 import 'dart:collection';
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum TransactionType {
   booking,
@@ -43,17 +46,77 @@ class TransactionLogEntry {
     this.samagriSessionId,
     this.bookingId,
   });
+
+  // ----------------------------
+  // SERIALIZATION
+  // ----------------------------
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': type.name,
+      'title': title,
+      'amount': amount,
+      'status': status.name,
+      'createdAt': createdAt.toIso8601String(),
+      'userLabel': userLabel,
+      'bookedForDate': bookedForDate?.toIso8601String(),
+      'bookedForTime': bookedForTime,
+      'samagriSessionId': samagriSessionId,
+      'bookingId': bookingId,
+    };
+  }
+
+  factory TransactionLogEntry.fromJson(Map<String, dynamic> json) {
+    return TransactionLogEntry(
+      id: json['id'],
+      type: TransactionType.values.firstWhere(
+        (e) => e.name == json['type'],
+      ),
+      title: json['title'],
+      amount: json['amount'],
+      status: TransactionStatus.values.firstWhere(
+        (e) => e.name == json['status'],
+      ),
+      createdAt: DateTime.parse(json['createdAt']),
+      userLabel: json['userLabel'],
+      bookedForDate: json['bookedForDate'] != null
+          ? DateTime.parse(json['bookedForDate'])
+          : null,
+      bookedForTime: json['bookedForTime'],
+      samagriSessionId: json['samagriSessionId'],
+      bookingId: json['bookingId'],
+    );
+  }
 }
 
 class TransactionLogService {
+  static const String _storageKey =
+      'shubh_pooja_transaction_logs_v1';
+
   static final List<TransactionLogEntry> _logs = [];
 
-  /// 🔒 APPEND-ONLY, DUPLICATE SAFE
+  static SharedPreferences? _prefs;
+
+  // ----------------------------
+  // INIT (CALL ON APP START)
+  // ----------------------------
+
+  static Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+    _loadFromStorage();
+  }
+
+  // ----------------------------
+  // APPEND-ONLY, DUPLICATE SAFE
+  // ----------------------------
+
   static void append(TransactionLogEntry entry) {
     final exists = _logs.any((e) => e.id == entry.id);
     if (exists) return;
 
     _logs.add(entry);
+    _persist();
   }
 
   static UnmodifiableListView<TransactionLogEntry> all() {
@@ -62,8 +125,45 @@ class TransactionLogService {
     return UnmodifiableListView(sorted);
   }
 
+  // ----------------------------
+  // INTERNAL STORAGE
+  // ----------------------------
+
+  static void _persist() {
+    if (_prefs == null) return;
+
+    final encoded = _logs
+        .map((e) => e.toJson())
+        .toList();
+
+    _prefs!.setString(
+      _storageKey,
+      jsonEncode(encoded),
+    );
+  }
+
+  static void _loadFromStorage() {
+    if (_prefs == null) return;
+
+    final raw = _prefs!.getString(_storageKey);
+    if (raw == null || raw.isEmpty) return;
+
+    final List decoded = jsonDecode(raw);
+
+    _logs
+      ..clear()
+      ..addAll(
+        decoded.map(
+          (e) => TransactionLogEntry.fromJson(
+            Map<String, dynamic>.from(e),
+          ),
+        ),
+      );
+  }
+
   /// ❌ NEVER CALL IN PROD FLOWS
   static void clear() {
     _logs.clear();
+    _prefs?.remove(_storageKey);
   }
 }

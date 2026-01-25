@@ -4,11 +4,27 @@ import 'package:go_router/go_router.dart';
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
 import '../../services/presentation/services_page.dart';
+import '../../../features/booking/application/booking_session.dart';
+import '../../samagri_flow/application/samagri_session.dart';
 
-class LandingPage extends StatelessWidget {
+class LandingPage extends StatefulWidget {
   static const routeName = '/landing';
 
   const LandingPage({super.key});
+
+  @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  @override
+  void initState() {
+    super.initState();
+
+    // 🔒 FINAL FIX: CLEAR ALL IN-MEMORY SESSIONS ON HOME ENTRY
+    BookingSession.reset();
+    SamagriSession.current = null; // ✅ correct way
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +96,6 @@ class LandingPage extends StatelessWidget {
                           context.push('/explore-services'),
                     ),
 
-                    // ✅ FIXED: My Activity (PUSH, NOT GO)
                     _LandingCard(
                       icon: "",
                       label: "My Activity",

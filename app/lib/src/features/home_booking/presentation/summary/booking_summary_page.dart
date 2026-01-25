@@ -10,6 +10,9 @@ class BookingSummaryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🔒 MARK FLOW AS BOOKING (CRITICAL FIX)
+    BookingSession.activeFlow = ActiveFlow.booking;
+
     final booking = BookingSession.current;
 
     if (booking == null) {
@@ -20,7 +23,6 @@ class BookingSummaryPage extends StatelessWidget {
 
     const int poojaCost = 2100;
 
-    // 🔑 FINAL SOURCE OF TRUTH
     final bool samagriRequired =
         BookingSession.samagriDecisionTaken;
 
@@ -33,131 +35,128 @@ class BookingSummaryPage extends StatelessWidget {
 
     final int totalAmount = poojaCost + samagriCost;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Booking Summary'),
-        centerTitle: true,
-        leading: const BackButton(),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  _sectionTitle(
-                    booking.bookingType ==
-                            BookingType.home
-                        ? 'Address'
-                        : 'Temple',
-                  ),
-                  _infoTile(
-                    booking.bookingType ==
-                            BookingType.home
-                        ? '${booking.address}\n${booking.city}'
-                        : '${booking.templeName}\n${booking.city}',
-                  ),
+    return WillPopScope(
+      onWillPop: () async {
+        // 🔒 EXITING BOOKING FLOW
+        BookingSession.reset();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Booking Summary'),
+          centerTitle: true,
+          leading: const BackButton(),
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    _sectionTitle(
+                      booking.bookingType ==
+                              BookingType.home
+                          ? 'Address'
+                          : 'Temple',
+                    ),
+                    _infoTile(
+                      booking.bookingType ==
+                              BookingType.home
+                          ? '${booking.address}\n${booking.city}'
+                          : '${booking.templeName}\n${booking.city}',
+                    ),
 
-                  const SizedBox(height: 16),
-
-                  _sectionTitle('Date & Time'),
-                  _infoTile(
-                    '${booking.selectedDate?.day}/${booking.selectedDate?.month}/${booking.selectedDate?.year}'
-                    ' at ${booking.selectedTime}',
-                  ),
-
-                  if (booking.panditName != null) ...[
                     const SizedBox(height: 16),
-                    _sectionTitle('Pandit'),
-                    _infoTile(booking.panditName!),
-                  ],
 
-                  const SizedBox(height: 16),
-
-                  // ------------------------
-                  // SAMAGRI SECTION (FINAL)
-                  // ------------------------
-                  _sectionTitle('Samagri'),
-
-                  if (!samagriRequired)
+                    _sectionTitle('Date & Time'),
                     _infoTile(
-                      'Samagri will be arranged by the user',
-                    )
-                  else if (samagriSession == null ||
-                      samagriSession.items.isEmpty)
-                    _infoTile(
-                      'Samagri will be arranged by us',
-                    )
-                  else
-                    _samagriList(samagriSession),
+                      '${booking.selectedDate?.day}/${booking.selectedDate?.month}/${booking.selectedDate?.year}'
+                      ' at ${booking.selectedTime}',
+                    ),
 
-                  const SizedBox(height: 20),
+                    if (booking.panditName != null) ...[
+                      const SizedBox(height: 16),
+                      _sectionTitle('Pandit'),
+                      _infoTile(booking.panditName!),
+                    ],
 
-                  _sectionTitle('Price Breakdown'),
-                  _priceRow('Pooja Charges', poojaCost),
-                  if (samagriRequired)
+                    const SizedBox(height: 16),
+
+                    _sectionTitle('Samagri'),
+                    if (!samagriRequired)
+                      _infoTile(
+                        'Samagri will be arranged by the user',
+                      )
+                    else if (samagriSession == null ||
+                        samagriSession.items.isEmpty)
+                      _infoTile(
+                        'Samagri will be arranged by us',
+                      )
+                    else
+                      _samagriList(samagriSession),
+
+                    const SizedBox(height: 20),
+
+                    _sectionTitle('Price Breakdown'),
+                    _priceRow('Pooja Charges', poojaCost),
+                    if (samagriRequired)
+                      _priceRow(
+                          'Samagri Charges', samagriCost),
+                    const Divider(),
                     _priceRow(
-                        'Samagri Charges', samagriCost),
-                  const Divider(),
-                  _priceRow(
-                      'Total Amount', totalAmount,
-                      isBold: true),
+                        'Total Amount', totalAmount,
+                        isBold: true),
 
-                  const SizedBox(height: 80),
-                ],
+                    const SizedBox(height: 80),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          SafeArea(
-            minimum: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  // 🔑 READY FOR PAYMENT
-                  BookingSession.status =
-                      BookingStatus.paymentPending;
-                  context.push('/payment');
-                },
-                child:
-                    const Text('Proceed to Payment'),
+            SafeArea(
+              minimum: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    BookingSession.status =
+                        BookingStatus.paymentPending;
+                    context.push('/payment');
+                  },
+                  child:
+                      const Text('Proceed to Payment'),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // ---------- UI HELPERS ----------
+  // helpers unchanged …
+  Widget _sectionTitle(String text) => Text(
+        text,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      );
 
-  Widget _sectionTitle(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
-  Widget _infoTile(String text) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.only(top: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(text),
-    );
-  }
+  Widget _infoTile(String text) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(top: 6),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(text),
+      );
 
   Widget _samagriList(SamagriSession session) {
     return Container(
@@ -201,32 +200,31 @@ class BookingSummaryPage extends StatelessWidget {
     String label,
     int amount, {
     bool isBold = false,
-  }) {
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: isBold
-                  ? FontWeight.bold
-                  : FontWeight.normal,
+  }) =>
+      Padding(
+        padding:
+            const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isBold
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+              ),
             ),
-          ),
-          Text(
-            '₹$amount',
-            style: TextStyle(
-              fontWeight: isBold
-                  ? FontWeight.bold
-                  : FontWeight.normal,
+            Text(
+              '₹$amount',
+              style: TextStyle(
+                fontWeight: isBold
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 }

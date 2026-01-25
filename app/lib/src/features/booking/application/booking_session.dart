@@ -20,14 +20,22 @@ class BookingSession {
 
   static ActiveFlow? activeFlow;
 
-  /// 🔑 STABLE TRANSACTION ID (CRITICAL FIX)
+  /// 🔑 STABLE TRANSACTION ID (CRITICAL)
   static String? transactionId;
 
+  /// 🔒 FULL RESET (USED AFTER BOOKING COMPLETION)
   static void reset() {
     current = null;
     status = BookingStatus.draft;
     samagriDecisionTaken = false;
     activeFlow = null;
     transactionId = null;
+  }
+
+  /// ✅ SAFE AUTO-CLEAR (BOOKING FLOW ONLY)
+  static void clearIfBookingFlow() {
+    if (activeFlow == ActiveFlow.booking) {
+      reset();
+    }
   }
 }

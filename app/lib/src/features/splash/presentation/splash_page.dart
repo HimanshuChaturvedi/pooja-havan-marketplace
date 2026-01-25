@@ -15,7 +15,8 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateMixin {
+class _SplashPageState extends State<SplashPage>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
 
@@ -23,21 +24,26 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   void initState() {
     super.initState();
 
-    // FIXED: remove problematic CurvedAnimation
+    // 🔒 FAST, ONE-TIME SPLASH ANIMATION
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 1000),
+    );
 
-    _scale = Tween(begin: 0.9, end: 1.05).animate(_controller);
+    _scale = Tween(begin: 0.95, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
 
-    // 5 second delay so you can see errors
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Timer(const Duration(seconds: 5), () {
-        if (mounted) {
-          context.go(LandingPage.routeName);
-        }
-      });
+    _controller.forward();
+
+    // Navigate immediately after animation completes
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        context.go(LandingPage.routeName);
+      }
     });
   }
 
@@ -79,14 +85,16 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
 
               Text(
                 "Shubh Pooja",
-                style: AppTextStyles.title.copyWith(color: Colors.white),
+                style:
+                    AppTextStyles.title.copyWith(color: Colors.white),
               ),
 
               const SizedBox(height: 8),
 
               Text(
                 "Trusted pandits • Samagri delivered",
-                style: AppTextStyles.subtitle.copyWith(color: Colors.white70),
+                style: AppTextStyles.subtitle
+                    .copyWith(color: Colors.white70),
               ),
             ],
           ),
