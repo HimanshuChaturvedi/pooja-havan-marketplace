@@ -29,27 +29,23 @@ class BookingSuccessPage extends StatelessWidget {
         if (booking != null &&
             snapshot.connectionState ==
                 ConnectionState.done) {
-          // 🔑 STABLE BOOKING TXN ID (USER / WHATSAPP)
+          // 🔑 STABLE BOOKING TXN ID
           BookingSession.transactionId ??=
               'BKG-${DateTime.now().millisecondsSinceEpoch}';
 
-          // 🔑 INTERNAL UNIQUE LOG ID (DEDUP ONLY)
           final uniqueLogId =
               '${BookingSession.transactionId}-${DateTime.now().millisecondsSinceEpoch}';
 
           TransactionLogService.append(
             TransactionLogEntry(
-              id: uniqueLogId, // internal
+              id: uniqueLogId,
               type: TransactionType.booking,
               title: booking.ritualName,
               amount: 3000,
               status: TransactionStatus.completed,
               createdAt: DateTime.now(),
               userLabel: displayUserId,
-
-              // ✅ THIS IS THE KEY FIX
               bookingId: BookingSession.transactionId,
-
               bookedForDate: booking.selectedDate,
               bookedForTime: booking.selectedTime,
             ),
@@ -91,9 +87,10 @@ class BookingSuccessPage extends StatelessWidget {
                           WhatsAppHelper.openChat(
                             message:
                                 'Namaste Pandit ji,\n\n'
-                                'A pooja has been booked via Shubh Pooja App.\n\n'
+                                'A pooja has been booked via Bharat Pooja Setu.\n\n'
                                 'User ID: $displayUserId\n'
                                 'Transaction ID: ${BookingSession.transactionId}\n\n'
+                                '📍 City: ${booking.city}\n\n'
                                 'Ritual: ${booking.ritualName}\n'
                                 'Pandit: ${booking.panditName ?? 'Not assigned'}\n'
                                 'Date & Time: '
@@ -101,7 +98,7 @@ class BookingSuccessPage extends StatelessWidget {
                                 '${booking.selectedTime ?? ''}\n'
                                 'Address: ${booking.address ?? 'NA'}\n\n'
                                 'Please confirm availability.\n\n'
-                                '— Shubh Pooja App',
+                                '— Bharat Pooja Setu',
                           );
                         },
                 ),

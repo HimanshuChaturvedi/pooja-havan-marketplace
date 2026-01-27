@@ -46,7 +46,11 @@ class SamagriSuccessPage extends StatelessWidget {
           );
         }
 
-        // ✅ CORRECT DELIVERY ADDRESS LOGIC
+        // 🔑 CITY LOGIC (SAFE & PILOT-CORRECT)
+        final String city =
+            isBookingFlow ? booking!.city : 'Ghaziabad';
+
+        // 🔑 DELIVERY ADDRESS
         final String deliveryAddress = isBookingFlow
             ? '${booking!.address}, ${booking.city}'
             : (samagri?.addressText ?? 'Address not provided');
@@ -88,15 +92,16 @@ class SamagriSuccessPage extends StatelessWidget {
                       WhatsAppHelper.openChat(
                         message:
                             'Namaste,\n\n'
-                            'A samagri order has been placed via Shubh Pooja App.\n\n'
+                            'A samagri order has been placed via Bharat Pooja Setu.\n\n'
                             'User ID: $displayUserId\n'
                             'Transaction ID: ${samagri?.sessionId}\n\n'
+                            '📍 City: $city\n\n'
                             'Items:\n'
                             '${samagri?.items.map((e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
                             'Delivery Address:\n'
                             '$deliveryAddress\n\n'
                             'Please confirm availability.\n\n'
-                            '— Shubh Pooja App',
+                            '— Bharat Pooja Setu',
                       );
                     },
                   ),

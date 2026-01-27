@@ -1,5 +1,3 @@
-// lib/src/features/services/presentation/pooja_details_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,109 +23,36 @@ class PoojaDetailsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
-  elevation: 0,
-  backgroundColor: AppColors.saffron,
-  centerTitle: true,
-  title: Text(
-    poojaName,
-    style: AppTextStyles.title.copyWith(
-      color: AppColors.white,
-      fontSize: 20,
-    ),
-  ),
-  iconTheme: const IconThemeData(color: Colors.white),
-
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.home, color: Colors.white),
-      onPressed: () => context.go('/landing'),
-    )
-  ],
-),
-
-
+        elevation: 0,
+        backgroundColor: AppColors.saffron,
+        centerTitle: true,
+        title: Text(
+          poojaName,
+          style: AppTextStyles.title.copyWith(
+            color: AppColors.white,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home, color: Colors.white),
+            onPressed: () => context.go('/landing'),
+          )
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ------------------------------ CARD ------------------------------
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12.withOpacity(0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.local_fire_department,
-                          color: AppColors.primaryGold, size: 34),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          poojaName,
-                          style: AppTextStyles.titleLarge.copyWith(
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  Text(
-                    details?['description'] ?? '',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: Colors.black87,
-                      height: 1.4,
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  _infoRow(
-                    icon: Icons.timelapse,
-                    title: "Duration",
-                    value: details?['duration'] ?? '',
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _infoRow(
-                    icon: Icons.check_circle,
-                    title: "Samagri Required",
-                    value: details?['samagri'] ?? '',
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _infoRow(
-                    icon: Icons.currency_rupee,
-                    title: "Dakshina / Charges",
-                    value: "As per location & pandit availability",
-                  ),
-                ],
-              ),
-            ),
-
+            _detailsCard(details),
             const SizedBox(height: 26),
-
-            // ------------------------- Proceed Button -------------------------
             GestureDetector(
               onTap: () {
-                context.push('/location/$poojaSlug/${Uri.encodeComponent(poojaName)}');
-
+                context.push(
+                  '/location/$poojaSlug/${Uri.encodeComponent(poojaName)}',
+                );
               },
               child: Container(
                 width: double.infinity,
@@ -153,12 +78,43 @@ class PoojaDetailsPage extends StatelessWidget {
     );
   }
 
-  // --------------------------- Info Row Widget ---------------------------
-  Widget _infoRow({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
+  Widget _detailsCard(Map<String, String>? details) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            details?['description'] ?? '',
+            style: AppTextStyles.bodyMedium.copyWith(height: 1.4),
+          ),
+          const SizedBox(height: 18),
+          _infoRow(Icons.timelapse, "Duration", details?['duration'] ?? ''),
+          const SizedBox(height: 12),
+          _infoRow(Icons.check_circle, "Samagri Required", details?['samagri'] ?? ''),
+          const SizedBox(height: 12),
+          _infoRow(
+            Icons.currency_rupee,
+            "Dakshina / Charges",
+            "As per location & pandit availability",
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String title, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -189,38 +145,68 @@ class PoojaDetailsPage extends StatelessWidget {
 }
 
 // ----------------------------------------------------------------------
-// STATIC POOJA DETAILS
+// 🔒 FINAL DETAILS MAP – ALIGNED WITH SERVICES PAGE
 // ----------------------------------------------------------------------
 
 final Map<String, Map<String, String>> _poojaDetails = {
-  'mundan': {
-    'description':
-        'Mundan Sanskar is an important Hindu ritual performed for children. It purifies the child and blesses them with long life and prosperity.',
-    'duration': '45 – 60 minutes',
-    'samagri': 'Havan Samagri, Kalash, Flowers, Ghee, Rice, Coconut',
-  },
   'grih_pravesh': {
     'description':
-        'Performed before entering a new home. This ritual brings peace, positivity, and divine blessings to the household.',
+        'Performed before entering a new home to invite peace, prosperity, and divine blessings.',
     'duration': '1.5 – 2 hours',
     'samagri': 'Kalash, Mango Leaves, Ghee, Havan Samagri, Flowers',
   },
-  'havan': {
+  'satyanarayan_katha': {
     'description':
-        'A sacred fire ritual performed to purify surroundings and invite positive energy. Suitable for all auspicious events.',
-    'duration': '60 – 90 minutes',
-    'samagri': 'Havan Kund, Samagri, Ghee, Camphor, Cotton Wicks',
-  },
-  'katha': {
-    'description':
-        'A devotional ritual performed to express gratitude and seek blessings. Suitable for all auspicious occasions.',
+        'A sacred katha performed to express gratitude and seek prosperity and family harmony.',
     'duration': '2 – 3 hours',
     'samagri': 'Fruits, Panchamrit, Flowers, Katha Book, Prasad Items',
   },
-  'marriage': {
+  'lakshmi_ganesh': {
     'description':
-        'Marriage rituals include essential sacred rites performed for the couple as per tradition.',
-    'duration': 'As per ritual requirements',
-    'samagri': 'Kalash, Flowers, Coconut, Mangal Sutra, Pooja Samagri',
+        'Performed for wealth, success, and auspicious beginnings in home or business.',
+    'duration': '60 – 90 minutes',
+    'samagri': 'Flowers, Diya, Ghee, Sweets, Pooja Samagri',
+  },
+  'havan_navgrah': {
+    'description':
+        'A fire ritual for grah shanti, positivity, and removal of negative influences.',
+    'duration': '60 – 90 minutes',
+    'samagri': 'Havan Kund, Samagri, Ghee, Camphor, Cotton Wicks',
+  },
+  'mundan': {
+    'description':
+        'A child’s first haircut ceremony performed for health, longevity, and purification.',
+    'duration': '45 – 60 minutes',
+    'samagri': 'Havan Samagri, Kalash, Flowers, Ghee, Rice, Coconut',
+  },
+  'naamkaran': {
+    'description':
+        'Naming ceremony performed for newborns as per Hindu traditions.',
+    'duration': '45 – 60 minutes',
+    'samagri': 'Kalash, Flowers, Rice, Panchamrit, Pooja Samagri',
+  },
+  'rudrabhishek': {
+    'description':
+        'A sacred abhishek of Lord Shiva performed for peace, health, and success.',
+    'duration': '60 – 90 minutes',
+    'samagri': 'Milk, Water, Bilva Patra, Flowers, Rudraksha',
+  },
+  'pitru_shanti': {
+    'description':
+        'Performed to seek blessings of ancestors and resolve ancestral issues.',
+    'duration': '1.5 – 2 hours',
+    'samagri': 'Til, Kush, Rice, Ghee, Pinda Samagri',
+  },
+  'vastu_shanti': {
+    'description':
+        'A ritual to remove vastu dosh and bring harmony to living or working spaces.',
+    'duration': '1.5 – 2 hours',
+    'samagri': 'Kalash, Havan Samagri, Flowers, Rice, Ghee',
+  },
+  'office_opening': {
+    'description':
+        'Performed before starting business operations to ensure success and growth.',
+    'duration': '45 – 60 minutes',
+    'samagri': 'Flowers, Diya, Coconut, Sweets, Pooja Samagri',
   },
 };

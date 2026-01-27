@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -24,10 +23,9 @@ class _SplashPageState extends State<SplashPage>
   void initState() {
     super.initState();
 
-    // 🔒 FAST, ONE-TIME SPLASH ANIMATION
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1000), // 🔒 1 sec locked
     );
 
     _scale = Tween(begin: 0.95, end: 1.0).animate(
@@ -39,7 +37,6 @@ class _SplashPageState extends State<SplashPage>
 
     _controller.forward();
 
-    // Navigate immediately after animation completes
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
         context.go(LandingPage.routeName);
@@ -83,16 +80,18 @@ class _SplashPageState extends State<SplashPage>
               ),
               const SizedBox(height: 18),
 
+              // ✅ UPDATED APP NAME
               Text(
-                "Shubh Pooja",
+                "Bharat Pooja Setu",
                 style:
                     AppTextStyles.title.copyWith(color: Colors.white),
               ),
 
               const SizedBox(height: 8),
 
+              // ✅ UPDATED TAGLINE
               Text(
-                "Trusted pandits • Samagri delivered",
+                "Connecting Bharat with Dharma",
                 style: AppTextStyles.subtitle
                     .copyWith(color: Colors.white70),
               ),

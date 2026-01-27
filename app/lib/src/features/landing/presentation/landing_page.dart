@@ -21,9 +21,9 @@ class _LandingPageState extends State<LandingPage> {
   void initState() {
     super.initState();
 
-    // 🔒 FINAL FIX: CLEAR ALL IN-MEMORY SESSIONS ON HOME ENTRY
+    // 🔒 SESSION BOUNDARY RESET (LOCKED)
     BookingSession.reset();
-    SamagriSession.current = null; // ✅ correct way
+    SamagriSession.current = null;
   }
 
   @override
@@ -41,8 +41,9 @@ class _LandingPageState extends State<LandingPage> {
             children: [
               const SizedBox(height: 70),
 
+              // ✅ APP NAME
               Text(
-                "Shubh Pooja",
+                "Bharat Pooja Setu",
                 style: AppTextStyles.titleLarge.copyWith(
                   color: AppColors.primaryGold,
                 ),
@@ -51,10 +52,23 @@ class _LandingPageState extends State<LandingPage> {
 
               const SizedBox(height: 6),
 
+              // ✅ TAGLINE
               Text(
-                "Divine Rituals, Modern Convenience",
+                "Connecting Bharat with Dharma",
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: Colors.black54,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 6),
+
+              // 🏷️ PILOT BADGE (SAFE STYLE)
+              Text(
+                "Pilot currently active in Ghaziabad",
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: Colors.black45,
+                  fontStyle: FontStyle.italic,
                 ),
                 textAlign: TextAlign.center,
               ),

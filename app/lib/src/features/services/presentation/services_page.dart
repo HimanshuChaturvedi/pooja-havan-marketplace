@@ -12,18 +12,22 @@ class ServicesPage extends StatelessWidget {
 
   const ServicesPage({super.key});
 
-  // Ritual list
-  List<Map<String, String>> get rituals => [
-        {'name': 'Mundan Ceremony', 'slug': 'mundan'},
-        {'name': 'Grih Pravesh Pooja', 'slug': 'grih_pravesh'},
-        {'name': 'Havan / Homam', 'slug': 'havan'},
-        {'name': 'Katha', 'slug': 'katha'},
-        {'name': 'Marriage Rituals', 'slug': 'marriage'},
+  // 🔒 WEST UP – FINAL 10 POOJA (PILOT READY)
+  List<Map<String, String>> get rituals => const [
+        {'name': 'Griha Pravesh Pooja', 'slug': 'grih_pravesh'},
+        {'name': 'Satyanarayan Katha', 'slug': 'satyanarayan_katha'},
+        {'name': 'Lakshmi Ganesh Pooja', 'slug': 'lakshmi_ganesh'},
+        {'name': 'Havan / Navgrah Shanti Pooja', 'slug': 'havan_navgrah'},
+        {'name': 'Mundan Sanskar', 'slug': 'mundan'},
+        {'name': 'Naamkaran Sanskar', 'slug': 'naamkaran'},
+        {'name': 'Rudrabhishek (Shiv Pooja)', 'slug': 'rudrabhishek'},
+        {'name': 'Pitru Shanti Pooja', 'slug': 'pitru_shanti'},
+        {'name': 'Vastu Shanti Pooja', 'slug': 'vastu_shanti'},
+        {'name': 'Office / Shop Opening Pooja', 'slug': 'office_opening'},
       ];
 
   @override
   Widget build(BuildContext context) {
-    // 🔑 READ ENTRY INTENT FROM LANDING
     final uri = GoRouterState.of(context).uri;
     final entryType = uri.queryParameters['type']; // home | temple | null
 
@@ -34,7 +38,7 @@ class ServicesPage extends StatelessWidget {
         backgroundColor: AppColors.saffron,
         centerTitle: true,
         title: Text(
-          'Service Categories',
+          'Book a Pooja',
           style: AppTextStyles.title.copyWith(
             color: AppColors.white,
             fontSize: 20,
@@ -54,7 +58,7 @@ class ServicesPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Choose a ritual to proceed',
+              'Select a pooja to proceed',
               style: AppTextStyles.subtitle.copyWith(
                 color: AppColors.textDark,
                 fontSize: 15,
@@ -62,57 +66,24 @@ class ServicesPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Ritual List
             ...rituals.map((ritual) {
               return _RitualCard(
                 title: ritual['name']!,
-                slug: ritual['slug']!,
                 onTap: () {
-                  final slug = ritual['slug']!;
-                  final name = ritual['name']!;
+                  BookingSession.current = BookingDraft(
+                    bookingType: entryType == 'temple'
+                        ? BookingType.temple
+                        : BookingType.home,
+                    ritualName: ritual['name']!,
+                    city: '',
+                  );
 
-                  // ✅ SET BOOKING SESSION HERE (CRITICAL FIX)
-                  if (entryType == 'temple') {
-                    BookingSession.current = BookingDraft(
-                      bookingType: BookingType.temple,
-                      ritualName: slug,
-                      city: '',
-                    );
-                  } else {
-                    // default = home pooja
-                    BookingSession.current = BookingDraft(
-                      bookingType: BookingType.home,
-                      ritualName: slug,
-                      city: '',
-                    );
-                  }
-
-                  // Continue existing flow
                   context.push(
-                    '/service/$slug/${Uri.encodeComponent(name)}',
+                    '/service/${ritual['slug']}/${Uri.encodeComponent(ritual['name']!)}',
                   );
                 },
               );
             }),
-
-            const SizedBox(height: 10),
-
-            // More Services
-            _RitualCard(
-              title: "More Services",
-              slug: "more",
-              onTap: () {
-                BookingSession.current = BookingDraft(
-                  bookingType: BookingType.home,
-                  ritualName: 'more',
-                  city: '',
-                );
-
-                context.push(
-                  '/service/more/${Uri.encodeComponent("More Services")}',
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -120,15 +91,12 @@ class ServicesPage extends StatelessWidget {
   }
 }
 
-// Card UI
 class _RitualCard extends StatelessWidget {
   final String title;
-  final String slug;
   final VoidCallback onTap;
 
   const _RitualCard({
     required this.title,
-    required this.slug,
     required this.onTap,
   });
 
