@@ -12,7 +12,7 @@ class ServicesPage extends StatelessWidget {
 
   const ServicesPage({super.key});
 
-  // 🔒 WEST UP – FINAL 10 POOJA (PILOT READY)
+  // 🔒 WEST UP – FINAL 11 POOJA (PILOT READY)
   List<Map<String, String>> get rituals => const [
         {'name': 'Griha Pravesh Pooja', 'slug': 'grih_pravesh'},
         {'name': 'Satyanarayan Katha', 'slug': 'satyanarayan_katha'},
@@ -24,6 +24,7 @@ class ServicesPage extends StatelessWidget {
         {'name': 'Pitru Shanti Pooja', 'slug': 'pitru_shanti'},
         {'name': 'Vastu Shanti Pooja', 'slug': 'vastu_shanti'},
         {'name': 'Office / Shop Opening Pooja', 'slug': 'office_opening'},
+        {'name': 'Ekadashi Udyapan', 'slug': 'ekadashi_udyapan'},
       ];
 
   @override
