@@ -2,22 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../application/booking_session.dart';
-import '../domain/booking_draft.dart';
+import '../../../theme/components/app_colors.dart';
+import '../../../theme/components/app_text_styles.dart';
+import '../../booking/application/booking_session.dart';
+import '../../booking/domain/booking_draft.dart';
 import 'booking_step1_page.dart';
-import 'booking_step2_page.dart';
+import 'package:app/src/core/widgets/divine_background.dart';
+import 'package:app/src/core/widgets/divine_glass_card.dart';
 
-class BookingReviewPage extends ConsumerWidget {
+class BookingReviewPage extends ConsumerStatefulWidget {
   final String panditName;
-
   const BookingReviewPage({super.key, required this.panditName});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookingReviewPage> createState() => _BookingReviewPageState();
+}
+
+class _BookingReviewPageState extends ConsumerState<BookingReviewPage> with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final booking = BookingSession.current;
     if (booking == null) {
-      return const Scaffold(
-        body: Center(child: Text('No booking found')),
+      return Scaffold(
+        body: Center(
+          child: Text('No booking found', style: AppTextStyles.bodyLarge),
+        ),
       );
     }
 
@@ -25,35 +51,183 @@ class BookingReviewPage extends ConsumerWidget {
     final time = ref.watch(selectedTimeProvider);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Review & Confirm'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         centerTitle: true,
+        title: Text(
+          'Review & Confirm',
+          style: AppTextStyles.title.copyWith(fontSize: 22),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.maroon),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      body: DivineBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StaggeredFade(
+                controller: _animController,
+                delay: 100,
+                child: Text(
+                  "Finalizing your ritual details",
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.maroon.withOpacity(0.6)),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              _StaggeredFade(
+                controller: _animController,
+                delay: 300,
+                child: DivineGlassCard(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      _ReviewRow(
+                        icon: Icons.person_pin_outlined,
+                        label: 'Pandit',
+                        value: widget.panditName,
+                      ),
+                      const Divider(height: 32, color: Colors.black12),
+                      _ReviewRow(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Date',
+                        value: date != null ? _formatDate(date) : '-',
+                      ),
+                      const Divider(height: 32, color: Colors.black12),
+                      _ReviewRow(
+                        icon: Icons.access_time_outlined,
+                        label: 'Time',
+                        value: time ?? '-',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              _StaggeredFade(
+                controller: _animController,
+                delay: 500,
+                child: DivineGlassCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.privacy_tip_outlined, color: AppColors.deepSaffron, size: 24),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          'Your booking is secure and confirmed manually by our team.',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.maroon.withOpacity(0.8),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        decoration: const BoxDecoration(color: Colors.transparent),
+        child: SizedBox(
+          width: double.infinity,
+          height: 60,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.saffron,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 4,
+            ),
+            onPressed: () {
+              BookingSession.status = BookingStatus.paymentPending;
+              context.push('/payment');
+            },
+            child: Text(
+              'Proceed to Payment →',
+              style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 18),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _ReviewRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.saffron.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.deepSaffron, size: 22),
+        ),
+        const SizedBox(width: 16),
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Pandit: $panditName'),
-            const SizedBox(height: 8),
-            Text('Date: ${date != null ? _formatDate(date) : '-'}'),
-            Text('Time: ${time ?? '-'}'),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  // 🔑 Booking enters payment stage
-                  BookingSession.status = BookingStatus.paymentPending;
-                  context.push('/payment');
-                },
-                child: const Text('Proceed to Payment'),
+            Text(label, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.maroon,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-      ),
+      ],
+    );
+  }
+}
+
+class _StaggeredFade extends StatelessWidget {
+  final AnimationController controller;
+  final int delay;
+  final Widget child;
+  const _StaggeredFade({required this.controller, required this.delay, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final start = (delay / 1200).clamp(0, 1.0).toDouble();
+        final end = ((delay + 600) / 1200).clamp(0, 1.0).toDouble();
+        
+        final opacity = CurvedAnimation(
+          parent: controller,
+          curve: Interval(start, end, curve: Curves.easeOut),
+        ).value;
+
+        return Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - opacity)),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

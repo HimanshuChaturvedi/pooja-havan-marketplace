@@ -43,9 +43,10 @@ class SamagriAddressPage extends ConsumerWidget {
               title: Text(address.line1),
               subtitle: Text(address.city),
               onTap: () {
-                // ✅ Attach selected address as text
+                // ✅ Attach selected address as text + ID
                 SamagriSession.attachAddress(
                   '${address.line1}, ${address.city}',
+                  addressId: address.id,
                 );
 
                 context.go('/payment');

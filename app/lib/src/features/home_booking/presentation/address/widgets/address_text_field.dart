@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
 
 class AddressTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -14,14 +16,22 @@ class AddressTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      maxLines: 3,
+      maxLines: 4,
+      style: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon),
       decoration: InputDecoration(
         hintText: hintText,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        hintStyle: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon.withOpacity(0.35)),
         filled: true,
-        fillColor: Colors.grey.shade100,
+        fillColor: AppColors.saffron.withOpacity(0.08),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: AppColors.saffron.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: AppColors.deepSaffron, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.all(20),
       ),
     );
   }

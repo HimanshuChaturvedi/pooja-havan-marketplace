@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../application/samagri_session.dart';
-import '../../../booking/application/booking_session.dart';
+import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
+import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
+import 'package:app/src/core/widgets/divine_background.dart';
+import 'package:app/src/core/widgets/divine_glass_card.dart';
 
 class SamagriSummaryPage extends StatelessWidget {
   const SamagriSummaryPage({super.key});
@@ -14,68 +18,110 @@ class SamagriSummaryPage extends StatelessWidget {
 
     if (samagri == null) {
       return const Scaffold(
-        body: Center(child: Text('No samagri data')),
+        body: DivineBackground(
+          child: Center(
+            child: Text('No samagri data', style: TextStyle(color: AppColors.maroon)),
+          ),
+        ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Samagri Summary')),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                ...samagri.items.map(
-                  (i) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('${i.name} × ${i.quantity}'),
-                        Text('₹${i.lineTotal}'),
-                      ],
-                    ),
-                  ),
-                ),
-                const Divider(height: 32),
-                Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        centerTitle: true,
+        title: Text(
+          'Samagri Summary',
+          style: AppTextStyles.title.copyWith(fontSize: 22, color: AppColors.maroon),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.maroon),
+      ),
+      body: DivineBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 120, 20, 100),
+          child: Column(
+            children: [
+              DivineGlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
                   children: [
-                    const Text(
-                      'Total',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ...samagri.items.map(
+                      (i) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${i.name} × ${i.quantity}',
+                              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon),
+                            ),
+                            Text(
+                              '₹${i.lineTotal}',
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                color: AppColors.maroon,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    Text(
-                      '₹${samagri.totalAmount}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold),
+                    const Divider(height: 32, color: Colors.black12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Amount',
+                          style: AppTextStyles.title.copyWith(fontSize: 18, color: AppColors.maroon),
+                        ),
+                        Text(
+                          '₹${samagri.totalAmount}',
+                          style: AppTextStyles.title.copyWith(
+                            fontSize: 20,
+                            color: AppColors.maroon,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  context.push(
-                    isBookingFlow
-                        ? '/samagri-success'
-                        : '/payment',
-                  );
-                },
-                child: const Text('Continue'),
               ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.transparent, AppColors.dawnOrange.withOpacity(0.9)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          height: 60,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.saffron,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              elevation: 4,
+            ),
+            onPressed: () {
+              context.push(
+                isBookingFlow ? '/samagri-success' : '/payment',
+              );
+            },
+            child: Text(
+              'Continue →',
+              style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 18),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

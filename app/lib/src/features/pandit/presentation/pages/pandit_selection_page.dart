@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class PanditSelectionPage extends StatelessWidget {
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
+import 'package:app/src/core/widgets/divine_background.dart';
+import 'package:app/src/core/widgets/divine_glass_card.dart';
+
+class PanditSelectionPage extends StatefulWidget {
   final String templeName;
 
   const PanditSelectionPage({
@@ -10,80 +15,105 @@ class PanditSelectionPage extends StatelessWidget {
   });
 
   @override
+  State<PanditSelectionPage> createState() => _PanditSelectionPageState();
+}
+
+class _PanditSelectionPageState extends State<PanditSelectionPage> with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Select Pandit'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         centerTitle: true,
+        title: Text(
+          'Select Pandit',
+          style: AppTextStyles.title.copyWith(fontSize: 22),
+        ),
+        iconTheme: const IconThemeData(color: AppColors.maroon),
       ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Choose a Pandit',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+      body: DivineBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StaggeredFade(
+                controller: _animController,
+                delay: 100,
+                child: Text(
+                  'Choose a Divine Guide',
+                  style: AppTextStyles.title.copyWith(fontSize: 24),
+                ),
               ),
-            ),
-
-            const SizedBox(height: 8),
-
-            Text(
-              templeName.isNotEmpty
-                  ? 'Available pandits for $templeName'
-                  : 'Available pandits for your pooja',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
+              const SizedBox(height: 12),
+              _StaggeredFade(
+                controller: _animController,
+                delay: 200,
+                child: Text(
+                  widget.templeName.isNotEmpty
+                      ? 'Available pandits for ${widget.templeName}'
+                      : 'Available authentic pandits for your pooja',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron),
+                ),
               ),
-            ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-            Expanded(
-              child: ListView(
-                children: [
-                  _PanditCard(
-                    name: 'Pandit Sharma',
-                    experience: '12+ years experience',
-                    onTap: () {
-                      context.push(
-                        '/pandit-details',
-                        extra: 'Pandit Sharma',
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _PanditCard(
-                    name: 'Pandit Mishra',
-                    experience: '8+ years experience',
-                    onTap: () {
-                      context.push(
-                        '/pandit-details',
-                        extra: 'Pandit Mishra',
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _PanditCard(
-                    name: 'Pandit Verma',
-                    experience: '15+ years experience',
-                    onTap: () {
-                      context.push(
-                        '/pandit-details',
-                        extra: 'Pandit Verma',
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
+              _PanditList(animController: _animController),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _PanditList extends StatelessWidget {
+  final AnimationController animController;
+  const _PanditList({required this.animController});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Map<String, String>> pandits = [
+      {'name': 'Pandit Sharma', 'exp': '12+ years experience'},
+      {'name': 'Pandit Mishra', 'exp': '8+ years experience'},
+      {'name': 'Pandit Verma', 'exp': '15+ years experience'},
+    ];
+
+    return Column(
+      children: List.generate(pandits.length, (index) {
+        final pandit = pandits[index];
+        return _StaggeredFade(
+          controller: animController,
+          delay: 400 + (index * 150),
+          child: _PanditCard(
+            name: pandit['name']!,
+            experience: pandit['exp']!,
+            onTap: () {
+              context.push('/pandit-details', extra: pandit['name']);
+            },
+          ),
+        );
+      }),
     );
   }
 }
@@ -101,63 +131,74 @@ class _PanditCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: DivineGlassCard(
+        onTap: onTap,
+        padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: Colors.orange.shade100,
-              child: const Icon(
-                Icons.person,
-                color: Colors.orange,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.saffron.withOpacity(0.12),
+                shape: BoxShape.circle,
               ),
+              child: const Icon(Icons.person, color: AppColors.deepSaffron, size: 32),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 18),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.title.copyWith(fontSize: 18),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     experience,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron.withOpacity(0.7)),
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey,
-            ),
+            const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.saffron),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StaggeredFade extends StatelessWidget {
+  final AnimationController controller;
+  final int delay;
+  final Widget child;
+
+  const _StaggeredFade({required this.controller, required this.delay, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final start = (delay / 1500).clamp(0, 1.0).toDouble();
+        final end = ((delay + 600) / 1500).clamp(0, 1.0).toDouble();
+        
+        final opacity = CurvedAnimation(
+          parent: controller,
+          curve: Interval(start, end, curve: Curves.easeOut),
+        ).value;
+
+        return Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - opacity)),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

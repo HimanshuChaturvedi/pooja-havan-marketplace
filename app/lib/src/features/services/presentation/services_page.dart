@@ -6,11 +6,34 @@ import '../../../theme/components/app_text_styles.dart';
 
 import '../../booking/application/booking_session.dart';
 import '../../booking/domain/booking_draft.dart';
+import 'package:app/src/core/widgets/divine_background.dart';
+import 'package:app/src/core/widgets/divine_glass_card.dart';
 
-class ServicesPage extends StatelessWidget {
+class ServicesPage extends StatefulWidget {
   static const routeName = '/services';
-
   const ServicesPage({super.key});
+
+  @override
+  State<ServicesPage> createState() => _ServicesPageState();
+}
+
+class _ServicesPageState extends State<ServicesPage> with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   // 🔒 WEST UP – FINAL 11 POOJA (PILOT READY)
   List<Map<String, String>> get rituals => const [
@@ -33,116 +56,123 @@ class ServicesPage extends StatelessWidget {
     final entryType = uri.queryParameters['type']; // home | temple | null
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: AppColors.saffron,
+        backgroundColor: Colors.transparent,
         centerTitle: true,
         title: Text(
           'Book a Pooja',
-          style: AppTextStyles.title.copyWith(
-            color: AppColors.white,
-            fontSize: 20,
-          ),
+          style: AppTextStyles.title.copyWith(fontSize: 22),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.maroon),
         actions: [
           IconButton(
-            icon: const Icon(Icons.home, color: Colors.white),
+            icon: const Icon(Icons.home_outlined),
             onPressed: () => context.go('/landing'),
           )
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Select a pooja to proceed',
-              style: AppTextStyles.subtitle.copyWith(
-                color: AppColors.textDark,
-                fontSize: 15,
+      body: DivineBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StaggeredFade(
+                controller: _animController,
+                delay: 100,
+                child: Text(
+                  'Select a sacred ritual to proceed',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            ...rituals.map((ritual) {
-              return _RitualCard(
-                title: ritual['name']!,
-                onTap: () {
-                  BookingSession.current = BookingDraft(
-                    bookingType: entryType == 'temple'
-                        ? BookingType.temple
-                        : BookingType.home,
-                    ritualName: ritual['name']!,
-                    city: '',
-                  );
-
-                  context.push(
-                    '/service/${ritual['slug']}/${Uri.encodeComponent(ritual['name']!)}',
-                  );
-                },
-              );
-            }),
-          ],
+              ...List.generate(rituals.length, (index) {
+                final ritual = rituals[index];
+                return _StaggeredFade(
+                  controller: _animController,
+                  delay: 300 + (index * 100),
+                  child: DivineGlassCard(
+                    onTap: () {
+                      BookingSession.current = BookingDraft(
+                        bookingType: entryType == 'temple' ? BookingType.temple : BookingType.home,
+                        ritualName: ritual['name']!,
+                        city: '',
+                      );
+                      context.push('/service/${ritual['slug']}/${Uri.encodeComponent(ritual['name']!)}');
+                    },
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.saffron.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.local_fire_department_rounded,
+                            color: AppColors.deepSaffron,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 18),
+                        Expanded(
+                          child: Text(
+                            ritual['name']!,
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              color: AppColors.maroon,
+                            ),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: AppColors.saffron,
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _RitualCard extends StatelessWidget {
-  final String title;
-  final VoidCallback onTap;
+class _StaggeredFade extends StatelessWidget {
+  final AnimationController controller;
+  final int delay;
+  final Widget child;
 
-  const _RitualCard({
-    required this.title,
-    required this.onTap,
-  });
+  const _StaggeredFade({required this.controller, required this.delay, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.local_fire_department,
-              color: AppColors.primaryGold,
-              size: 32,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                title,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textDark,
-                ),
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey,
-              size: 16,
-            ),
-          ],
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final start = (delay / 1500).clamp(0, 1.0).toDouble();
+        final end = ((delay + 600) / 1500).clamp(0, 1.0).toDouble();
+        final opacity = CurvedAnimation(
+          parent: controller,
+          curve: Interval(start, end, curve: Curves.easeOut),
+        ).value;
+        return Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - opacity)),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
+import 'package:app/src/core/widgets/divine_background.dart';
+import 'package:app/src/core/widgets/divine_glass_card.dart';
 
-class PoojaDetailsPage extends StatelessWidget {
+class PoojaDetailsPage extends StatefulWidget {
   final String poojaName;
   final String poojaSlug;
 
@@ -15,124 +17,163 @@ class PoojaDetailsPage extends StatelessWidget {
   });
 
   @override
+  State<PoojaDetailsPage> createState() => _PoojaDetailsPageState();
+}
+
+class _PoojaDetailsPageState extends State<PoojaDetailsPage> with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final details = _poojaDetails[poojaSlug];
+    final details = _poojaDetails[widget.poojaSlug];
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: AppColors.saffron,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         centerTitle: true,
         title: Text(
-          poojaName,
-          style: AppTextStyles.title.copyWith(
-            color: Colors.white,
-            fontSize: 20,
-          ),
+          widget.poojaName,
+          style: AppTextStyles.title.copyWith(fontSize: 22),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppColors.maroon),
         actions: [
           IconButton(
-            icon: const Icon(Icons.home, color: Colors.white),
+            icon: const Icon(Icons.home_outlined),
             onPressed: () => context.go('/landing'),
           )
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12.withOpacity(0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: details == null
-                  ? const Text(
-                      'Details will be updated soon.',
-                      style: TextStyle(fontSize: 16),
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          details['description']!,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: Colors.black87,
-                            height: 1.4,
-                          ),
+      body: DivineBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 120, 20, 100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StaggeredFade(
+                controller: _animController,
+                delay: 100,
+                child: DivineGlassCard(
+                  padding: const EdgeInsets.all(24),
+                  child: details == null
+                      ? const Text('Details will be updated soon.')
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Pooja Overview',
+                              style: AppTextStyles.title.copyWith(
+                                fontSize: 18,
+                                color: AppColors.maroon,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              details['description']!,
+                              style: AppTextStyles.bodyMedium.copyWith(height: 1.6),
+                            ),
+                          ],
                         ),
-
-                        const SizedBox(height: 18),
-
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (details != null)
+                _StaggeredFade(
+                  controller: _animController,
+                  delay: 300,
+                  child: DivineGlassCard(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
                         _infoRow(
-                          icon: Icons.timelapse,
+                          icon: Icons.timer_outlined,
                           title: 'Duration',
                           value: details['duration']!,
                         ),
-                        const SizedBox(height: 12),
-
+                        const Divider(height: 32, color: Colors.black12),
                         _infoRow(
-                          icon: Icons.check_circle,
-                          title: 'Samagri Required',
+                          icon: Icons.inventory_2_outlined,
+                          title: 'Samagri',
                           value: details['samagri']!,
                         ),
-                        const SizedBox(height: 12),
-
+                        const Divider(height: 32, color: Colors.black12),
                         _infoRow(
-                          icon: Icons.currency_rupee,
-                          title: 'Pandit Ji Fees (Indicative)',
+                          icon: Icons.payments_outlined,
+                          title: 'Dakshina',
                           value: details['fees']!,
-                        ),
-
-                        const SizedBox(height: 8),
-                        Text(
-                          '*Final dakshina may vary based on city & pandit availability',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
                         ),
                       ],
                     ),
-            ),
-
-            const SizedBox(height: 26),
-
-            GestureDetector(
-              onTap: () {
-                context.push(
-                  '/location/$poojaSlug/${Uri.encodeComponent(poojaName)}',
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryGold,
-                  borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: Center(
+              const SizedBox(height: 12),
+              _StaggeredFade(
+                controller: _animController,
+                delay: 500,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
-                    'Proceed to Location Selection',
-                    style: AppTextStyles.button.copyWith(
-                      color: Colors.white,
-                      fontSize: 16,
+                    '*Final dakshina may vary based on city & pandit availability',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.maroon.withOpacity(0.5),
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+      bottomSheet: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
             ),
           ],
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.saffron,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shadowColor: AppColors.saffron.withOpacity(0.4),
+            ),
+            onPressed: () {
+              context.push(
+                '/location/${widget.poojaSlug}/${Uri.encodeComponent(widget.poojaName)}',
+              );
+            },
+            child: Text(
+              'Select Location →',
+              style: AppTextStyles.button.copyWith(fontSize: 18, color: Colors.white),
+            ),
+          ),
         ),
       ),
     );
@@ -144,30 +185,68 @@ class PoojaDetailsPage extends StatelessWidget {
     required String value,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.primaryGold, size: 22),
-        const SizedBox(width: 10),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.saffron.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.deepSaffron, size: 22),
+        ),
+        const SizedBox(width: 16),
         Expanded(
-          child: RichText(
-            text: TextSpan(
-              text: '$title: ',
-              style: AppTextStyles.bodyLarge.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold),
               ),
-              children: [
-                TextSpan(
-                  text: value,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: Colors.black87,
-                  ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.maroon,
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StaggeredFade extends StatelessWidget {
+  final AnimationController controller;
+  final int delay;
+  final Widget child;
+
+  const _StaggeredFade({required this.controller, required this.delay, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final start = (delay / 1500).clamp(0, 1.0).toDouble();
+        final end = ((delay + 600) / 1500).clamp(0, 1.0).toDouble();
+        
+        final opacity = CurvedAnimation(
+          parent: controller,
+          curve: Interval(start, end, curve: Curves.easeOut),
+        ).value;
+
+        return Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - opacity)),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
