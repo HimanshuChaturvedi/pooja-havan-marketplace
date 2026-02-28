@@ -90,8 +90,8 @@ class _DivineGlassCardState extends State<DivineGlassCard> with SingleTickerProv
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.white.withOpacity(0.25), // Increased from 0.15
-                          Colors.white.withOpacity(0.05), // Increased from 0.02
+                          Colors.white.withOpacity(0.4), // Increased from 0.25
+                          Colors.white.withOpacity(0.1), // Increased from 0.05
                         ],
                       ),
                       borderRadius: BorderRadius.circular(widget.borderRadius),

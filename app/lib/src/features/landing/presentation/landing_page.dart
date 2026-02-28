@@ -222,6 +222,7 @@ class _MenuRow extends StatelessWidget {
               style: AppTextStyles.bodyLarge.copyWith(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: AppColors.maroon, // Explicitly forced for visibility
                 letterSpacing: 0.5,
               ),
             ),
@@ -229,7 +230,7 @@ class _MenuRow extends StatelessWidget {
           const Icon(
             Icons.arrow_forward_ios_rounded,
             size: 16,
-            color: AppColors.saffron,
+            color: AppColors.maroon, // Explicitly forced
           ),
         ],
       ),
@@ -253,11 +254,11 @@ class _StaggeredFade extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final start = delay / 1500;
-        final end = (delay + 600) / 1500;
+        final start = (delay / 1500).clamp(0.0, 1.0);
+        final end = ((delay + 600) / 1500).clamp(0.0, 1.0);
         final opacity = CurvedAnimation(
           parent: controller,
-          curve: Interval(start.clamp(0, 1), end.clamp(0, 1), curve: Curves.easeOut),
+          curve: Interval(start, end, curve: Curves.easeOut),
         ).value;
         
         return Opacity(

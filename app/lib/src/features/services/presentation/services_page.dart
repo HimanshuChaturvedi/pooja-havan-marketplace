@@ -132,7 +132,7 @@ class _ServicesPageState extends State<ServicesPage> with SingleTickerProviderSt
                             style: AppTextStyles.bodyLarge.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 17,
-                              color: AppColors.maroon,
+                              color: AppColors.maroon, // Explicitly forced
                             ),
                           ),
                         ),

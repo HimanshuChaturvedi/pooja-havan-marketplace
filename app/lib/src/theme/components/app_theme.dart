@@ -6,12 +6,14 @@ ThemeData buildAppTheme() {
   final seed = AppColors.saffron;
   return ThemeData(
     useMaterial3: true,
+    brightness: Brightness.light, // Force Light Mode for Bright Divine theme
     colorScheme: ColorScheme.fromSeed(
       seedColor: seed,
       primary: AppColors.saffron,
       secondary: AppColors.gold,
       surface: AppColors.cream, // Changed from midnight for Light Theme
       onSurface: AppColors.maroon, // Changed from white for visibility
+      brightness: Brightness.light,
     ),
     textTheme: GoogleFonts.outfitTextTheme().apply(
       bodyColor: AppColors.maroon, // Changed from white
