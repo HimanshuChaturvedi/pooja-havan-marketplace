@@ -59,7 +59,7 @@ class _DivineGlassCardState extends State<DivineGlassCard> with SingleTickerProv
           ),
           // 🌚 DROP SHADOW (SHARP)
           BoxShadow(
-            color: AppColors.maroon.withOpacity(0.08),
+            color: AppColors.maroon.withOpacity(0.12), // Increased from 0.08
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -75,7 +75,7 @@ class _DivineGlassCardState extends State<DivineGlassCard> with SingleTickerProv
       child: ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12), // Reduced from 20 for better visibility
           child: Material(
             color: Colors.transparent,
             child: InkWell(
@@ -90,14 +90,14 @@ class _DivineGlassCardState extends State<DivineGlassCard> with SingleTickerProv
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.white.withOpacity(0.15),
-                          Colors.white.withOpacity(0.02),
+                          Colors.white.withOpacity(0.25), // Increased from 0.15
+                          Colors.white.withOpacity(0.05), // Increased from 0.02
                         ],
                       ),
                       borderRadius: BorderRadius.circular(widget.borderRadius),
                       border: Border.all(
-                        color: AppColors.glassBorder, // V2 is more visible
-                        width: 1.2,
+                        color: AppColors.glassBorder.withOpacity(0.8), // Even more visible
+                        width: 1.5, // Increased from 1.2
                       ),
                     ),
                     child: widget.child,

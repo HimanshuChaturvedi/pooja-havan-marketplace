@@ -10,14 +10,14 @@ ThemeData buildAppTheme() {
       seedColor: seed,
       primary: AppColors.saffron,
       secondary: AppColors.gold,
-      surface: AppColors.midnight,
-      onSurface: AppColors.white,
+      surface: AppColors.cream, // Changed from midnight for Light Theme
+      onSurface: AppColors.maroon, // Changed from white for visibility
     ),
     textTheme: GoogleFonts.outfitTextTheme().apply(
-      bodyColor: AppColors.white,
-      displayColor: AppColors.white,
+      bodyColor: AppColors.maroon, // Changed from white
+      displayColor: AppColors.maroon, // Changed from white
     ),
-    scaffoldBackgroundColor: AppColors.midnight,
+    scaffoldBackgroundColor: AppColors.cream, // Changed from midnight
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.saffron,

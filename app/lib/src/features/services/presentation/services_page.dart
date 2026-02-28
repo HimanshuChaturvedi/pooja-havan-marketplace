@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -59,8 +60,14 @@ class _ServicesPageState extends State<ServicesPage> with SingleTickerProviderSt
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white.withOpacity(0.12), // Subtle glass base
         centerTitle: true,
+        flexibleSpace: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(color: Colors.transparent),
+          ),
+        ),
         title: Text(
           'Book a Pooja',
           style: AppTextStyles.title.copyWith(fontSize: 22),
