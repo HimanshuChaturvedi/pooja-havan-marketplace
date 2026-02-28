@@ -1,7 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../theme/components/app_colors.dart';
 
+/// ✅ DEVICE-SAFE Glass Card
+/// BackdropFilter was causing SOLID GRAY on many Android devices.
+/// Replaced with solid semi-opaque white that looks great and works everywhere.
 class DivineGlassCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -22,139 +24,47 @@ class DivineGlassCard extends StatefulWidget {
   State<DivineGlassCard> createState() => _DivineGlassCardState();
 }
 
-class _DivineGlassCardState extends State<DivineGlassCard> with SingleTickerProviderStateMixin {
-  late final AnimationController _shineController;
-
-  @override
-  void initState() {
-    super.initState();
-    _shineController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    );
-    if (widget.showShine) {
-      _shineController.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _shineController.dispose();
-    super.dispose();
-  }
+class _DivineGlassCardState extends State<DivineGlassCard>
+    with SingleTickerProviderStateMixin {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        boxShadow: [
-          // 🌚 AMBIENT OCCLUSION (SOFT)
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-            spreadRadius: -5,
-          ),
-          // 🌚 DROP SHADOW (SHARP)
-          BoxShadow(
-            color: AppColors.maroon.withOpacity(0.12), // Increased from 0.08
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-          // 💡 INNER GLOW / HIGHLIGHT (TOP)
-          BoxShadow(
-            color: Colors.white.withOpacity(0.5),
-            blurRadius: 4,
-            offset: const Offset(0, -1),
-            // inset: true, // Requires customized flutter or just simulated below
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12), // Reduced from 20 for better visibility
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onTap,
-              child: Stack(
-                children: [
-                  // 💎 GLASS SURFACE WITH INNER SHINE GRADIENT
-                  Container(
-                    padding: widget.padding,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white.withOpacity(0.4), // Increased from 0.25
-                          Colors.white.withOpacity(0.1), // Increased from 0.05
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(widget.borderRadius),
-                      border: Border.all(
-                        color: AppColors.glassBorder.withOpacity(0.8), // Even more visible
-                        width: 1.5, // Increased from 1.2
-                      ),
-                    ),
-                    child: widget.child,
-                  ),
-
-                  // ✨ SPECULAR HIGHLIGHT (SHINY TOP-LEFT EDGE)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(widget.borderRadius),
-                          border: Border(
-                            top: BorderSide(color: Colors.white.withOpacity(0.45), width: 1.8),
-                            left: BorderSide(color: Colors.white.withOpacity(0.45), width: 1.8),
-                            bottom: const BorderSide(color: Colors.transparent),
-                            right: const BorderSide(color: Colors.transparent),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // ✨ ANIMATED SHINE EFFECT
-                  if (widget.showShine)
-                    IgnorePointer(
-                      child: AnimatedBuilder(
-                        animation: _shineController,
-                        builder: (context, child) {
-                          return Positioned.fill(
-                            child: FractionallySizedBox(
-                              widthFactor: 0.25,
-                              alignment: Alignment(
-                                -3.0 + (_shineController.value * 6),
-                                0,
-                              ),
-                              child: Transform.rotate(
-                                angle: 0.6,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.white.withOpacity(0.0),
-                                        Colors.white.withOpacity(0.25),
-                                        Colors.white.withOpacity(0.0),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap?.call();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            color: Colors.white.withOpacity(0.82), // ✅ SOLID – works on all devices
+            border: Border.all(
+              color: AppColors.saffron.withOpacity(0.25),
+              width: 1.3,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.maroon.withOpacity(0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.6),
+                blurRadius: 4,
+                offset: const Offset(0, -1),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: widget.padding,
+            child: widget.child,
           ),
         ),
       ),
