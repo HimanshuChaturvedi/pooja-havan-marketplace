@@ -5,8 +5,7 @@ import '../../../booking/domain/booking_draft.dart';
 import '../../../samagri_flow/application/samagri_session.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class BookingSummaryPage extends StatefulWidget {
   const BookingSummaryPage({super.key});
@@ -23,7 +22,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTick
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200),
     )..forward();
   }
 
@@ -35,14 +34,13 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    // 🔒 MARK FLOW AS BOOKING (CRITICAL FIX)
     BookingSession.activeFlow = ActiveFlow.booking;
-
     final booking = BookingSession.current;
 
     if (booking == null) {
-      return const Scaffold(
-        body: Center(child: Text('No booking data found', style: TextStyle(color: AppColors.maroon))),
+      return const AppScaffold(
+        title: 'Error',
+        body: Center(child: Text('No booking data found')),
       );
     }
 
@@ -57,239 +55,246 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTick
         BookingSession.reset();
         return true;
       },
-      child: Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          title: Text(
-            'Booking Summary',
-            style: AppTextStyles.title.copyWith(fontSize: 22),
-          ),
-          centerTitle: true,
-          iconTheme: const IconThemeData(color: AppColors.maroon),
-        ),
-        body: DivineBackground(
+      child: AppScaffold(
+        title: 'Booking Summary',
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
+              _StaggeredFade(
+                controller: _animController,
+                delay: 100,
+                child: SectionHeader(title: booking.bookingType == BookingType.home ? 'Ceremony Location' : 'Sacred Temple'),
+              ),
+              _StaggeredFade(
+                controller: _animController,
+                delay: 200,
+                child: _InfoCard(
+                  text: booking.bookingType == BookingType.home
+                      ? '${booking.address}\n${booking.city}'
+                      : '${booking.templeName}\n${booking.city}',
+                  icon: Icons.location_on_rounded,
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              _StaggeredFade(
+                controller: _animController,
+                delay: 300,
+                child: const SectionHeader(title: 'Date & Time'),
+              ),
+              _StaggeredFade(
+                controller: _animController,
+                delay: 400,
+                child: _InfoCard(
+                  text: '${booking.selectedDate?.day.toString().padLeft(2, '0')}/${booking.selectedDate?.month.toString().padLeft(2, '0')}/${booking.selectedDate?.year}'
+                  ' at ${booking.selectedTime}',
+                  icon: Icons.calendar_month_rounded,
+                ),
+              ),
+
+              if (booking.panditName != null) ...[
+                const SizedBox(height: 32),
+                _StaggeredFade(
+                  controller: _animController,
+                  delay: 500,
+                  child: const SectionHeader(title: 'Divine Guide (Pandit)'),
+                ),
+                _StaggeredFade(
+                  controller: _animController,
+                  delay: 600,
+                  child: _InfoCard(text: booking.panditName!, icon: Icons.person_rounded),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+
+              _StaggeredFade(
+                controller: _animController,
+                delay: 700,
+                child: const SectionHeader(title: 'Ritual Materials'),
+              ),
+              _StaggeredFade(
+                controller: _animController,
+                delay: 800,
+                child: !samagriRequired
+                    ? const _InfoCard(text: 'Samagri will be arranged by you', icon: Icons.shopping_basket_rounded)
+                    : (samagriSession == null || samagriSession.items.isEmpty)
+                        ? const _InfoCard(text: 'Full samagri set will be arranged by us', icon: Icons.auto_awesome_rounded)
+                        : _SamagriSummaryCard(session: samagriSession),
+              ),
+
+              const SizedBox(height: 48),
+
+              _StaggeredFade(
+                controller: _animController,
+                delay: 900,
+                child: PrimaryCard(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _StaggeredFade(
-                        controller: _animController,
-                        delay: 100,
-                        child: _sectionTitle(booking.bookingType == BookingType.home ? 'Ceremony Location' : 'Sacred Temple'),
-                      ),
-                      _StaggeredFade(
-                        controller: _animController,
-                        delay: 200,
-                        child: _infoTile(
-                          booking.bookingType == BookingType.home
-                              ? '${booking.address}\n${booking.city}'
-                              : '${booking.templeName}\n${booking.city}',
-                          Icons.location_on_outlined,
+                      Text(
+                        'BOOKING DETAILS',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.softGrey,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
                         ),
                       ),
-
                       const SizedBox(height: 24),
-
-                      _StaggeredFade(
-                        controller: _animController,
-                        delay: 300,
-                        child: _sectionTitle('Date & Time'),
-                      ),
-                      _StaggeredFade(
-                        controller: _animController,
-                        delay: 400,
-                        child: _infoTile(
-                          '${booking.selectedDate?.day.toString().padLeft(2, '0')}/${booking.selectedDate?.month.toString().padLeft(2, '0')}/${booking.selectedDate?.year}'
-                          ' at ${booking.selectedTime}',
-                          Icons.calendar_month_outlined,
+                      _statusLine('Booking Status', 'Draft / Review'),
+                      const SizedBox(height: 12),
+                      _statusLine('Payment Status', 'Manual Payment'),
+                      const SizedBox(height: 12),
+                      _statusLine('Estimated Duration', '90 - 120 Mins'),
+                      const Divider(height: 48, color: Colors.black12),
+                      Text(
+                        'PRICE BREAKDOWN',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.softGrey,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
                         ),
                       ),
-
-                      if (booking.panditName != null) ...[
-                        const SizedBox(height: 24),
-                        _StaggeredFade(
-                          controller: _animController,
-                          delay: 500,
-                          child: _sectionTitle('Divine Guide (Pandit)'),
-                        ),
-                        _StaggeredFade(
-                          controller: _animController,
-                          delay: 600,
-                          child: _infoTile(booking.panditName!, Icons.person_outline),
-                        ),
+                      const SizedBox(height: 24),
+                      _PriceRow(label: 'Ritual Dakshina', amount: poojaCost),
+                      if (samagriRequired) ...[
+                        const SizedBox(height: 16),
+                        _PriceRow(label: 'Samagri Charges', amount: samagriCost),
                       ],
-
-                      const SizedBox(height: 24),
-
-                      _StaggeredFade(
-                        controller: _animController,
-                        delay: 700,
-                        child: _sectionTitle('Ritual Materials (Samagri)'),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Divider(color: Colors.black12, height: 1),
                       ),
-                      _StaggeredFade(
-                        controller: _animController,
-                        delay: 800,
-                        child: !samagriRequired
-                            ? _infoTile('Samagri will be arranged by you', Icons.shopping_basket_outlined)
-                            : (samagriSession == null || samagriSession.items.isEmpty)
-                                ? _infoTile('Full samagri set will be arranged by us', Icons.auto_awesome_outlined)
-                                : _samagriList(samagriSession),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      _StaggeredFade(
-                        controller: _animController,
-                        delay: 900,
-                        child: DivineGlassCard(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Price Breakdown',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.maroon,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.1,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              _priceRow('Pooja Dakshina', poojaCost),
-                              if (samagriRequired) ...[
-                                const SizedBox(height: 12),
-                                _priceRow('Samagri Charges', samagriCost),
-                              ],
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Divider(color: Colors.black12),
-                              ),
-                              _priceRow('Total Amount', totalAmount, isTotal: true),
-                            ],
-                          ),
-                        ),
-                      ),
+                      _PriceRow(label: 'Total Amount', amount: totalAmount, isTotal: true),
                     ],
                   ),
                 ),
               ),
-
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.transparent, AppColors.dawnOrange.withOpacity(0.9)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.saffron,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      elevation: 8,
-                      shadowColor: AppColors.saffron.withOpacity(0.5),
-                    ),
-                    onPressed: () {
-                      BookingSession.status = BookingStatus.paymentPending;
-                      context.push('/payment');
-                    },
-                    child: Text(
-                      'Proceed to Payment →',
-                      style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 18),
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 100),
             ],
+          ),
+        ),
+        bottomNavigationBar: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+          child: PrimaryButton(
+            label: 'Proceed to Payment →',
+            onTap: () {
+              BookingSession.status = BookingStatus.paymentPending;
+              context.push('/payment');
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _sectionTitle(String text) => Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 8),
-        child: Text(
-          text.toUpperCase(),
+  Widget _statusLine(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
           style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.deepSaffron,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
+            color: AppColors.softGrey,
+            fontWeight: FontWeight.w700,
           ),
         ),
-      );
-
-  Widget _infoTile(String text, IconData icon) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColors.white.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.saffron.withOpacity(0.3)),
+        Text(
+          value,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.darkCharcoal,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.cream.withOpacity(0.4), size: 20),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                text,
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.maroon, height: 1.4, fontSize: 16),
+      ],
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final String text;
+  final IconData icon;
+  const _InfoCard({required this.text, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return PrimaryCard(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.saffron.withOpacity(0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.saffron, size: 22),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.darkCharcoal,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ],
-        ),
-      );
-
-  Widget _samagriList(SamagriSession session) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.4),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.saffron.withOpacity(0.3)),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _SamagriSummaryCard extends StatelessWidget {
+  final SamagriSession session;
+  const _SamagriSummaryCard({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    return PrimaryCard(
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.auto_awesome_outlined, color: AppColors.gold, size: 20),
+              const Icon(Icons.auto_awesome_rounded, color: AppColors.saffron, size: 20),
               const SizedBox(width: 12),
               Text(
                 'Items to be arranged by us',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.maroon, fontWeight: FontWeight.bold),
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.darkCharcoal, 
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(color: Colors.black12),
-          ),
+          const Divider(height: 32, color: Colors.black12),
           ...session.items.map((item) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     '${item.name} × ${item.quantity}',
-                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.deepSaffron.withOpacity(0.7)),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.softGrey,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     '₹${item.unitPrice * item.quantity}',
-                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.maroon),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.darkCharcoal,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -299,24 +304,35 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTick
       ),
     );
   }
+}
 
-  Widget _priceRow(String label, int amount, {bool isTotal = false}) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: isTotal
-                ? AppTextStyles.title.copyWith(color: AppColors.maroon, fontSize: 18)
-                : AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron.withOpacity(0.6)),
-          ),
-          Text(
-            '₹$amount',
-            style: isTotal
-                ? AppTextStyles.title.copyWith(color: AppColors.maroon, fontSize: 24)
-                : AppTextStyles.bodyMedium.copyWith(color: AppColors.maroon, fontWeight: FontWeight.bold),
-          ),
-        ],
-      );
+
+class _PriceRow extends StatelessWidget {
+  final String label;
+  final int amount;
+  final bool isTotal;
+  const _PriceRow({required this.label, required this.amount, this.isTotal = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: isTotal
+              ? AppTextStyles.title.copyWith(color: AppColors.darkCharcoal, fontSize: 18, fontWeight: FontWeight.w900)
+              : AppTextStyles.bodyMedium.copyWith(color: AppColors.softGrey, fontWeight: FontWeight.w700),
+        ),
+        Text(
+          '₹$amount',
+          style: isTotal
+              ? AppTextStyles.title.copyWith(color: AppColors.saffron, fontSize: 26, fontWeight: FontWeight.w900)
+              : AppTextStyles.bodyLarge.copyWith(color: AppColors.darkCharcoal, fontWeight: FontWeight.w900),
+        ),
+      ],
+    );
+  }
 }
 
 class _StaggeredFade extends StatelessWidget {
@@ -331,8 +347,8 @@ class _StaggeredFade extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final start = (delay / 1500).clamp(0, 1.0).toDouble();
-        final end = ((delay + 600) / 1500).clamp(0, 1.0).toDouble();
+        final start = (delay / 1200).clamp(0, 1.0).toDouble();
+        final end = ((delay + 600) / 1200).clamp(0, 1.0).toDouble();
         
         final opacity = CurvedAnimation(
           parent: controller,

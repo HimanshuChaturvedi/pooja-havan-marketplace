@@ -2,17 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:app/src/logs/transaction_log.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
-class MyActivityPage extends StatefulWidget {
-  const MyActivityPage({super.key});
+class MyBookingsPage extends StatefulWidget {
+  const MyBookingsPage({super.key});
 
   @override
-  State<MyActivityPage> createState() => _MyActivityPageState();
+  State<MyBookingsPage> createState() => _MyBookingsPageState();
 }
 
-class _MyActivityPageState extends State<MyActivityPage> with SingleTickerProviderStateMixin {
+class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
   @override
@@ -34,50 +33,36 @@ class _MyActivityPageState extends State<MyActivityPage> with SingleTickerProvid
   Widget build(BuildContext context) {
     final logs = TransactionLogService.all();
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          'My Activity',
-          style: AppTextStyles.title.copyWith(fontSize: 22),
-        ),
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: AppColors.maroon),
-      ),
-      body: DivineBackground(
-        child: logs.isEmpty
-            ? const _EmptyState()
-            : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 120, 16, 40),
-                itemCount: logs.length,
-                itemBuilder: (context, index) {
-                  final log = logs[index];
-                  return _StaggeredFade(
-                    controller: _animController,
-                    delay: 100 + (index * 100),
-                    child: _ActivityCard(log: log),
-                  );
-                },
-              ),
-      ),
+    return AppScaffold(
+      title: 'My Bookings',
+      body: logs.isEmpty
+          ? const _EmptyState()
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              itemCount: logs.length,
+              itemBuilder: (context, index) {
+                final log = logs[index];
+                return _StaggeredFade(
+                  controller: _animController,
+                  delay: 100 + (index * 100),
+                  child: _BookingCard(log: log),
+                );
+              },
+            ),
     );
   }
 }
 
-class _ActivityCard extends StatelessWidget {
+class _BookingCard extends StatelessWidget {
   final TransactionLogEntry log;
 
-  const _ActivityCard({required this.log});
+  const _BookingCard({required this.log});
 
   @override
   Widget build(BuildContext context) {
-    final isBooking = log.type == TransactionType.booking;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: DivineGlassCard(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: PrimaryCard(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,34 +73,54 @@ class _ActivityCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: (isBooking ? AppColors.saffron : AppColors.deepSaffron).withOpacity(0.12),
+                    color: AppColors.saffron.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: (isBooking ? AppColors.saffron : AppColors.deepSaffron).withOpacity(0.3)),
                   ),
                   child: Text(
                     _titleFromLog(log).toUpperCase(),
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: isBooking ? AppColors.deepSaffron : AppColors.maroon,
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.saffron,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: 1.1,
+                      fontSize: 10,
                     ),
                   ),
                 ),
                 Text(
                   '₹${log.amount}',
-                  style: AppTextStyles.title.copyWith(color: AppColors.maroon, fontSize: 20),
+                  style: AppTextStyles.title.copyWith(
+                    color: AppColors.darkCharcoal, 
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
               _subtitleFromLog(log),
-              style: AppTextStyles.title.copyWith(fontSize: 18),
+              style: AppTextStyles.title.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.darkCharcoal,
+              ),
             ),
             const SizedBox(height: 12),
-            _InfoLine(label: 'ID', value: _transactionIdForDisplay(log)),
+            _InfoLine(label: 'Booking ID', value: _transactionIdForDisplay(log)),
             const SizedBox(height: 6),
             _InfoLine(label: 'Date', value: _formatDateTime(log.createdAt)),
+            if (log.bookedForDate != null) ...[
+              const SizedBox(height: 6),
+              _InfoLine(
+                label: 'Scheduled',
+                value: '${log.bookedForDate!.day.toString().padLeft(2, '0')}/${log.bookedForDate!.month.toString().padLeft(2, '0')}/${log.bookedForDate!.year} at ${log.bookedForTime ?? '--'}',
+              ),
+            ],
+            const SizedBox(height: 6),
+            _InfoLine(
+              label: 'Status',
+              value: log.status == TransactionStatus.completed ? 'Confirmed' : 'Pending',
+            ),
           ],
         ),
       ),
@@ -132,11 +137,20 @@ class _InfoLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text('$label: ', style: AppTextStyles.bodySmall.copyWith(color: AppColors.deepSaffron.withOpacity(0.5))),
+        Text(
+          '$label: ', 
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.softGrey,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         Expanded(
           child: Text(
             value,
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.maroon.withOpacity(0.7)),
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.darkCharcoal,
+              fontWeight: FontWeight.w600,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -189,11 +203,11 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history, color: AppColors.maroon.withOpacity(0.2), size: 64),
+          Icon(Icons.history, color: AppColors.softGrey.withOpacity(0.2), size: 64),
           const SizedBox(height: 16),
           Text(
-            'No activity yet',
-            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon.withOpacity(0.4)),
+            'No bookings yet',
+            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.softGrey),
           ),
         ],
       ),

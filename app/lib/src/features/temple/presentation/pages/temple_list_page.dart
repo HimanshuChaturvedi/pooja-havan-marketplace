@@ -5,6 +5,7 @@ import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/features/booking/application/booking_session.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class TempleListPage extends StatefulWidget {
   final String city;
@@ -36,107 +37,90 @@ class _TempleListPageState extends State<TempleListPage> with SingleTickerProvid
   Widget build(BuildContext context) {
     final temples = _sampleTemplesFor(widget.city);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          'Temples in ${widget.city}',
-          style: AppTextStyles.title.copyWith(color: Colors.white, fontSize: 20),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.midnight, AppColors.midnight.withOpacity(0.1)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-        ),
-      ),
-      body: Container(
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: AppColors.bgGradient,
-        ),
-        child: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
-          itemCount: temples.length + 1,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    "Select a sacred location for your prayers",
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.cream.withOpacity(0.6)),
-                  ),
-                ),
-              );
-            }
-            final t = temples[index - 1];
-            final templeName = t['name'] ?? 'Selected Temple';
-
+    return AppScaffold(
+      title: 'Temples in ${widget.city}',
+      body: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        itemCount: temples.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
+        itemBuilder: (context, index) {
+          if (index == 0) {
             return _StaggeredFade(
               controller: _animController,
-              delay: 200 + (index * 150),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.12)),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5)),
-                  ],
+              delay: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  "Select a sacred location for your prayers",
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.softGrey,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+              ),
+            );
+          }
+          final t = temples[index - 1];
+          final templeName = t['name'] ?? 'Selected Temple';
+
+          return _StaggeredFade(
+            controller: _animController,
+            delay: 200 + (index * 150),
+            child: GestureDetector(
+              onTap: () {
+                BookingSession.current?.bookingType = BookingType.temple;
+                BookingSession.current?.templeName = templeName;
+                BookingSession.current?.city = widget.city;
+                context.push('/temple-details');
+              },
+              child: PrimaryCard(
+                padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.saffron.withOpacity(0.2),
+                        color: AppColors.saffron.withOpacity(0.08),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(t['type'] == 'ghat' ? Icons.water : Icons.account_balance, color: AppColors.saffron, size: 28),
+                      child: Icon(
+                        t['type'] == 'ghat' ? Icons.water : Icons.temple_hindu_rounded, 
+                        color: AppColors.saffron, 
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(templeName, style: AppTextStyles.title.copyWith(color: Colors.white, fontSize: 18)),
+                          Text(
+                            templeName, 
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w800, 
+                              color: AppColors.darkCharcoal,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text(t['type']!.toUpperCase(), style: AppTextStyles.bodySmall.copyWith(color: AppColors.gold.withOpacity(0.7), letterSpacing: 1.2)),
+                          Text(
+                            t['type']!.toUpperCase(), 
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.saffron, 
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                              fontSize: 10,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.saffron.withOpacity(0.8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
-                      onPressed: () {
-                        BookingSession.current?.bookingType = BookingType.temple;
-                        BookingSession.current?.templeName = templeName;
-                        BookingSession.current?.city = widget.city;
-                        context.push('/temple-details');
-                      },
-                      child: const Text('View →', style: TextStyle(color: Colors.white)),
-                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.saffron, size: 14),
                   ],
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

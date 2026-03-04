@@ -7,10 +7,10 @@ import 'package:app/src/logs/transaction_log.dart';
 import 'package:app/src/core/utils/whatsapp_helper.dart';
 import 'package:app/src/core/utils/app_identity.dart';
 import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class BookingSuccessPage extends StatefulWidget {
   const BookingSuccessPage({super.key});
@@ -22,7 +22,7 @@ class BookingSuccessPage extends StatefulWidget {
 class _BookingSuccessPageState extends State<BookingSuccessPage> with TickerProviderStateMixin {
   late final AnimationController _animController;
   late final AnimationController _iconAnimController;
-  late final AnimationController _entryController; // New: one-time entry animations
+  late final AnimationController _entryController;
   bool _transactionLogged = false;
 
   @override
@@ -43,10 +43,7 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> with TickerProv
       duration: const Duration(milliseconds: 1500),
     )..forward();
 
-    // 🏎️ Haptic Pulse on Success
     HapticFeedback.heavyImpact();
-
-    // ✅ FIXED REFRESH LOOP: Log transaction once in initState
     _logTransaction();
   }
 
@@ -103,169 +100,178 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> with TickerProv
         final rawUserId = snapshot.hasData ? snapshot.data! : '0000';
         final displayUserId = _shortUserId(rawUserId);
 
-        return Scaffold(
-          body: DivineBackground(
-            child: Stack(
-              children: [
-                // 🔆 DIVINE HALO EFFECT (ROTATING GLOW)
-                Center(
-                  child: AnimatedBuilder(
-                    animation: _animController,
-                    builder: (context, child) {
-                      return Transform.rotate(
-                        angle: _animController.value * 2 * math.pi,
-                        child: Container(
-                          width: 250,
-                          height: 250,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                AppColors.saffron.withOpacity(0.4),
-                                AppColors.saffron.withOpacity(0.0),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 60),
-                        // ✨ SUCCESS ICON
-                        ScaleTransition(
-                          scale: CurvedAnimation(
-                            parent: _iconAnimController,
-                            curve: Curves.elasticOut,
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(28),
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.saffron.withOpacity(0.5),
-                                  blurRadius: 30,
-                                  spreadRadius: 5,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.check_circle_rounded,
-                              color: Color(0xFF4CAF50),
-                              size: 64,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        _StaggeredFade(
-                          controller: _entryController, // Changed to _entryController
-                          delay: 0,
-                          child: Text(
-                            "Booking Confirmed!",
-                            style: AppTextStyles.titleLarge.copyWith(fontSize: 30, color: AppColors.maroon),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        _StaggeredFade(
-                          controller: _entryController, // Changed to _entryController
-                          delay: 400,
-                          child: Text(
-                            "May the Divine blessings be with you.",
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.maroon.withOpacity(0.7),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 48),
-
-                        // 📑 BOOKING DETAILS (3D GLASS CARD)
-                        _StaggeredFade(
-                          controller: _entryController, // Changed to _entryController
-                          delay: 800,
-                          child: DivineGlassCard(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              children: [
-                                _detailItem('Booking ID', BookingSession.transactionId ?? '---'),
-                                const Divider(height: 32, color: Colors.black12),
-                                _detailItem('Ritual', booking?.ritualName ?? '---'),
-                                const Divider(height: 32, color: Colors.black12),
-                                _detailItem('Status', 'Confirmation Pending'),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 40),
-
-                        // 🏠 SHARE & HOME BUTTONS
-                        _StaggeredFade(
-                          controller: _entryController, // Changed to _entryController
-                          delay: 1200,
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                width: double.infinity,
-                                height: 56,
-                                child: ElevatedButton.icon(
-                                  icon: const Icon(Icons.share_outlined, color: Colors.white),
-                                  label: const Text('Share Details with Pandit'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.saffron,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  ),
-                                  onPressed: booking == null
-                                      ? null
-                                      : () {
-                                          WhatsAppHelper.openChat(
-                                            message: 'Namaste Pandit ji,\n\n'
-                                                'A pooja has been booked via Bharat Pooja Setu.\n\n'
-                                                'User ID: $displayUserId\n'
-                                                'Transaction ID: ${BookingSession.transactionId}\n\n'
-                                                'Ritual: ${booking.ritualName}\n'
-                                                'Address: ${booking.address ?? 'NA'}\n\n'
-                                                'Please confirm availability.\n\n'
-                                                '— Bharat Pooja Setu',
-                                          );
-                                        },
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              TextButton(
-                                onPressed: () => context.go('/landing'),
-                                child: Text(
-                                  'Return to Home',
-                                  style: AppTextStyles.button.copyWith(color: AppColors.maroon, fontWeight: FontWeight.bold),
-                                ),
-                              ),
+        return AppScaffold(
+          showAppBar: false,
+          extendBodyBehindAppBar: true,
+          body: Stack(
+            children: [
+              // 🔆 DIVINE HALO EFFECT
+              Center(
+                child: AnimatedBuilder(
+                  animation: _animController,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: _animController.value * 2 * math.pi,
+                      child: Container(
+                        width: 250,
+                        height: 250,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              AppColors.saffron.withOpacity(0.3),
+                              AppColors.saffron.withOpacity(0.0),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 60),
+                      // ✨ SUCCESS ICON
+                      ScaleTransition(
+                        scale: CurvedAnimation(
+                          parent: _iconAnimController,
+                          curve: Curves.elasticOut,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(28),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.saffron.withOpacity(0.15),
+                                blurRadius: 40,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.softGreen,
+                            size: 64,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      _StaggeredFade(
+                        controller: _entryController,
+                        delay: 0,
+                        child: Text(
+                          "Booking Confirmed!",
+                          style: AppTextStyles.titleLarge.copyWith(
+                            fontSize: 32, 
+                            color: AppColors.darkCharcoal,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      _StaggeredFade(
+                        controller: _entryController,
+                        delay: 400,
+                        child: Text(
+                          "May the Divine blessings be with you.",
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.softGrey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 48),
+
+                      _StaggeredFade(
+                        controller: _entryController,
+                        delay: 800,
+                        child: PrimaryCard(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            children: [
+                              _detailItem('Booking ID', BookingSession.transactionId ?? '---'),
+                              const Divider(height: 32, color: Colors.black12),
+                              _detailItem('Ritual', booking?.ritualName ?? '---'),
+                              const Divider(height: 32, color: Colors.black12),
+                              _detailItem('Status', 'Awaiting Pandit Confirmation'),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // 🏠 SHARE & HOME BUTTONS
+                      _StaggeredFade(
+                        controller: _entryController,
+                        delay: 1200,
+                        child: Column(
+                          children: [
+                            PrimaryButton(
+                              icon: Icons.share_outlined,
+                              label: 'Share Details with Pandit',
+                              onTap: booking == null
+                                  ? () {}
+                                  : () {
+                                      final samagri = SamagriSession.current;
+                                      String msg = 'Namaste Pandit ji,\n\n'
+                                          'A pooja has been booked via Bharat Pooja Setu.\n\n'
+                                          'User ID: $displayUserId\n'
+                                          'Transaction ID: ${BookingSession.transactionId}\n\n'
+                                          'Ritual: ${booking.ritualName}\n'
+                                          'Address: ${booking.address ?? 'NA'}\n'
+                                          'Date: ${booking.selectedDate?.day}/${booking.selectedDate?.month}/${booking.selectedDate?.year}\n'
+                                          'Time: ${booking.selectedTime}\n\n';
+
+                                      if (samagri != null && samagri.items.isNotEmpty) {
+                                        msg += '📦 Samagri Included:\n';
+                                        for (var item in samagri.items) {
+                                          msg += '- ${item.name} × ${item.quantity}\n';
+                                        }
+                                        msg += '\n';
+                                      }
+
+                                      msg += 'Please confirm availability.\n\n'
+                                          '— Bharat Pooja Setu';
+
+                                      WhatsAppHelper.openChat(message: msg);
+                                    },
+                            ),
+                            const SizedBox(height: 20),
+                            TextButton(
+                              onPressed: () => context.go('/landing'),
+                              child: Text(
+                                'Return to Home',
+                                style: AppTextStyles.button.copyWith(
+                                  color: AppColors.softGrey, 
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -278,13 +284,22 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> with TickerProv
       children: [
         Text(
           label,
-          style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold),
+          style: AppTextStyles.bodySmall.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.softGrey,
+          ),
         ),
-        Text(
-          value,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.maroon,
-            fontWeight: FontWeight.bold,
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.darkCharcoal,
+              fontWeight: FontWeight.w900,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -304,7 +319,7 @@ class _StaggeredFade extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final totalDuration = 1500; // Match _entryController duration
+        const totalDuration = 1500;
         final start = (delay / totalDuration).clamp(0, 1.0).toDouble();
         final end = ((delay + 600) / totalDuration).clamp(0, 1.0).toDouble();
         final opacity = CurvedAnimation(
@@ -319,23 +334,6 @@ class _StaggeredFade extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _InfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: AppTextStyles.bodyMedium.copyWith(color: Colors.white.withOpacity(0.4))),
-        Text(value, style: AppTextStyles.bodyMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-      ],
     );
   }
 }

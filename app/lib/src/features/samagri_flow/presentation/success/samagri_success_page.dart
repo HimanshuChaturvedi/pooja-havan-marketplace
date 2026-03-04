@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:math' as math;
 
 import 'package:app/src/logs/transaction_log.dart';
 import 'package:app/src/core/utils/whatsapp_helper.dart';
@@ -8,8 +9,7 @@ import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
 import 'package:app/src/features/booking/application/booking_session.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class SamagriSuccessPage extends StatefulWidget {
   const SamagriSuccessPage({super.key});
@@ -21,6 +21,7 @@ class SamagriSuccessPage extends StatefulWidget {
 class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
   bool _logged = false;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +55,7 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
     );
     _logged = true;
   }
+
   @override
   void dispose() {
     _animController.dispose();
@@ -82,156 +84,153 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
             ? '${booking!.address ?? "NA"}, ${booking.city}'
             : (samagri?.addressText ?? 'Address not provided');
 
-        return Scaffold(
-          body: DivineBackground( // Changed from Container to DivineBackground
-            child: Stack(
-              children: [
-                Center(
-                  child: AnimatedBuilder(
-                    animation: _animController,
-                    builder: (context, child) {
-                      return Container(
-                        width: 300 * _animController.value,
-                        height: 300 * _animController.value,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.saffron.withOpacity(0.15 * (1 - _animController.value)), // Changed color
-                              blurRadius: 100,
-                              spreadRadius: 50,
-                            ),
+        return AppScaffold(
+          showAppBar: false,
+          extendBodyBehindAppBar: true,
+          body: Stack(
+            children: [
+              // 🔆 DIVINE HALO EFFECT
+              Center(
+                child: AnimatedBuilder(
+                  animation: _animController,
+                  builder: (context, child) {
+                    return Container(
+                      width: 300 * _animController.value,
+                      height: 300 * _animController.value,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.saffron.withOpacity(0.2 * (1 - _animController.value)),
+                            AppColors.saffron.withOpacity(0.0),
                           ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ScaleTransition(
-                          scale: CurvedAnimation(parent: _animController, curve: Curves.elasticOut),
-                          child: Container(
-                            padding: const EdgeInsets.all(32),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white, // Changed from gradient to solid color
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.saffron.withOpacity(0.4), // Changed color
-                                  blurRadius: 30,
-                                  spreadRadius: 5,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(Icons.shopping_basket, color: AppColors.maroon, size: 60), // Changed icon color
-                          ),
-                        ),
-                        const SizedBox(height: 48),
-                        _StaggeredFade(
-                          controller: _animController,
-                          delay: 800,
-                          child: Text(
-                            "Order Submitted!",
-                            style: AppTextStyles.titleLarge.copyWith(color: AppColors.maroon, fontSize: 32), // Changed text color
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _StaggeredFade(
-                          controller: _animController,
-                          delay: 1000,
-                          child: Text(
-                            "Your samagri request has been sent to the vendor. They will contact you shortly for delivery.",
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon.withOpacity(0.7), height: 1.5, fontWeight: FontWeight.w500), // Changed text color and added fontWeight
-                          ),
-                        ),
-                        const SizedBox(height: 48),
-                        _StaggeredFade(
-                          controller: _animController,
-                          delay: 1200,
-                          child: Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1), // Changed opacity
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: AppColors.glassBorder), // Changed border color
-                            ),
-                            child: Column(
-                              children: [
-                                _InfoRow(label: 'Order ID', value: samagri?.sessionId.substring(0, 10).toUpperCase() ?? '---'),
-                                const SizedBox(height: 12),
-                                _InfoRow(label: 'Delivery City', value: city),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        _StaggeredFade(
-                          controller: _animController,
-                          delay: 1400,
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 60,
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.chat_bubble_outline),
-                              label: const Text('Send details to Vendor'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.saffron,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ScaleTransition(
+                        scale: CurvedAnimation(parent: _animController, curve: Curves.elasticOut),
+                        child: Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.saffron.withOpacity(0.15),
+                                blurRadius: 40,
+                                spreadRadius: 10,
                               ),
-                              onPressed: () {
-                                WhatsAppHelper.openChat(
-                                  message: 'Namaste,\n\n'
-                                      'A samagri order has been placed via Bharat Pooja Setu.\n\n'
-                                      'User ID: $displayUserId\n'
-                                      'Transaction ID: ${samagri?.sessionId}\n\n'
-                                      '📍 City: $city\n\n'
-                                      'Items:\n'
-                                      '${samagri?.items.map((e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
-                                      'Delivery Address:\n'
-                                      '$deliveryAddress\n\n'
-                                      'Please confirm availability.\n\n'
-                                      '— Bharat Pooja Setu',
-                                );
-                              },
+                            ],
+                          ),
+                          child: const Icon(Icons.shopping_basket, color: AppColors.saffron, size: 60),
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      _StaggeredFade(
+                        controller: _animController,
+                        delay: 800,
+                        child: Text(
+                          "Order Submitted!",
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.titleLarge.copyWith(
+                            color: AppColors.darkCharcoal, 
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _StaggeredFade(
+                        controller: _animController,
+                        delay: 1000,
+                        child: Text(
+                          "Your samagri request has been sent to the vendor. They will contact you shortly for delivery.",
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.softGrey, 
+                            height: 1.5, 
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      _StaggeredFade(
+                        controller: _animController,
+                        delay: 1200,
+                        child: PrimaryCard(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            children: [
+                              _InfoRow(
+                                label: 'Order ID', 
+                                value: samagri?.sessionId.substring(0, 10).toUpperCase() ?? '---',
+                              ),
+                              const Divider(height: 24, color: Colors.black12),
+                              _InfoRow(label: 'Delivery City', value: city),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      _StaggeredFade(
+                        controller: _animController,
+                        delay: 1400,
+                        child: PrimaryButton(
+                          icon: Icons.chat_bubble_outline,
+                          label: 'Send details to Vendor',
+                          onTap: () {
+                            WhatsAppHelper.openChat(
+                              message: 'Namaste,\n\n'
+                                  'A samagri order has been placed via Bharat Pooja Setu.\n\n'
+                                  'User ID: $displayUserId\n'
+                                  'Transaction ID: ${samagri?.sessionId}\n\n'
+                                  '📍 City: $city\n\n'
+                                  'Items:\n'
+                                  '${samagri?.items.map((e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
+                                  'Delivery Address:\n'
+                                  '$deliveryAddress\n\n'
+                                  'Please confirm availability.\n\n'
+                                  '— Bharat Pooja Setu',
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _StaggeredFade(
+                        controller: _animController,
+                        delay: 1600,
+                        child: TextButton(
+                          onPressed: () {
+                            if (isBookingFlow) {
+                              context.go('/home-summary');
+                            } else {
+                              SamagriSession.clear();
+                              context.go('/landing');
+                            }
+                          },
+                          child: Text(
+                            'Continue',
+                            style: AppTextStyles.button.copyWith(
+                              color: AppColors.softGrey,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        _StaggeredFade(
-                          controller: _animController,
-                          delay: 1600,
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: AppColors.maroon.withOpacity(0.5)), // Changed border color
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                              minimumSize: const Size(double.infinity, 54),
-                            ),
-                            onPressed: () {
-                              if (isBookingFlow) {
-                                context.go('/home-summary');
-                              } else {
-                                SamagriSession.clear();
-                                context.go('/landing');
-                              }
-                            },
-                            child: Text(
-                              'Continue',
-                              style: AppTextStyles.button.copyWith(color: AppColors.maroon), // Changed text color
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -249,8 +248,26 @@ class _InfoRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.maroon.withOpacity(0.6))), // Changed text color
-        Text(value, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.maroon, fontWeight: FontWeight.bold)), // Changed text color
+        Text(
+          label, 
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.softGrey,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value, 
+            textAlign: TextAlign.right,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.darkCharcoal, 
+              fontWeight: FontWeight.w900,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }

@@ -5,9 +5,14 @@ import '../../features/booking/application/booking_session.dart';
 
 import '../../features/splash/presentation/splash_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
+import '../../theme/components/app_colors.dart';
+import '../../theme/components/app_text_styles.dart';
+import '../../core/widgets/design_system.dart';
 import '../../features/services/presentation/services_page.dart';
 import '../../features/services/presentation/pooja_details_page.dart';
 import '../../features/location/presentation/pages/location_page.dart';
+import '../../features/services/presentation/booking_mode_page.dart'; // [NEW]
+import '../../features/services/presentation/location_selection_page.dart'; // [NEW]
 
 import '../../features/pooja_flow/presentation/at_home_or_temple/at_home_or_temple_page.dart';
 
@@ -17,7 +22,7 @@ import '../../features/home_booking/presentation/summary/booking_summary_page.da
 
 import '../../features/samagri_flow/presentation/requirement/samagri_requirement_page.dart';
 import '../../features/samagri_flow/presentation/list/samagri_list_page.dart';
-import '../../features/samagri_flow/presentation/cart/samagri_cart_page.dart';
+
 import '../../features/samagri_flow/presentation/summary/samagri_summary_page.dart';
 import '../../features/samagri_flow/presentation/address/samagri_address_page.dart';
 
@@ -32,14 +37,17 @@ import '../../features/pandit/presentation/pages/pandit_details_page.dart';
 
 import '../../features/services/domain/explore_service.dart';
 import '../../features/services/presentation/explore_service_detail_page.dart';
-import '../../features/activity/presentation/my_activity_page.dart';
+import '../../features/bookings/presentation/my_bookings_page.dart';
 import '../../features/samagri_flow/presentation/success/samagri_success_page.dart';
 
 
+import '../../features/home_booking/presentation/home_screen.dart';
+
+import '../../features/main/presentation/pages/main_page.dart';
 
 final GoRouter appRouter = GoRouter(
   debugLogDiagnostics: true,
-  initialLocation: '/splash',
+  initialLocation: '/',
 
   errorBuilder: (context, state) => Scaffold(
     appBar: AppBar(title: const Text('Page Not Found')),
@@ -49,7 +57,7 @@ final GoRouter appRouter = GoRouter(
         children: [
           const Text("Oops! That page doesn't exist."),
           TextButton(
-            onPressed: () => context.go('/landing'),
+            onPressed: () => context.go('/'),
             child: const Text('Go to Home'),
           ),
         ],
@@ -66,14 +74,37 @@ final GoRouter appRouter = GoRouter(
 
     // LANDING
     GoRoute(
+      path: '/home',
+      builder: (context, state) => const MainPage(),
+    ),
+    GoRoute(
       path: '/landing',
-      builder: (context, state) => const LandingPage(),
+      builder: (context, state) => const MainPage(),
+    ),
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const MainPage(),
     ),
 
     // SERVICES
     GoRoute(
       path: '/services',
       builder: (context, state) => const ServicesPage(),
+    ),
+
+    // BOOKING MODE (NEW)
+    GoRoute(
+      path: '/booking-mode',
+      builder: (context, state) => const BookingModePage(),
+    ),
+
+    // LOCATION SELECTION (NEW)
+    GoRoute(
+      path: '/location-selection',
+      builder: (context, state) {
+        final mode = state.uri.queryParameters['type'] ?? 'home';
+        return LocationSelectionPage(mode: mode);
+      },
     ),
 
     // SERVICE DETAILS
@@ -181,11 +212,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SamagriListPage(),
     ),
 
-    // SAMAGRI CART
-    GoRoute(
-      path: '/samagri-cart',
-      builder: (context, state) => const SamagriCartPage(),
-    ),
+
 
     // SAMAGRI SUMMARY (NO GUARDS)
     GoRoute(
@@ -245,9 +272,9 @@ final GoRouter appRouter = GoRouter(
     ),
 
     GoRoute(
-  path: '/my-activity',
-  builder: (context, state) => const MyActivityPage(),
-),
+      path: '/my-bookings',
+      builder: (context, state) => const MyBookingsPage(),
+    ),
 GoRoute(
   path: '/samagri-success',
   builder: (context, state) =>
@@ -260,29 +287,88 @@ GoRoute(
     GoRoute(
       path: '/explore-services',
       builder: (context, state) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('Explore Services')),
+        return AppScaffold(
+          title: 'Explore Offerings',
           body: ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             itemCount: exploreServices.length,
             itemBuilder: (context, index) {
               final service = exploreServices[index];
-              return Card(
-                child: ListTile(
-                  title: Text(service.title),
-                  subtitle: Text(service.description),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ExploreServiceDetailPage(service: service),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: PrimaryCard(
+                  padding: const EdgeInsets.all(20),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      service.title,
+                      style: AppTextStyles.title.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.darkCharcoal,
                       ),
-                    );
-                  },
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        service.description,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.softGrey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_rounded, color: AppColors.saffron),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ExploreServiceDetailPage(service: service),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
+          ),
+        );
+      },
+    ),
+    // TEMPLE SERVICES (Placeholder)
+    GoRoute(
+      path: '/temple-services',
+      builder: (context, state) {
+        return AppScaffold(
+          title: 'Temple Services',
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.account_balance_rounded, color: AppColors.saffron.withOpacity(0.3), size: 64),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Coming Soon',
+                    style: AppTextStyles.title.copyWith(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.darkCharcoal,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Temple booking services will be\navailable in the next update.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.softGrey,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },

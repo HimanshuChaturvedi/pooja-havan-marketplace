@@ -4,8 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../booking/application/booking_session.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class HomeDateTimePage extends StatefulWidget {
   const HomeDateTimePage({super.key});
@@ -26,7 +25,7 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> with SingleTickerPr
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200),
     )..forward();
   }
 
@@ -45,14 +44,14 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> with SingleTickerPr
       lastDate: today.add(const Duration(days: 60)),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
               primary: AppColors.saffron,
               onPrimary: Colors.white,
-              surface: AppColors.midnight,
-              onSurface: AppColors.cream,
+              surface: Colors.white,
+              onSurface: AppColors.darkCharcoal,
             ),
-            dialogBackgroundColor: AppColors.midnight,
+            dialogBackgroundColor: Colors.white,
           ),
           child: child!,
         );
@@ -72,14 +71,14 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> with SingleTickerPr
       initialTime: TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(
               primary: AppColors.saffron,
               onPrimary: Colors.white,
-              surface: AppColors.midnight,
-              onSurface: AppColors.cream,
+              surface: Colors.white,
+              onSurface: AppColors.darkCharcoal,
             ),
-            dialogBackgroundColor: AppColors.midnight,
+            dialogBackgroundColor: Colors.white,
           ),
           child: child!,
         );
@@ -100,108 +99,75 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          'Select Date & Time',
-          style: AppTextStyles.title.copyWith(color: AppColors.maroon, fontSize: 22),
-        ),
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: AppColors.maroon),
-      ),
-      body: DivineBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: Text(
-                  'Choose a divine moment for your pooja',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.deepSaffron,
-                    fontSize: 18,
-                  ),
+    return AppScaffold(
+      title: 'Select Date & Time',
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: Text(
+                'Choose a divine moment for your pooja',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.saffron,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
                 ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // DATE CARD
-              _StaggeredFade(
-                controller: _animController,
-                delay: 300,
-                child: _SelectionCard(
-                  label: 'Preferred Date',
-                  value: selectedDate == null
-                      ? 'Tap to select date'
-                      : _formatDate(selectedDate!),
-                  icon: Icons.calendar_today_outlined,
-                  isSelected: selectedDate != null,
-                  onTap: _pickDate,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // TIME CARD
-              _StaggeredFade(
-                controller: _animController,
-                delay: 500,
-                child: _SelectionCard(
-                  label: 'Auspicious Time',
-                  value: selectedTime == null
-                      ? 'Tap to select time'
-                      : _formatTime(selectedTime!),
-                  icon: Icons.access_time_outlined,
-                  isSelected: selectedTime != null,
-                  onTap: _pickTime,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.transparent, AppColors.midnight.withOpacity(0.9)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isValid ? AppColors.saffron : Colors.white.withOpacity(0.1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              elevation: isValid ? 8 : 0,
-              shadowColor: AppColors.deepSaffron.withOpacity(0.5),
-            ),
-            onPressed: isValid
-                ? () {
-                    BookingSession.current?.selectedDate = selectedDate;
-                    BookingSession.current?.selectedTime =
-                        selectedTime!.format(context);
-                    context.push('/samagri-required');
-                  }
-                : null,
-            child: Text(
-              'Continue to Samagri Selection →',
-              style: AppTextStyles.button.copyWith(
-                color: isValid ? AppColors.maroon : AppColors.maroon.withOpacity(0.4),
-                fontSize: 18,
               ),
             ),
-          ),
+
+            const SizedBox(height: 48),
+
+            // DATE CARD
+            _StaggeredFade(
+              controller: _animController,
+              delay: 300,
+              child: _SelectionCard(
+                label: 'Preferred Date',
+                value: selectedDate == null
+                    ? 'Tap to select date'
+                    : _formatDate(selectedDate!),
+                icon: Icons.calendar_today_rounded,
+                isSelected: selectedDate != null,
+                onTap: _pickDate,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // TIME CARD
+            _StaggeredFade(
+              controller: _animController,
+              delay: 500,
+              child: _SelectionCard(
+                label: 'Auspicious Time',
+                value: selectedTime == null
+                    ? 'Tap to select time'
+                    : _formatTime(selectedTime!),
+                icon: Icons.access_time_filled_rounded,
+                isSelected: selectedTime != null,
+                onTap: _pickTime,
+              ),
+            ),
+            const SizedBox(height: 100),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        child: PrimaryButton(
+          label: 'Continue to Samagri Selection →',
+          onTap: isValid
+              ? () {
+                  BookingSession.current?.selectedDate = selectedDate;
+                  BookingSession.current?.selectedTime =
+                      selectedTime!.format(context);
+                  context.push('/samagri-required');
+                }
+              : null,
         ),
       ),
     );
@@ -225,20 +191,23 @@ class _SelectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      child: DivineGlassCard(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: PrimaryCard(
         padding: const EdgeInsets.all(24),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: (isSelected ? AppColors.saffron : Colors.black).withOpacity(0.1),
+                color: (isSelected ? AppColors.saffron : AppColors.softGrey).withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: isSelected ? AppColors.deepSaffron : AppColors.maroon.withOpacity(0.4), size: 28),
+              child: Icon(
+                icon, 
+                color: isSelected ? AppColors.saffron : AppColors.softGrey, 
+                size: 28,
+              ),
             ),
             const SizedBox(width: 20),
             Expanded(
@@ -246,11 +215,12 @@ class _SelectionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    label,
+                    label.toUpperCase(),
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.deepSaffron.withOpacity(0.5),
+                      color: AppColors.softGrey,
                       letterSpacing: 1.1,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 10,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -258,16 +228,17 @@ class _SelectionCard extends StatelessWidget {
                     value,
                     style: AppTextStyles.title.copyWith(
                       fontSize: 20,
-                      color: isSelected ? AppColors.maroon : AppColors.maroon.withOpacity(0.4),
+                      fontWeight: FontWeight.w900,
+                      color: isSelected ? AppColors.darkCharcoal : AppColors.softGrey.withOpacity(0.5),
                     ),
                   ),
                 ],
               ),
             ),
             Icon(
-              Icons.calendar_today_outlined,
-              size: 16,
-              color: isSelected ? AppColors.saffron : AppColors.maroon.withOpacity(0.2),
+              Icons.chevron_right_rounded,
+              size: 24,
+              color: isSelected ? AppColors.saffron : AppColors.softGrey.withOpacity(0.3),
             ),
           ],
         ),
@@ -288,8 +259,8 @@ class _StaggeredFade extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final start = (delay / 1500).clamp(0, 1.0).toDouble();
-        final end = ((delay + 600) / 1500).clamp(0, 1.0).toDouble();
+        final start = (delay / 1200).clamp(0, 1.0).toDouble();
+        final end = ((delay + 600) / 1200).clamp(0, 1.0).toDouble();
         
         final opacity = CurvedAnimation(
           parent: controller,

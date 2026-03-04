@@ -1,14 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../../theme/components/app_colors.dart';
-import '../../../theme/components/app_text_styles.dart';
-
-import '../../booking/application/booking_session.dart';
-import '../../booking/domain/booking_draft.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
+import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class ServicesPage extends StatefulWidget {
   static const routeName = '/services';
@@ -56,98 +52,93 @@ class _ServicesPageState extends State<ServicesPage> with SingleTickerProviderSt
     final uri = GoRouterState.of(context).uri;
     final entryType = uri.queryParameters['type']; // home | temple | null
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white.withOpacity(0.12), // Subtle glass base
-        centerTitle: true,
-        flexibleSpace: ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(color: Colors.transparent),
-          ),
-        ),
-        title: Text(
-          'Book a Pooja',
-          style: AppTextStyles.title.copyWith(fontSize: 22),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.maroon),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home_outlined),
-            onPressed: () => context.go('/landing'),
-          )
-        ],
-      ),
-      body: DivineBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: Text(
-                  'Select a sacred ritual to proceed',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron),
+    return AppScaffold(
+      title: 'Book a Pooja',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.home_outlined, color: AppColors.darkCharcoal),
+          onPressed: () => context.go('/landing'),
+        )
+      ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: Text(
+                'Select a sacred ritual to proceed',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.softGrey,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 24),
+            ),
+            const SizedBox(height: 32),
 
-              ...List.generate(rituals.length, (index) {
-                final ritual = rituals[index];
-                return _StaggeredFade(
+            ...List.generate(rituals.length, (index) {
+              final ritual = rituals[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _StaggeredFade(
                   controller: _animController,
-                  delay: 300 + (index * 100),
-                  child: DivineGlassCard(
+                  delay: 300 + (index * 80),
+                  child: GestureDetector(
                     onTap: () {
-                      BookingSession.current = BookingDraft(
-                        bookingType: entryType == 'temple' ? BookingType.temple : BookingType.home,
-                        ritualName: ritual['name']!,
-                        city: '',
-                      );
+                      final current = BookingSession.current;
+                      if (current != null) {
+                        current.ritualName = ritual['name']!;
+                      } else {
+                        BookingSession.current = BookingDraft(
+                          bookingType: entryType == 'temple' ? BookingType.temple : BookingType.home,
+                          ritualName: ritual['name']!,
+                          city: '',
+                        );
+                      }
                       context.push('/service/${ritual['slug']}/${Uri.encodeComponent(ritual['name']!)}');
                     },
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.saffron.withOpacity(0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.local_fire_department_rounded,
-                            color: AppColors.deepSaffron,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 18),
-                        Expanded(
-                          child: Text(
-                            ritual['name']!,
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                              color: AppColors.maroon, // Explicitly forced
+                    child: PrimaryCard(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.saffron.withOpacity(0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.local_fire_department_rounded,
+                              color: AppColors.saffron,
+                              size: 24,
                             ),
                           ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: AppColors.saffron,
-                          size: 14,
-                        ),
-                      ],
+                          const SizedBox(width: 18),
+                          Expanded(
+                            child: Text(
+                              ritual['name']!,
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 17,
+                                color: AppColors.darkCharcoal,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: AppColors.saffron,
+                            size: 14,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                );
-              }),
-            ],
-          ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );

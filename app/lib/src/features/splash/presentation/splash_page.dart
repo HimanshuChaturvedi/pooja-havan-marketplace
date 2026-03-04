@@ -15,7 +15,6 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   late final AnimationController _mainController;
-  late final AnimationController _pulseController;
   late final Animation<double> _scale;
 
   @override
@@ -26,19 +25,14 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       duration: const Duration(seconds: 2),
     );
 
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
-
     _scale = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(parent: _mainController, curve: Curves.elasticOut),
     );
 
     _mainController.forward();
 
-    // Navigate after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
+    // Navigate to landing after 2.5 seconds
+    Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) context.go('/landing');
     });
   }
@@ -46,102 +40,84 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _mainController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedBuilder(
-        animation: _pulseController,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.center,
-                radius: 1.2 + (0.2 * _pulseController.value),
-                colors: [
-                  AppColors.dawnYellow,
-                  AppColors.saffronLight,
-                ],
+      backgroundColor: AppColors.warmIvory,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Divine Icon (Saffron Glow)
+            ScaleTransition(
+              scale: _scale,
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.saffron.withOpacity(0.12),
+                      blurRadius: 60,
+                      spreadRadius: 10,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 100,
+                  color: AppColors.saffron,
+                ),
               ),
             ),
-            child: child,
-          );
-        },
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Glowing Diya Icon
-              ScaleTransition(
-                scale: _scale,
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.saffron.withOpacity(0.4),
-                        blurRadius: 50,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                    gradient: RadialGradient(
-                      colors: [AppColors.dawnYellow, AppColors.saffron.withOpacity(0.4)],
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.local_fire_department_rounded,
-                    size: 110,
-                    color: AppColors.maroon,
-                  ),
+            const SizedBox(height: 48),
+
+            // Premium Title
+            _StaggeredFade(
+              delay: 500,
+              controller: _mainController,
+              child: Text(
+                "Bharat Pooja Setu",
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: AppColors.darkCharcoal,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 48),
+            ),
 
-              // ✅ MODERN PREMIUM TITLE
-              _StaggeredFade(
-                delay: 500,
-                controller: _mainController,
-                child: ShaderMask(
-                  shaderCallback: (bounds) => AppColors.goldGradient.createShader(bounds),
-                  child: Text(
-                    "Bharat Pooja Setu",
-                    style: AppTextStyles.titleLarge.copyWith(
-                      color: AppColors.maroon,
-                      fontSize: 36,
-                      letterSpacing: 1.8,
-                    ),
-                  ),
+            const SizedBox(height: 12),
+
+            // Subtle Tagline
+            _StaggeredFade(
+              delay: 800,
+              controller: _mainController,
+              child: Text(
+                "Connecting Bharat with Dharma",
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.softGrey,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // ✅ SUBTLE TAGLINE
-              _StaggeredFade(
-                delay: 1000,
-                controller: _mainController,
-                child: Text(
-                  "Connecting Bharat with Dharma",
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.deepSaffron,
-                    fontStyle: FontStyle.italic,
-                    letterSpacing: 1.2,
-                  ),
-                ),
+            ),
+            
+            const SizedBox(height: 80),
+            
+            const SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.saffron),
               ),
-              
-              const SizedBox(height: 80),
-              
-              const CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.deepSaffron),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -169,7 +145,7 @@ class _StaggeredFade extends StatelessWidget {
         
         final opacity = CurvedAnimation(
           parent: controller,
-          curve: Interval(start, end, curve: Curves.easeIn),
+          curve: Interval(start, end, curve: Curves.easeOut),
         ).value;
 
         return Opacity(

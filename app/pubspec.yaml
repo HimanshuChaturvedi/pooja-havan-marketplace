@@ -47,6 +47,7 @@ flutter:
 
   assets:
     - assets/icons/
+    - assets/images/
 
 # ⚠️ IMPORTANT: This MUST be outside `flutter:` block
 flutter_icons:

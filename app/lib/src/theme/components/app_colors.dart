@@ -1,48 +1,63 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // ✨ OPTION 2: SAFFRON DAWN (BRIGHT DIVINE)
-  static const saffron = Color(0xFFFF9933);   // Radiant Saffron
-  static const gold = Color(0xFFFFD700);      // Pure Gold
-  static const yellow = Color(0xFFFFF176);    // Sunlight Yellow
+  // 🕊️ MODERN IVORY PREMIUM PALETTE (REFINED)
+  static const warmIvory       = Color(0xFFFAF7F2); // Page Background
+  static const darkCharcoal    = Color(0xFF1C1C1E); // Primary Text
+  static const softGrey        = Color(0xFF6B6B6B); // Secondary Text
   
-  static const dawnOrange = Color(0xFFFFCC80); // Soft Dawn Orange
-  static const dawnYellow = Color(0xFFFFF9C4); // Pale Morning Sun
+  // ACCENTS
+  static const saffron         = Color(0xFFF4A300); // REFINED SAFFRON
+  static const saffronSecondary = Color(0xFFFFB422); // Brighter saffron for gradients
+  static const deepPlum        = Color(0xFF4A2E6F); // Secondary Accent
   
-  // DAKSHINA RED (High Contrast Text)
-  static const maroon = Color(0xFF800000);    // Deep Maroon
-  static const deepSaffron = Color(0xFFE65100); // Burnt Orange for body text
-  
-  static const cream = Color(0xFFFFFDE7);     // Divine Cream
-  static const white = Colors.white;
- 
+  // STATUS
+  static const softGreen       = Color(0xFF4CAF50);
+  static const softRed         = Color(0xFFE57373);
+  static const champagneGold   = Color(0xFFF5D193); 
+
   // GRADIENTS
-  static const bgGradient = LinearGradient(
-    colors: [dawnOrange, dawnYellow],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
- 
   static const saffronGradient = LinearGradient(
-    colors: [saffron, gold],
+    colors: [Color(0xFFF4A300), Color(0xFFFFB422)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
- 
-  // ✨ 3D GLASSMORPHISM V2 (High Depth)
-  static Color glassBackground = Colors.white.withOpacity(0.12); // Much thinner for v2
-  static Color glassBorder = Colors.white.withOpacity(0.6); // Increased from 0.4
-  static Color glassShadow = Colors.black.withOpacity(0.2); 
-  static Color glassShine = Colors.white.withOpacity(0.6); // For specular highlights
- 
+
+  static const plumGradient = LinearGradient(
+    colors: [Color(0xFF4A2E6F), Color(0xFF6A4C93)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // ✨ CARD SYSTEM — REFINED (Minimal)
+  static Color glassBackground = Colors.white.withOpacity(0.9); 
+  static Color cardSaffronBorder = const Color(0xFFF4A300).withOpacity(0.12); // 10-15% Opacity
+  static Color cardSaffronShadow = const Color(0xFFF4A300).withOpacity(0.08); // Low opacity glow
+  static const glassBorder     = Color(0xFFE0E0E0);
+  static Color glassShadow     = Colors.black.withOpacity(0.05);
+
   // LEGACY COMPATIBILITY
-  static const midnight = Color(0xFF1A1A2E); 
-  static const purple = Color(0xFF4A148C);
-  static const textDark = maroon;
-  static const primaryGold = deepSaffron;
+  static const deepIndigo      = warmIvory; 
+  static const mysticalPurple  = deepPlum;
+  static const cosmicViolet    = darkCharcoal;
+  static const bgGradient      = LinearGradient(colors: [warmIvory, Color(0xFFFDFCFB)]);
+  static const goldGradient    = saffronGradient;
+  static const purpleGradient  = plumGradient;
   
-  static const backgroundLight = dawnYellow;
-  static const saffronLight = dawnOrange;
-  static const saffronDark = saffron;
-  static const goldGradient = saffronGradient;
+  static const white           = Colors.white;
+  static const white70         = Colors.white70;
+  static const roseGold        = Color(0xFFE49B9B);
+  static const maroon          = deepPlum; 
+  static const deepSaffron     = saffron;
+  static const cream           = warmIvory;
+  static const midnight        = darkCharcoal;
+  static const purple          = deepPlum;
+  static const dawnOrange      = saffron;
+  static const gold            = Color(0xFFFFD700);
+  
+  static const textDark        = darkCharcoal; 
+  static const primaryGold     = saffron;
+  static const backgroundLight = warmIvory;
+  static const saffronLight    = saffronSecondary;
+  static const saffronDark     = saffron;
 }

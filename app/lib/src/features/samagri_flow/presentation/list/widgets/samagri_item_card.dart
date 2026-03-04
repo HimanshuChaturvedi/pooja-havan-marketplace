@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class SamagriItemCard extends StatelessWidget {
   final String name;
@@ -21,51 +21,67 @@ class SamagriItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DivineGlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return PrimaryCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.maroon,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+            child: Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.saffron.withOpacity(0.05),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  "₹$price",
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.deepSaffron,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            children: [
-              _CounterButton(icon: Icons.remove, onTap: quantity > 0 ? onRemove : null),
-              SizedBox(
-                width: 40,
-                child: Text(
-                  quantity.toString(),
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.maroon,
-                    fontWeight: FontWeight.bold,
-                  ),
+                padding: const EdgeInsets.all(16),
+                child: Icon(
+                  Icons.shopping_bag_outlined,
+                  color: AppColors.saffron.withOpacity(0.5),
+                  size: 32,
                 ),
               ),
-              _CounterButton(icon: Icons.add, onTap: onAdd),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.darkCharcoal,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "₹$price",
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.saffron,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Row(
+                children: [
+                  _CounterButton(icon: Icons.remove, onTap: quantity > 0 ? onRemove : null),
+                  SizedBox(
+                    width: 24,
+                    child: Text(
+                      quantity.toString(),
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.darkCharcoal,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  _CounterButton(icon: Icons.add, onTap: onAdd),
+                ],
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -80,21 +96,18 @@ class _CounterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.saffron.withOpacity(onTap == null ? 0.05 : 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.saffron.withOpacity(onTap == null ? 0.1 : 0.2),
-            ),
-          ),
-          child: Icon(icon, color: onTap == null ? Colors.grey.withOpacity(0.3) : AppColors.maroon, size: 20),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: AppColors.saffron.withOpacity(onTap == null ? 0.02 : 0.08),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          color: onTap == null ? AppColors.softGrey.withOpacity(0.3) : AppColors.darkCharcoal,
+          size: 16,
         ),
       ),
     );

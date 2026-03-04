@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../theme/components/app_colors.dart';
-import '../../../theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 final fullNameProvider = StateProvider<String>((ref) => "");
 final phoneProvider = StateProvider<String>((ref) => "");
@@ -43,137 +42,103 @@ class _BookingStep2PageState extends ConsumerState<BookingStep2Page> with Single
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          "Your Details",
-          style: AppTextStyles.title.copyWith(fontSize: 22),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.maroon),
-      ),
-      body: DivineBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 150),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: _SectionCard(
-                  title: "Personal Information",
-                  children: [
-                    _InputField(
-                      label: "Full Name",
-                      icon: Icons.person_outline,
-                      value: ref.watch(fullNameProvider),
-                      onChanged: (v) => ref.read(fullNameProvider.notifier).state = v,
-                    ),
-                    _InputField(
-                      label: "Phone Number",
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                      value: ref.watch(phoneProvider),
-                      onChanged: (v) => ref.read(phoneProvider.notifier).state = v,
-                    ),
-                    _InputField(
-                      label: "Email (optional)",
-                      icon: Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                      value: ref.watch(emailProvider),
-                      onChanged: (v) => ref.read(emailProvider.notifier).state = v,
-                    ),
-                  ],
-                ),
+    return AppScaffold(
+      title: "Your Details",
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: _SectionCard(
+                title: "Personal Information",
+                children: [
+                  _InputField(
+                    label: "Full Name",
+                    icon: Icons.person_outline,
+                    value: ref.watch(fullNameProvider),
+                    onChanged: (v) => ref.read(fullNameProvider.notifier).state = v,
+                  ),
+                  _InputField(
+                    label: "Phone Number",
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    value: ref.watch(phoneProvider),
+                    onChanged: (v) => ref.read(phoneProvider.notifier).state = v,
+                  ),
+                  _InputField(
+                    label: "Email (optional)",
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    value: ref.watch(emailProvider),
+                    onChanged: (v) => ref.read(emailProvider.notifier).state = v,
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 16),
-
-              _StaggeredFade(
-                controller: _animController,
-                delay: 400,
-                child: _SectionCard(
-                  title: "Address Details",
-                  children: [
-                    _InputField(
-                      label: "Address Line 1",
-                      icon: Icons.home_outlined,
-                      value: ref.watch(address1Provider),
-                      onChanged: (v) => ref.read(address1Provider.notifier).state = v,
-                    ),
-                    _InputField(
-                      label: "City",
-                      icon: Icons.location_on_outlined,
-                      value: ref.watch(cityProvider),
-                      onChanged: (v) => ref.read(cityProvider.notifier).state = v,
-                    ),
-                    _InputField(
-                      label: "Pincode",
-                      icon: Icons.pin_drop_outlined,
-                      keyboardType: TextInputType.number,
-                      value: ref.watch(pincodeProvider),
-                      onChanged: (v) => ref.read(pincodeProvider.notifier).state = v,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              _StaggeredFade(
-                controller: _animController,
-                delay: 700,
-                child: _SectionCard(
-                  title: "Instructions",
-                  children: [
-                    _InputField(
-                      label: "Notes for Pandit (optional)",
-                      icon: Icons.edit_outlined,
-                      maxLines: 3,
-                      value: ref.watch(instructionsProvider),
-                      onChanged: (v) => ref.read(instructionsProvider.notifier).state = v,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
             ),
+
+            const SizedBox(height: 24),
+
+            _StaggeredFade(
+              controller: _animController,
+              delay: 400,
+              child: _SectionCard(
+                title: "Address Details",
+                children: [
+                  _InputField(
+                    label: "Address Line 1",
+                    icon: Icons.home_outlined,
+                    value: ref.watch(address1Provider),
+                    onChanged: (v) => ref.read(address1Provider.notifier).state = v,
+                  ),
+                  _InputField(
+                    label: "City",
+                    icon: Icons.location_on_outlined,
+                    value: ref.watch(cityProvider),
+                    onChanged: (v) => ref.read(cityProvider.notifier).state = v,
+                  ),
+                  _InputField(
+                    label: "Pincode",
+                    icon: Icons.pin_drop_outlined,
+                    keyboardType: TextInputType.number,
+                    value: ref.watch(pincodeProvider),
+                    onChanged: (v) => ref.read(pincodeProvider.notifier).state = v,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            _StaggeredFade(
+              controller: _animController,
+              delay: 700,
+              child: _SectionCard(
+                title: "Instructions",
+                children: [
+                  _InputField(
+                    label: "Notes for Pandit (optional)",
+                    icon: Icons.edit_outlined,
+                    maxLines: 3,
+                    value: ref.watch(instructionsProvider),
+                    onChanged: (v) => ref.read(instructionsProvider.notifier).state = v,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 100),
           ],
         ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.saffron,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 4,
-            ),
-            onPressed: () {
-              context.push('/booking/confirm/${widget.panditName}');
-            },
-            child: Text(
-              'Continue to Review →',
-              style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 18),
-            ),
-          ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        child: PrimaryButton(
+          label: 'Continue to Review →',
+          onTap: () {
+            context.push('/booking/confirm/${widget.panditName}');
+          },
         ),
       ),
     );
@@ -187,14 +152,14 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DivineGlassCard(
+    return PrimaryCard(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: AppTextStyles.title.copyWith(color: AppColors.maroon, fontSize: 18),
+            style: AppTextStyles.title.copyWith(color: AppColors.darkCharcoal, fontSize: 18),
           ),
           const SizedBox(height: 20),
           ...children,
@@ -228,23 +193,18 @@ class _InputField extends StatelessWidget {
       child: TextField(
         maxLines: maxLines,
         keyboardType: keyboardType,
-        onChanged: (v) => onChanged(v),
-        controller: TextEditingController(text: value)..selection = TextSelection.collapsed(offset: value.length),
-        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon),
+        onChanged: onChanged,
+        // We avoid creating a new controller every build to prevent cursor jumps
+        controller: TextEditingController.fromValue(
+          TextEditingValue(
+            text: value,
+            selection: TextSelection.collapsed(offset: value.length),
+          ),
+        ),
+        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.darkCharcoal),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.maroon.withOpacity(0.5)),
-          prefixIcon: Icon(icon, color: AppColors.deepSaffron.withOpacity(0.7)),
-          filled: true,
-          fillColor: AppColors.saffron.withOpacity(0.05),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.saffron.withOpacity(0.1)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.saffron, width: 1.5),
-          ),
+          prefixIcon: Icon(icon, color: AppColors.saffron, size: 20),
         ),
       ),
     );

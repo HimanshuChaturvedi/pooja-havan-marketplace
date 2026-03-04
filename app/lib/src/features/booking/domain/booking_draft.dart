@@ -1,6 +1,8 @@
 enum BookingType {
   home,
   temple,
+  tirth,
+  other,
 }
 
 class BookingDraft {
@@ -20,6 +22,11 @@ class BookingDraft {
   DateTime? selectedDate;
   String? selectedTime;
 
+  // Location Metadata (Crucial for Pandit selection & Pricing)
+  double? latitude;
+  double? longitude;
+  String? area; // e.g. Indirapuram, Raj Nagar
+
   // Samagri
   bool samagriRequired;
   List<String> samagriItems;
@@ -33,6 +40,9 @@ class BookingDraft {
     this.panditName,
     this.selectedDate,
     this.selectedTime,
+    this.latitude,
+    this.longitude,
+    this.area,
     this.samagriRequired = false,
     List<String>? samagriItems,
   }) : samagriItems = samagriItems ?? [];

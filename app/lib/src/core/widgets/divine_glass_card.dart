@@ -1,70 +1,88 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import '../../theme/components/app_colors.dart';
 
-/// ✅ DEVICE-SAFE Glass Card
-/// BackdropFilter was causing SOLID GRAY on many Android devices.
-/// Replaced with solid semi-opaque white that looks great and works everywhere.
-class DivineGlassCard extends StatefulWidget {
+class DivineGlassCard extends StatelessWidget {
   final Widget child;
+  final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
+  final double blur;
   final double borderRadius;
-  final EdgeInsets padding;
-  final bool showShine;
 
   const DivineGlassCard({
     super.key,
     required this.child,
+    this.padding,
     this.onTap,
-    this.borderRadius = 24,
-    this.padding = const EdgeInsets.all(20),
-    this.showShine = true,
+    this.blur = 15.0, // Increased for deeper glass look
+    this.borderRadius = 24.0,
   });
 
   @override
-  State<DivineGlassCard> createState() => _DivineGlassCardState();
-}
-
-class _DivineGlassCardState extends State<DivineGlassCard>
-    with SingleTickerProviderStateMixin {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap?.call();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            color: Colors.white.withOpacity(0.82), // ✅ SOLID – works on all devices
-            border: Border.all(
-              color: AppColors.saffron.withOpacity(0.25),
-              width: 1.3,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.maroon.withOpacity(0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.6),
-                blurRadius: 4,
-                offset: const Offset(0, -1),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.glassShadow,
+            blurRadius: 30,
+            offset: const Offset(0, 10),
           ),
-          child: Padding(
-            padding: widget.padding,
-            child: widget.child,
+          // Subtle Inner Glow
+          BoxShadow(
+            color: AppColors.champagneGold.withOpacity(0.05),
+            blurRadius: 20,
+            spreadRadius: -10,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: Container(
+              padding: padding ?? const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.glassBackground, // frosting
+                borderRadius: BorderRadius.circular(borderRadius),
+                border: Border.all(
+                  color: AppColors.glassBorder, // Rose/Champagne gold thin border
+                  width: 1.2,
+                ),
+              ),
+              child: Stack(
+                children: [
+                  // Content
+                  child,
+
+                  // ✨ SPECULAR GLOSS OVERLAY (Diagonal Highlight) - Now on top
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            stops: const [0.0, 0.45, 0.5, 0.55, 1.0],
+                            colors: [
+                              Colors.white.withOpacity(0.0),
+                              Colors.white.withOpacity(0.0),
+                              Colors.white.withOpacity(0.15), // Slightly increased glint
+                              Colors.white.withOpacity(0.0),
+                              Colors.white.withOpacity(0.0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

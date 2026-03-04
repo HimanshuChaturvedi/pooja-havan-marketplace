@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../theme/components/app_colors.dart';
-import '../../../../theme/components/app_text_styles.dart';
-import '../../../booking/application/booking_session.dart';
-import '../../../booking/domain/booking_draft.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
+import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 import 'widgets/choice_card.dart';
 
 enum PoojaLocationType { home, temple }
@@ -47,119 +47,96 @@ class _AtHomeOrTemplePageState extends State<AtHomeOrTemplePage> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          'Pooja Location',
-          style: AppTextStyles.title.copyWith(fontSize: 22),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.maroon),
-      ),
-      body: DivineBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: Text(
-                  'Where would you like to perform the ritual?',
-                  style: AppTextStyles.title.copyWith(fontSize: 24),
+    return AppScaffold(
+      title: 'Location Preference',
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: Text(
+                'Where would you like to perform the ritual?',
+                style: AppTextStyles.title.copyWith(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.darkCharcoal,
+                  height: 1.2,
                 ),
               ),
+            ),
 
-              const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-              _StaggeredFade(
-                controller: _animController,
-                delay: 200,
-                child: Text(
-                  'Choose the sacred setting that suits you best.',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 200,
+              child: Text(
+                'Choose the sacred setting that suits you best.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.softGrey,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+            ),
 
-              const SizedBox(height: 40),
+            const SizedBox(height: 48),
 
-              _StaggeredFade(
-                controller: _animController,
-                delay: 400,
-                child: ChoiceCard(
-                  title: 'At Home',
-                  description: 'Pandit will visit your home with sacred items to perform the pooja.',
-                  isSelected: selectedType == PoojaLocationType.home,
-                  onTap: () {
-                    setState(() {
-                      selectedType = PoojaLocationType.home;
-                    });
-                  },
-                ),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 400,
+              child: ChoiceCard(
+                title: 'At Home',
+                description: 'Pandit will visit your home with sacred items to perform the pooja.',
+                isSelected: selectedType == PoojaLocationType.home,
+                onTap: () {
+                  setState(() {
+                    selectedType = PoojaLocationType.home;
+                  });
+                },
               ),
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-              _StaggeredFade(
-                controller: _animController,
-                delay: 600,
-                child: ChoiceCard(
-                  title: 'At Temple',
-                  description: 'Perform the pooja at a nearby or selected temple of your choice.',
-                  isSelected: selectedType == PoojaLocationType.temple,
-                  onTap: () {
-                    setState(() {
-                      selectedType = PoojaLocationType.temple;
-                    });
-                  },
-                ),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 600,
+              child: ChoiceCard(
+                title: 'At Temple',
+                description: 'Perform the pooja at a nearby or selected temple of your choice.',
+                isSelected: selectedType == PoojaLocationType.temple,
+                onTap: () {
+                  setState(() {
+                    selectedType = PoojaLocationType.temple;
+                  });
+                },
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 100),
+          ],
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.transparent, AppColors.midnight.withOpacity(0.9)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.saffron,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              elevation: 8,
-              shadowColor: AppColors.saffron.withOpacity(0.5),
-            ),
-            onPressed: selectedType == null
-                ? null
-                : () {
-                    if (BookingSession.current == null) return;
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        child: PrimaryButton(
+          label: 'Continue →',
+          onTap: selectedType == null
+              ? null
+              : () {
+                  if (BookingSession.current == null) return;
 
-                    if (selectedType == PoojaLocationType.home) {
-                      BookingSession.current!.bookingType = BookingType.home;
-                      context.push('/home-address');
-                    } else {
-                      BookingSession.current!.bookingType = BookingType.temple;
-                      final city = Uri.encodeComponent(widget.city);
-                      context.push('/temples/$city');
-                    }
-                  },
-            child: Text(
-              'Continue →',
-              style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 18),
-            ),
-          ),
+                  if (selectedType == PoojaLocationType.home) {
+                    BookingSession.current!.bookingType = BookingType.home;
+                    context.push('/home-address');
+                  } else {
+                    BookingSession.current!.bookingType = BookingType.temple;
+                    final city = Uri.encodeComponent(widget.city);
+                    context.push('/temples/$city');
+                  }
+                },
         ),
       ),
     );

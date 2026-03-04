@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class TempleDetailsPage extends StatefulWidget {
   const TempleDetailsPage({super.key});
@@ -36,144 +37,118 @@ class _TempleDetailsPageState extends State<TempleDetailsPage> with SingleTicker
     final templeName = booking?.templeName ?? 'Selected Temple';
     final city = booking?.city ?? '';
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          templeName,
-          style: AppTextStyles.title.copyWith(color: Colors.white, fontSize: 22),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.midnight, AppColors.midnight.withOpacity(0.1)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-        ),
-      ),
-      body: Container(
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: AppColors.bgGradient,
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: Text(
-                  templeName,
-                  style: AppTextStyles.titleLarge.copyWith(color: AppColors.gold, fontSize: 28),
+    return AppScaffold(
+      title: templeName,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: Text(
+                templeName,
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: AppColors.darkCharcoal, 
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 8),
-              _StaggeredFade(
-                controller: _animController,
-                delay: 200,
-                child: Row(
+            ),
+            const SizedBox(height: 8),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 200,
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on, color: AppColors.saffron, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    city, 
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.softGrey,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            _StaggeredFade(
+              controller: _animController,
+              delay: 400,
+              child: PrimaryCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.location_on, color: AppColors.saffron, size: 18),
-                    const SizedBox(width: 8),
-                    Text(city, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.cream.withOpacity(0.6))),
+                    Text(
+                      'About Temple',
+                      style: AppTextStyles.title.copyWith(
+                        color: AppColors.darkCharcoal, 
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'This is a renowned temple where traditional Vedic poojas and havans are performed daily by experienced pandits in an authentic spiritual environment.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.darkCharcoal.withOpacity(0.8), 
+                        height: 1.6,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 32),
+            const SizedBox(height: 16),
 
-              _StaggeredFade(
-                controller: _animController,
-                delay: 400,
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.12)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'About Temple',
-                        style: AppTextStyles.title.copyWith(color: Colors.white, fontSize: 20),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 600,
+              child: PrimaryCard(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.saffron.withOpacity(0.08),
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'This is a renowned temple where traditional Vedic poojas and havans are performed daily by experienced pandits in an authentic spiritual environment.',
-                        style: AppTextStyles.bodyMedium.copyWith(color: Colors.white.withOpacity(0.8), height: 1.6),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              _StaggeredFade(
-                controller: _animController,
-                delay: 600,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.saffron.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.saffron.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.auto_awesome, color: AppColors.gold, size: 24),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          'Experience the divine energy directly from this sacred location.',
-                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.cream.withOpacity(0.9)),
+                      child: const Icon(Icons.auto_awesome, color: AppColors.saffron, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'Experience the divine energy directly from this sacred location.',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.darkCharcoal, 
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 100),
+          ],
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.transparent, AppColors.midnight.withOpacity(0.9)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.saffron,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              elevation: 8,
-              shadowColor: AppColors.saffron.withOpacity(0.5),
-            ),
-            onPressed: () {
-              context.push('/pandit-selection');
-            },
-            child: Text(
-              'Continue Booking →',
-              style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 18),
-            ),
-          ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        child: PrimaryButton(
+          label: 'Continue Booking →',
+          onTap: () {
+            context.push('/pandit-selection');
+          },
         ),
       ),
     );

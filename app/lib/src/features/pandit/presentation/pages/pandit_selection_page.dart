@@ -3,8 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class PanditSelectionPage extends StatefulWidget {
   final String templeName;
@@ -38,49 +37,44 @@ class _PanditSelectionPageState extends State<PanditSelectionPage> with SingleTi
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          'Select Pandit',
-          style: AppTextStyles.title.copyWith(fontSize: 22),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.maroon),
-      ),
-      body: DivineBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: Text(
-                  'Choose a Divine Guide',
-                  style: AppTextStyles.title.copyWith(fontSize: 24),
+    return AppScaffold(
+      title: 'Select Pandit',
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: Text(
+                'Choose a Divine Guide',
+                style: AppTextStyles.title.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.darkCharcoal,
                 ),
               ),
-              const SizedBox(height: 12),
-              _StaggeredFade(
-                controller: _animController,
-                delay: 200,
-                child: Text(
-                  widget.templeName.isNotEmpty
-                      ? 'Available pandits for ${widget.templeName}'
-                      : 'Available authentic pandits for your pooja',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron),
+            ),
+            const SizedBox(height: 12),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 200,
+              child: Text(
+                widget.templeName.isNotEmpty
+                    ? 'Available pandits for ${widget.templeName}'
+                    : 'Available authentic pandits for your pooja',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.softGrey,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+            ),
 
-              const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
-              _PanditList(animController: _animController),
-            ],
-          ),
+            _PanditList(animController: _animController),
+          ],
         ),
       ),
     );
@@ -102,15 +96,18 @@ class _PanditList extends StatelessWidget {
     return Column(
       children: List.generate(pandits.length, (index) {
         final pandit = pandits[index];
-        return _StaggeredFade(
-          controller: animController,
-          delay: 400 + (index * 150),
-          child: _PanditCard(
-            name: pandit['name']!,
-            experience: pandit['exp']!,
-            onTap: () {
-              context.push('/pandit-details', extra: pandit['name']);
-            },
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _StaggeredFade(
+            controller: animController,
+            delay: 400 + (index * 150),
+            child: _PanditCard(
+              name: pandit['name']!,
+              experience: pandit['exp']!,
+              onTap: () {
+                context.push('/pandit-details', extra: pandit['name']);
+              },
+            ),
           ),
         );
       }),
@@ -131,20 +128,19 @@ class _PanditCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: DivineGlassCard(
-        onTap: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      child: PrimaryCard(
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.saffron.withOpacity(0.12),
+                color: AppColors.saffron.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person, color: AppColors.deepSaffron, size: 32),
+              child: const Icon(Icons.person, color: AppColors.saffron, size: 32),
             ),
             const SizedBox(width: 18),
             Expanded(
@@ -153,17 +149,25 @@ class _PanditCard extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: AppTextStyles.title.copyWith(fontSize: 18),
+                    style: AppTextStyles.title.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.darkCharcoal,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     experience,
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron.withOpacity(0.7)),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.saffron,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.saffron),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.saffron),
           ],
         ),
       ),

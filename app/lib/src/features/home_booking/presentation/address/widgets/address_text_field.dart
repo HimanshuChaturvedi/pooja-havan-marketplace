@@ -14,25 +14,33 @@ class AddressTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      maxLines: 4,
-      style: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon.withOpacity(0.35)),
-        filled: true,
-        fillColor: AppColors.saffron.withOpacity(0.08),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.saffron.withOpacity(0.2)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Detailed Address',
+          style: AppTextStyles.bodyLarge.copyWith(
+            color: AppColors.darkCharcoal, 
+            fontWeight: FontWeight.w800,
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.deepSaffron, width: 1.5),
+        const SizedBox(height: 12),
+        TextField(
+          controller: controller,
+          maxLines: 4,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.darkCharcoal,
+            fontWeight: FontWeight.w600,
+          ),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.softGrey.withOpacity(0.5)),
+            filled: true,
+            fillColor: Colors.white,
+            // Border is handled by theme, but we can override if needed for specific aesthetic
+          ),
         ),
-        contentPadding: const EdgeInsets.all(20),
-      ),
+      ],
     );
   }
 }

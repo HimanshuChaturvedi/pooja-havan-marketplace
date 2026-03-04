@@ -11,13 +11,14 @@ class SpiritParticles extends StatefulWidget {
 
 class _SpiritParticlesState extends State<SpiritParticles> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  final List<_Particle> _particles = List.generate(25, (_) => _Particle());
+  // Increased particle count for more "Glossy Dust"
+  final List<_Particle> _particles = List.generate(40, (_) => _Particle());
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(seconds: 10))
+        vsync: this, duration: const Duration(seconds: 12))
       ..repeat();
   }
 
@@ -44,9 +45,10 @@ class _SpiritParticlesState extends State<SpiritParticles> with SingleTickerProv
 class _Particle {
   double x = Random().nextDouble();
   double y = Random().nextDouble();
-  double size = Random().nextDouble() * 2 + 1;
-  double speed = Random().nextDouble() * 0.1 + 0.05;
-  double opacity = Random().nextDouble() * 0.5 + 0.2;
+  double size = Random().nextDouble() * 3 + 0.5; // Varied sizes
+  double speed = Random().nextDouble() * 0.08 + 0.03;
+  double opacity = Random().nextDouble() * 0.6 + 0.1;
+  double twinkleSpeed = Random().nextDouble() * 3 + 1; // Unique twinkle
 }
 
 class _ParticlePainter extends CustomPainter {
@@ -67,21 +69,25 @@ class _ParticlePainter extends CustomPainter {
       double xPos = p.x * size.width;
       double yPos = currentY * size.height;
 
-      // Subtle pulse effect
-      double pOpacity = p.opacity * (0.8 + 0.2 * sin(animationValue * 2 * pi));
+      // Twinkling logic (Sine wave based on individual speed)
+      double twinkle = (sin(animationValue * 2 * pi * p.twinkleSpeed) + 1) / 2;
+      double pOpacity = p.opacity * (0.3 + 0.7 * twinkle);
       
       paint.color = color.withOpacity(pOpacity.clamp(0.0, 1.0));
       
+      // Draw main particle
       canvas.drawCircle(
         Offset(xPos, yPos),
         p.size,
         paint,
       );
       
-      // Add a tiny glow
-      paint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-      canvas.drawCircle(Offset(xPos, yPos), p.size * 2, paint);
-      paint.maskFilter = null;
+      // Add a soft glow (Bloom) if the particle is "bright"
+      if (twinkle > 0.8) {
+        paint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+        canvas.drawCircle(Offset(xPos, yPos), p.size * 2.5, paint);
+        paint.maskFilter = null;
+      }
     }
   }
 

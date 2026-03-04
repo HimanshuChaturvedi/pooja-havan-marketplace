@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../../theme/components/app_colors.dart';
-import '../../../theme/components/app_text_styles.dart';
-import '../../booking/application/booking_session.dart';
-import '../../samagri_flow/application/samagri_session.dart';
-import '../../samagri_flow/state/samagri_cart_notifier.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
+import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   const PaymentPage({super.key});
@@ -51,144 +49,120 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
   Widget build(BuildContext context) {
     final booking = BookingSession.current;
     final samagri = SamagriSession.current;
-    final amount = samagri != null ? samagri.totalAmount : 3000;
+    
+    const int ritualDakshina = 2100;
+    final int samagriCost = samagri != null ? samagri.totalAmount : 0;
+    final int amount = (booking != null) ? (ritualDakshina + samagriCost) : samagriCost;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          'Payment',
-          style: AppTextStyles.title.copyWith(fontSize: 22),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.maroon),
-        leading: BackButton(
-          onPressed: () {
-            if (booking != null) {
-              context.go('/home-address');
-              return;
-            }
-            context.go('/samagri-summary');
-          },
-        ),
-      ),
-      body: DivineBackground(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: Text(
-                  'Final Payment',
-                  style: AppTextStyles.title.copyWith(fontSize: 24),
+    return AppScaffold(
+      title: 'Payment',
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: Text(
+                'Final Payment',
+                style: AppTextStyles.title.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.darkCharcoal,
                 ),
               ),
-              const SizedBox(height: 8),
-              _StaggeredFade(
-                controller: _animController,
-                delay: 200,
-                child: Text(
-                  'Review your amount and complete the sacred booking.',
-                  style: AppTextStyles.bodyMedium,
-                ),
+            ),
+            const SizedBox(height: 8),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 200,
+              child: Text(
+                'Review your amount and complete the sacred booking.',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGrey),
               ),
+            ),
 
-              const SizedBox(height: 40),
+            const SizedBox(height: 40),
 
-              _StaggeredFade(
-                controller: _animController,
-                delay: 400,
-                child: DivineGlassCard(
-                  padding: const EdgeInsets.all(24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total Payable',
-                        style: AppTextStyles.title.copyWith(fontSize: 18),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 400,
+              child: PrimaryCard(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total Payable',
+                      style: AppTextStyles.title.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
                       ),
-                      Text(
-                        '₹$amount',
-                        style: AppTextStyles.title.copyWith(
-                          color: AppColors.deepSaffron,
-                          fontSize: 26,
+                    ),
+                    Text(
+                      '₹$amount',
+                      style: AppTextStyles.title.copyWith(
+                        color: AppColors.saffron,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            _StaggeredFade(
+              controller: _animController,
+              delay: 600,
+              child: PrimaryCard(
+                padding: const EdgeInsets.all(20),
+                color: AppColors.saffron.withOpacity(0.05),
+                showShadow: false,
+                child: Row(
+                  children: [
+                    const Icon(Icons.shield_outlined, color: AppColors.saffron, size: 24),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        booking != null
+                            ? 'Pay directly to the Pandit after the sacred ritual.'
+                            : 'Pay directly to the Vendor upon delivery of samagri.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.darkCharcoal.withOpacity(0.8),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 10),
-
-              _StaggeredFade(
-                controller: _animController,
-                delay: 600,
-                child: DivineGlassCard(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.shield_outlined, color: AppColors.deepSaffron, size: 24),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          booking != null
-                              ? 'Manual payment confirmed. Pay directly to the Pandit after the sacred ritual.'
-                              : 'Manual payment confirmed. Pay directly to the Vendor upon delivery of samagri.',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.maroon,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-        decoration: const BoxDecoration(color: Colors.transparent),
-        child: SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.saffron,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              elevation: 8,
-              shadowColor: AppColors.saffron.withOpacity(0.5),
-            ),
-            onPressed: canPayNow()
-                ? () async {
-                    await Future.delayed(const Duration(milliseconds: 500));
-                    if (booking != null) {
-                      BookingSession.status = BookingStatus.confirmed;
-                      context.go('/booking-success');
-                      return;
-                    }
-                    if (samagri != null) {
-                      SamagriSession.markPaid();
-                      ref.read(samagriCartProvider.notifier).clearCart();
-                      context.go('/samagri-success');
-                    }
-                  }
-                : null,
-            child: Text(
-              'Confirm Booking ₹$amount →',
-              style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 18),
-            ),
-          ),
+        child: PrimaryButton(
+          label: 'Confirm Booking ₹$amount',
+          onTap: () async {
+            await Future.delayed(const Duration(milliseconds: 500));
+            if (booking != null) {
+              BookingSession.status = BookingStatus.confirmed;
+              context.go('/booking-success');
+              return;
+            }
+            if (samagri != null) {
+              SamagriSession.markPaid();
+              ref.read(samagriCartProvider.notifier).clearCart();
+              context.go('/samagri-success');
+            }
+          },
+          loading: false, // Could be state driven
+          color: canPayNow() ? null : AppColors.softGrey.withOpacity(0.3),
         ),
       ),
     );
@@ -223,42 +197,6 @@ class _StaggeredFade extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _AmountCard extends StatelessWidget {
-  final String label;
-  final int amount;
-  const _AmountCard({required this.label, required this.amount});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.saffron.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.saffron.withOpacity(0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.saffron.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: AppTextStyles.title.copyWith(color: Colors.white, fontSize: 18)),
-          Text(
-            '₹$amount',
-            style: AppTextStyles.title.copyWith(color: AppColors.gold, fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
     );
   }
 }

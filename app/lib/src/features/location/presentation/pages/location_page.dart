@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../booking/application/booking_session.dart';
-import '../../../booking/domain/booking_draft.dart';
-import '../../../../theme/components/app_colors.dart';
-import '../../../../theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class LocationPage extends StatefulWidget {
   final String ritualSlug;
@@ -43,134 +42,136 @@ class _LocationPageState extends State<LocationPage> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      body: DivineBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: Text(
-                  "Preparing ritual for ${widget.ritualName}",
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron),
+    return AppScaffold(
+      title: 'Location Selection',
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: Text(
+                "Preparing ritual for ${widget.ritualName}",
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.saffron,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
+            ),
 
-              const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
-              // 📍 PILOT NOTICE (GLASS STYLE)
-              _StaggeredFade(
-                controller: _animController,
-                delay: 300,
-                child: DivineGlassCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.auto_awesome, color: AppColors.deepSaffron, size: 20),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Special Pilot Service',
-                            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon, fontWeight: FontWeight.bold),
+            // 📍 PILOT NOTICE
+            _StaggeredFade(
+              controller: _animController,
+              delay: 300,
+              child: PrimaryCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, color: AppColors.saffron, size: 20),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Special Pilot Service',
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.darkCharcoal, 
+                            fontWeight: FontWeight.w900,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Bharat Pooja Setu services are currently being piloted exclusively in Ghaziabad for the highest quality experience.',
-                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.maroon.withOpacity(0.8), height: 1.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              _StaggeredFade(
-                controller: _animController,
-                delay: 500,
-                child: Text(
-                  'Current Location',
-                  style: AppTextStyles.bodyLarge.copyWith(color: AppColors.maroon, fontWeight: FontWeight.w600),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              _StaggeredFade(
-                controller: _animController,
-                delay: 700,
-                child: DivineGlassCard(
-                  padding: const EdgeInsets.all(24),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.saffron.withOpacity(0.1),
-                          shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.location_on, color: AppColors.deepSaffron, size: 28),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Bharat Pooja Setu services are currently being piloted exclusively in Ghaziabad for the highest quality experience.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.darkCharcoal.withOpacity(0.8), 
+                        height: 1.5,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _pilotCity,
-                            style: AppTextStyles.title.copyWith(fontSize: 20),
-                          ),
-                          Text(
-                            'Uttar Pradesh, India',
-                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.deepSaffron.withOpacity(0.6)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 48),
+
+            _StaggeredFade(
+              controller: _animController,
+              delay: 500,
+              child: Text(
+                'Current City',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.darkCharcoal, 
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            _StaggeredFade(
+              controller: _animController,
+              delay: 700,
+              child: PrimaryCard(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.saffron.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.location_on_rounded, color: AppColors.saffron, size: 28),
+                    ),
+                    const SizedBox(width: 20),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _pilotCity,
+                          style: AppTextStyles.title.copyWith(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.darkCharcoal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Uttar Pradesh, India',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.softGrey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 100),
+          ],
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.transparent, AppColors.midnight.withOpacity(0.9)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.saffron,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              elevation: 8,
-              shadowColor: AppColors.saffron.withOpacity(0.5),
-            ),
-            onPressed: () {
-              BookingSession.current = BookingDraft(
-                bookingType: BookingType.home,
-                ritualName: widget.ritualName,
-                city: _pilotCity,
-              );
-              context.push('/at-home-or-temple');
-            },
-            child: Text(
-              'Continue to Booking →',
-              style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 18),
-            ),
-          ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        child: PrimaryButton(
+          label: 'Continue to Booking →',
+          onTap: () {
+            BookingSession.current = BookingDraft(
+              bookingType: BookingType.home,
+              ritualName: widget.ritualName,
+              city: _pilotCity,
+            );
+            context.push('/at-home-or-temple');
+          },
         ),
       ),
     );

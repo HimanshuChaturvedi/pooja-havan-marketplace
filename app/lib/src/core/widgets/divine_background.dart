@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../theme/components/app_colors.dart';
 import 'spirit_particles.dart';
+import '../../theme/components/app_colors.dart';
 
 class DivineBackground extends StatelessWidget {
   final Widget child;
   final bool showParticles;
-  final String? bgImagePath; 
+  final String? bgImagePath;
 
   const DivineBackground({
     super.key,
@@ -18,7 +18,7 @@ class DivineBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // 🌅 1. BASE SAFFRON DAWN GRADIENT
+        // 1. DEEP INDIGO DEPTHS GRADIENT
         Container(
           width: double.infinity,
           height: double.infinity,
@@ -27,42 +27,72 @@ class DivineBackground extends StatelessWidget {
           ),
         ),
 
-        // 🌅 2. DEPTH VIGNETTE (Focus Center)
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                colors: [
-                  Colors.transparent,
-                  AppColors.maroon.withOpacity(0.15),
-                ],
-                stops: const [0.6, 1.0],
+        // 2. CENTRAL SACRED GLOW (Mandala Aura)
+        Positioned(
+          top: 100,
+          left: 0,
+          right: 0,
+          child: Opacity(
+            opacity: 0.2,
+            child: Container(
+              height: 400,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.roseGold.withOpacity(0.4),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.3, 1.0],
+                ),
               ),
             ),
           ),
         ),
 
-        // 🏵️ 3. SUBTLE WATERMARK DEVOTIONAL IMAGE
-        if (bgImagePath != null)
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.22, // Slightly more visible
-              child: Image.asset(
-                bgImagePath!,
-                fit: BoxFit.cover,
-                color: AppColors.saffron.withOpacity(0.2),
-                colorBlendMode: BlendMode.softLight, // Soft light for better texture integration
+        // 3. GLOWING LOTUS MANDALA WATERMARK
+        Positioned(
+          top: 40,
+          left: 0,
+          right: 0,
+          child: Opacity(
+            opacity: 0.08,
+            child: Icon(
+              Icons.spa_rounded, // Central lotus symbol
+              size: 500,
+              color: AppColors.champagneGold,
+            ),
+          ),
+        ),
+
+        // 4. TOP AURORA (Rose Gold Glow)
+        Positioned(
+          top: -200,
+          right: -100,
+          child: Container(
+            width: 500,
+            height: 500,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppColors.mysticalPurple.withOpacity(0.4),
+                  Colors.transparent,
+                ],
               ),
             ),
           ),
+        ),
 
-        // ✨ 4. SPIRIT PARTICLES (DIVINE LIGHT)
+        // 5. FLOATING GOLD PARTICLES
         if (showParticles)
-          const Positioned.fill(
-            child: SpiritParticles(color: AppColors.gold),
+          Positioned.fill(
+            child: SpiritParticles(
+              color: AppColors.champagneGold.withOpacity(0.6),
+            ),
           ),
 
-        // 📱 5. CONTENT LAYER
+        // 6. CONTENT LAYER
         child,
       ],
     );

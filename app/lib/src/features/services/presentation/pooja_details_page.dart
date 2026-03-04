@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../../theme/components/app_colors.dart';
-import '../../../theme/components/app_text_styles.dart';
-import 'package:app/src/core/widgets/divine_background.dart';
-import 'package:app/src/core/widgets/divine_glass_card.dart';
+import 'package:app/src/theme/components/app_colors.dart';
+import 'package:app/src/theme/components/app_text_styles.dart';
+import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'package:app/src/core/widgets/design_system.dart';
 
 class PoojaDetailsPage extends StatefulWidget {
   final String poojaName;
@@ -42,138 +42,126 @@ class _PoojaDetailsPageState extends State<PoojaDetailsPage> with SingleTickerPr
   Widget build(BuildContext context) {
     final details = _poojaDetails[widget.poojaSlug];
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: Text(
-          widget.poojaName,
-          style: AppTextStyles.title.copyWith(fontSize: 22),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.maroon),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home_outlined),
-            onPressed: () => context.go('/landing'),
-          )
-        ],
-      ),
-      body: DivineBackground(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 120, 20, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _StaggeredFade(
-                controller: _animController,
-                delay: 100,
-                child: DivineGlassCard(
-                  padding: const EdgeInsets.all(24),
-                  child: details == null
-                      ? const Text('Details will be updated soon.')
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Pooja Overview',
-                              style: AppTextStyles.title.copyWith(
-                                fontSize: 18,
-                                color: AppColors.maroon,
-                              ),
+    return AppScaffold(
+      title: widget.poojaName,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.home_outlined, color: AppColors.darkCharcoal),
+          onPressed: () => context.go('/landing'),
+        )
+      ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StaggeredFade(
+              controller: _animController,
+              delay: 100,
+              child: PrimaryCard(
+                padding: const EdgeInsets.all(24),
+                child: details == null
+                    ? const Text('Details will be updated soon.')
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pooja Overview',
+                            style: AppTextStyles.title.copyWith(
+                              fontSize: 18,
+                              color: AppColors.darkCharcoal,
+                              fontWeight: FontWeight.w800,
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              details['description']!,
-                              style: AppTextStyles.bodyMedium.copyWith(height: 1.6),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            details['description']!,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              height: 1.6,
+                              color: AppColors.darkCharcoal.withOpacity(0.8),
+                              fontWeight: FontWeight.w500,
                             ),
-                          ],
-                        ),
-                ),
+                          ),
+                        ],
+                      ),
               ),
-              const SizedBox(height: 10),
-              if (details != null)
-                _StaggeredFade(
-                  controller: _animController,
-                  delay: 300,
-                  child: DivineGlassCard(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        _infoRow(
-                          icon: Icons.timer_outlined,
-                          title: 'Duration',
-                          value: details['duration']!,
-                        ),
-                        const Divider(height: 32, color: Colors.black12),
-                        _infoRow(
-                          icon: Icons.inventory_2_outlined,
-                          title: 'Samagri',
-                          value: details['samagri']!,
-                        ),
-                        const Divider(height: 32, color: Colors.black12),
-                        _infoRow(
-                          icon: Icons.payments_outlined,
-                          title: 'Dakshina',
-                          value: details['fees']!,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              _StaggeredFade(
-                controller: _animController,
-                delay: 500,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    '*Final dakshina may vary based on city & pandit availability',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.maroon.withOpacity(0.5),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
             ),
+            const SizedBox(height: 16),
+            if (details != null)
+              _StaggeredFade(
+                controller: _animController,
+                delay: 300,
+                child: PrimaryCard(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      _infoRow(
+                        icon: Icons.timer_outlined,
+                        title: 'Duration',
+                        value: details['duration']!,
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(height: 1, color: Colors.black12),
+                      const SizedBox(height: 12),
+                      _infoRow(
+                        icon: Icons.inventory_2_outlined,
+                        title: 'Samagri',
+                        value: details['samagri']!,
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(height: 1, color: Colors.black12),
+                      const SizedBox(height: 12),
+                      _infoRow(
+                        icon: Icons.payments_outlined,
+                        title: 'Dakshina',
+                        value: details['fees']!,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
+            _StaggeredFade(
+              controller: _animController,
+              delay: 500,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  '*Final dakshina may vary based on city & pandit availability',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.softGrey,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 100),
           ],
         ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.saffron,
-              foregroundColor: Colors.white,
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              shadowColor: AppColors.saffron.withOpacity(0.4),
-            ),
-            onPressed: () {
-              context.push(
-                '/location/${widget.poojaSlug}/${Uri.encodeComponent(widget.poojaName)}',
-              );
-            },
-            child: Text(
-              'Select Location →',
-              style: AppTextStyles.button.copyWith(fontSize: 18, color: Colors.white),
-            ),
-          ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        child: PrimaryButton(
+          label: 'Select Location →',
+          onTap: () {
+            final booking = BookingSession.current;
+            if (booking != null) {
+              if (booking.bookingType == BookingType.temple) {
+                if (booking.templeName == null) {
+                  context.push('/temples/${Uri.encodeComponent(booking.city)}');
+                } else {
+                  context.push('/home-date-time');
+                }
+              } else {
+                context.push('/home-address');
+              }
+              return;
+            }
+            context.push(
+              '/location/${widget.poojaSlug}/${Uri.encodeComponent(widget.poojaName)}',
+            );
+          },
         ),
       ),
     );
@@ -189,10 +177,10 @@ class _PoojaDetailsPageState extends State<PoojaDetailsPage> with SingleTickerPr
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.saffron.withOpacity(0.1),
+            color: AppColors.saffron.withOpacity(0.08),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: AppColors.deepSaffron, size: 22),
+          child: Icon(icon, color: AppColors.saffron, size: 22),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -201,14 +189,17 @@ class _PoojaDetailsPageState extends State<PoojaDetailsPage> with SingleTickerPr
             children: [
               Text(
                 title,
-                style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold),
+                style: AppTextStyles.bodySmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.softGrey,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
                 style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.maroon,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkCharcoal,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
