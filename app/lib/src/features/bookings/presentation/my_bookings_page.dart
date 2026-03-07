@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:app/src/logs/transaction_log.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/src/features/booking/data/booking_providers.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class MyBookingsPage extends StatefulWidget {
+import 'booking_detail_page.dart';
+
+class MyBookingsPage extends ConsumerStatefulWidget {
   const MyBookingsPage({super.key});
 
   @override
-  State<MyBookingsPage> createState() => _MyBookingsPageState();
+  ConsumerState<MyBookingsPage> createState() => _MyBookingsPageState();
 }
 
-class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProviderStateMixin {
+class _MyBookingsPageState extends ConsumerState<MyBookingsPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
   @override
@@ -21,6 +25,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..forward();
+    // autoDispose on bookingsProvider guarantees fresh fetch on every mount
   }
 
   @override
@@ -31,53 +36,67 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    final logs = TransactionLogService.all();
+    final bookingsAsync = ref.watch(bookingsProvider);
 
     return AppScaffold(
       title: 'My Bookings',
-      body: logs.isEmpty
-          ? const _EmptyState()
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              itemCount: logs.length,
-              itemBuilder: (context, index) {
-                final log = logs[index];
-                return _StaggeredFade(
-                  controller: _animController,
-                  delay: 100 + (index * 100),
-                  child: _BookingCard(log: log),
-                );
-              },
-            ),
+      body: RefreshIndicator(
+        color: AppColors.saffron,
+        onRefresh: () async => ref.invalidate(bookingsProvider),
+        child: bookingsAsync.when(
+          loading: () => Center(child: CircularProgressIndicator(color: AppColors.saffron)),
+          error: (err, stack) => Center(child: Text('Error: $err', style: AppTextStyles.bodyMedium)),
+          data: (bookings) => bookings.isEmpty
+              ? const _EmptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = bookings[index];
+                    return _StaggeredFade(
+                      controller: _animController,
+                      delay: 100 + (index * 100),
+                      child: _BookingCard(booking: booking),
+                    );
+                  },
+                ),
+        ),
+      ),
     );
   }
 }
 
 class _BookingCard extends StatelessWidget {
-  final TransactionLogEntry log;
+  final BookingDraft booking;
 
-  const _BookingCard({required this.log});
+  const _BookingCard({required this.booking});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: PrimaryCard(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => BookingDetailPage(booking: booking)),
+        );
+      },
+      child: Padding(
+        padding: EdgeInsets.only(bottom: 16),
+        child: PrimaryCard(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.saffron.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    _titleFromLog(log).toUpperCase(),
+                    _titleFromBooking(booking).toUpperCase(),
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.saffron,
                       fontWeight: FontWeight.w900,
@@ -87,7 +106,7 @@ class _BookingCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '₹${log.amount}',
+                  '₹${booking.totalAmount}',
                   style: AppTextStyles.title.copyWith(
                     color: AppColors.darkCharcoal, 
                     fontSize: 20,
@@ -96,35 +115,50 @@ class _BookingCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
-              _subtitleFromLog(log),
+              booking.ritualName,
               style: AppTextStyles.title.copyWith(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: AppColors.darkCharcoal,
               ),
             ),
-            const SizedBox(height: 12),
-            _InfoLine(label: 'Booking ID', value: _transactionIdForDisplay(log)),
+            SizedBox(height: 12),
+            _InfoLine(
+              label: 'Type', 
+              value: booking.bookingType == BookingType.other ? 'SAMAGRI' : booking.bookingType.name.toUpperCase(),
+            ),
             const SizedBox(height: 6),
-            _InfoLine(label: 'Date', value: _formatDateTime(log.createdAt)),
-            if (log.bookedForDate != null) ...[
-              const SizedBox(height: 6),
+            if (booking.selectedDate != null) ...[
               _InfoLine(
                 label: 'Scheduled',
-                value: '${log.bookedForDate!.day.toString().padLeft(2, '0')}/${log.bookedForDate!.month.toString().padLeft(2, '0')}/${log.bookedForDate!.year} at ${log.bookedForTime ?? '--'}',
+                value: '${booking.selectedDate!.day.toString().padLeft(2, '0')}/${booking.selectedDate!.month.toString().padLeft(2, '0')}/${booking.selectedDate!.year} at ${booking.selectedTime ?? '--'}',
               ),
             ],
             const SizedBox(height: 6),
             _InfoLine(
               label: 'Status',
-              value: log.status == TransactionStatus.completed ? 'Confirmed' : 'Pending',
+              value: 'Confirmed',
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+String _titleFromBooking(BookingDraft b) {
+  switch (b.bookingType) {
+    case BookingType.home:
+      return 'Home Pooja';
+    case BookingType.temple:
+      return 'Temple Ritual';
+    case BookingType.other:
+      return 'Shop Order';
+    default:
+      return 'Booking';
   }
 }
 
@@ -159,32 +193,6 @@ class _InfoLine extends StatelessWidget {
   }
 }
 
-String _transactionIdForDisplay(TransactionLogEntry log) {
-  if (log.type == TransactionType.booking) {
-    return log.bookingId ?? '-';
-  }
-  if (log.type == TransactionType.samagri) {
-    return log.samagriSessionId ?? log.id;
-  }
-  return log.id;
-}
-
-String _titleFromLog(TransactionLogEntry e) {
-  switch (e.type) {
-    case TransactionType.booking:
-      return 'Pooja Booking';
-    case TransactionType.samagri:
-      return 'Samagri Order';
-  }
-}
-
-String _subtitleFromLog(TransactionLogEntry e) {
-  if (e.type == TransactionType.booking) {
-    return e.title;
-  }
-  return 'Samagri Order Request';
-}
-
 String _formatDateTime(DateTime dt) {
   final day = dt.day.toString().padLeft(2, '0');
   final month = dt.month.toString().padLeft(2, '0');
@@ -204,7 +212,7 @@ class _EmptyState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.history, color: AppColors.softGrey.withOpacity(0.2), size: 64),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             'No bookings yet',
             style: AppTextStyles.bodyLarge.copyWith(color: AppColors.softGrey),

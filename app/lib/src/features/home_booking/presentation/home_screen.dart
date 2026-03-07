@@ -4,14 +4,19 @@ import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/features/home_booking/presentation/widgets/action_card.dart';
 import 'package:app/src/features/home_booking/presentation/widgets/banner_carousel.dart';
+import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
+import 'package:app/src/features/main/presentation/state/main_navigation_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   static const routeName = '/home';
 
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       color: AppColors.warmIvory,
       child: Stack(
@@ -58,7 +63,13 @@ class HomeScreen extends StatelessWidget {
                             title: 'Book a Pooja',
                             subtitle: 'Divine rituals at home',
                             icon: Icons.temple_hindu_rounded,
-                            onTap: () => context.push('/services'),
+                            onTap: () {
+                              ref.read(mainNavigationProvider.notifier).state = 0; // Home tab
+                              BookingSession.reset();
+                              SamagriSession.clear();
+                              ref.read(samagriCartProvider.notifier).clearCart();
+                              context.push('/services');
+                            },
                           ),
                           ActionCard(
                             title: 'Explore Services',
@@ -70,13 +81,26 @@ class HomeScreen extends StatelessWidget {
                             title: 'Shop',
                             subtitle: 'Pure ritual essentials',
                             icon: Icons.shopping_basket_rounded,
-                            onTap: () => context.push('/samagri-list'),
+                            onTap: () {
+                              ref.read(mainNavigationProvider.notifier).state = 2; // Shop tab
+                              BookingSession.reset();
+                              SamagriSession.clear();
+                              ref.read(samagriCartProvider.notifier).clearCart();
+                              // Simply going to landing will now show index 2
+                              context.go('/landing');
+                            },
                           ),
                           ActionCard(
                             title: 'Temple Services',
                             subtitle: 'Book rituals at temple',
                             icon: Icons.account_balance_rounded,
-                            onTap: () => context.push('/temple-services'),
+                            onTap: () {
+                              ref.read(mainNavigationProvider.notifier).state = 0; // Home tab
+                              BookingSession.reset();
+                              SamagriSession.clear();
+                              ref.read(samagriCartProvider.notifier).clearCart();
+                              context.push('/temple-services');
+                            },
                           ),
                         ],
                       ),

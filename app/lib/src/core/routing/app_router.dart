@@ -31,6 +31,11 @@ import '../../features/booking/presentation/booking_success_page.dart';
 
 import '../../features/temple/presentation/pages/temple_list_page.dart';
 import '../../features/temple/presentation/pages/temple_details_page.dart';
+import '../../features/temple/presentation/pages/temple_city_page.dart';
+import '../../features/temple/presentation/pages/temple_selection_page.dart';
+import '../../features/temple/presentation/pages/temple_ritual_page.dart';
+import '../../features/temple/presentation/pages/temple_date_page.dart';
+import '../../features/temple/presentation/pages/temple_summary_page.dart';
 
 import '../../features/pandit/presentation/pages/pandit_selection_page.dart';
 import '../../features/pandit/presentation/pages/pandit_details_page.dart';
@@ -39,6 +44,7 @@ import '../../features/services/domain/explore_service.dart';
 import '../../features/services/presentation/explore_service_detail_page.dart';
 import '../../features/bookings/presentation/my_bookings_page.dart';
 import '../../features/samagri_flow/presentation/success/samagri_success_page.dart';
+import '../../features/samagri_flow/presentation/address/samagri_delivery_address_page.dart';
 
 
 import '../../features/home_booking/presentation/home_screen.dart';
@@ -84,6 +90,12 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const MainPage(),
+    ),
+
+    // SHOP REDIRECT
+    GoRoute(
+      path: '/shop',
+      redirect: (context, state) => '/landing',
     ),
 
     // SERVICES
@@ -272,7 +284,7 @@ final GoRouter appRouter = GoRouter(
     ),
 
     GoRoute(
-      path: '/my-bookings',
+      path: '/bookings',
       builder: (context, state) => const MyBookingsPage(),
     ),
 GoRoute(
@@ -280,6 +292,10 @@ GoRoute(
   builder: (context, state) =>
       const SamagriSuccessPage(),
 ),
+    GoRoute(
+      path: '/samagri-delivery-address',
+      builder: (context, state) => const SamagriDeliveryAddressPage(),
+    ),
 
 
 
@@ -335,42 +351,44 @@ GoRoute(
         );
       },
     ),
-    // TEMPLE SERVICES (Placeholder)
+    // TEMPLE FLOW
     GoRoute(
       path: '/temple-services',
+      builder: (context, state) => const TempleCityPage(),
+    ),
+    GoRoute(
+      path: '/temple-select',
       builder: (context, state) {
-        return AppScaffold(
-          title: 'Temple Services',
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.account_balance_rounded, color: AppColors.saffron.withOpacity(0.3), size: 64),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Coming Soon',
-                    style: AppTextStyles.title.copyWith(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.darkCharcoal,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Temple booking services will be\navailable in the next update.',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.softGrey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+        final city = state.uri.queryParameters['city'] ?? 'Ghaziabad';
+        return TempleSelectionPage(city: city);
+      },
+    ),
+    GoRoute(
+      path: '/temple-ritual',
+      builder: (context, state) {
+        final temple = state.uri.queryParameters['temple'] ?? '';
+        final city = state.uri.queryParameters['city'] ?? '';
+        return TempleRitualPage(temple: temple, city: city);
+      },
+    ),
+    GoRoute(
+      path: '/temple-date',
+      builder: (context, state) {
+        final temple = state.uri.queryParameters['temple'] ?? '';
+        final city = state.uri.queryParameters['city'] ?? '';
+        final ritual = state.uri.queryParameters['ritual'] ?? '';
+        return TempleDatePage(temple: temple, city: city, ritual: ritual);
+      },
+    ),
+    GoRoute(
+      path: '/temple-summary',
+      builder: (context, state) {
+        final temple = state.uri.queryParameters['temple'] ?? '';
+        final city = state.uri.queryParameters['city'] ?? '';
+        final ritual = state.uri.queryParameters['ritual'] ?? '';
+        final date = state.uri.queryParameters['date'] ?? '';
+        final slot = state.uri.queryParameters['slot'] ?? '';
+        return TempleSummaryPage(temple: temple, city: city, ritual: ritual, date: date, slot: slot);
       },
     ),
   ],

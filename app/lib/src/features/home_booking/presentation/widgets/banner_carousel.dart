@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/features/home_booking/presentation/models/festival_model.dart';
 import 'package:app/src/core/widgets/design_system.dart';
@@ -52,7 +53,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 170,
+          height: 200,
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (index) => setState(() => _currentPage = index),
@@ -63,7 +64,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: GestureDetector(
                   onTap: () {
-                    debugPrint('Tapped on ${festival.title}');
+                    // Navigate to the services page for booking
+                    context.push('/services');
                   },
                   child: PrimaryCard(
                     padding: EdgeInsets.zero,
@@ -94,7 +96,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.all(24.0),
+                            padding: const EdgeInsets.all(20.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -102,7 +104,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withOpacity(0.25),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -115,26 +117,44 @@ class _BannerCarouselState extends State<BannerCarousel> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 10),
                                 Text(
                                   festival.title,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 22,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.w900,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 4),
                                 Text(
                                   festival.subtitle,
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.9),
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     height: 1.3,
                                     fontWeight: FontWeight.w600,
                                   ),
-                                  maxLines: 2,
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    'Book Now →',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

@@ -10,6 +10,7 @@ import 'package:app/src/features/samagri_flow/presentation/list/widgets/samagri_
 import 'package:app/src/features/samagri_flow/application/samagri_session.dart'
     as session;
 import 'package:app/src/core/widgets/design_system.dart';
+import '../../data/samagri_repository_provider.dart';
 
 class SamagriListPage extends ConsumerStatefulWidget {
   const SamagriListPage({super.key});
@@ -19,87 +20,202 @@ class SamagriListPage extends ConsumerStatefulWidget {
 }
 
 class _SamagriListPageState extends ConsumerState<SamagriListPage> {
-  final List<SamagriItem> _items = const [
-    SamagriItem(id: 'havan_samagri', name: 'Havan Samagri', price: 500, categoryId: 'daily'),
-    SamagriItem(id: 'ghee', name: 'Ghee', price: 300, categoryId: 'daily'),
-    SamagriItem(id: 'agarbatti', name: 'Agarbatti', price: 100, categoryId: 'daily'),
-    SamagriItem(id: 'dhoop', name: 'Dhoop', price: 150, categoryId: 'daily'),
-    SamagriItem(id: 'diya', name: 'Diya', price: 80, categoryId: 'daily'),
-    SamagriItem(id: 'phool', name: 'Phool', price: 120, categoryId: 'daily'),
-    SamagriItem(id: 'kapur', name: 'Kapur', price: 60, categoryId: 'daily'),
-    SamagriItem(id: 'chawal', name: 'Chawal (Akshat)', price: 70, categoryId: 'daily'),
-    SamagriItem(id: 'kumkum', name: 'Kumkum / Roli', price: 50, categoryId: 'daily'),
-    SamagriItem(id: 'supari', name: 'Supari', price: 60, categoryId: 'daily'),
-    SamagriItem(id: 'nariyal', name: 'Nariyal (Coconut)', price: 90, categoryId: 'daily'),
-    SamagriItem(id: 'samidha', name: 'Samidha (Havan Lakdi)', price: 200, categoryId: 'daily'),
-  ];
+  String _searchQuery = '';
+  String _selectedCategory = 'All';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(samagriCartProvider);
+    final samagriAsync = ref.watch(samagriItemsProvider);
+    
     final hasItems = cart.items.isNotEmpty;
     final total = cart.totalAmount;
 
     return AppScaffold(
       title: 'Shop',
-      body: CustomScrollView(
-        slivers: [
-          const SliverPadding(
-            padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
-            sliver: SliverToBoxAdapter(
-              child: SectionHeader(title: 'Sacred Items for Daily Use'),
+      body: Column(
+        children: [
+          // 🔍 STICKY SEARCH BAR
+          Container(
+            color: AppColors.warmIvory,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (v) => setState(() => _searchQuery = v),
+                decoration: InputDecoration(
+                  hintText: 'Search samagri...',
+                  hintStyle: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.softGrey.withOpacity(0.5),
+                  ),
+                  prefixIcon: const Icon(Icons.search_rounded, color: AppColors.saffron),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close_rounded, color: AppColors.softGrey, size: 20),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+              ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.82, 
+
+          // 📋 RESULTS AREA
+          Expanded(
+            child: samagriAsync.when(
+              data: (items) {
+                // Get unique categories
+                final categories = ['All', ...items.map((e) => e.categoryId).toSet().toList()];
+                
+                final filtered = items.where((item) {
+                  final matchesSearch = _searchQuery.isEmpty ||
+                      item.name.toLowerCase().contains(_searchQuery.toLowerCase());
+                  final matchesCategory = _selectedCategory == 'All' ||
+                      item.categoryId == _selectedCategory;
+                  return matchesSearch && matchesCategory;
+                }).toList();
+
+                return Column(
+                  children: [
+                    // 🏷️ CATEGORY CHIPS
+                    Container(
+                      color: AppColors.warmIvory,
+                      padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
+                      child: SizedBox(
+                        height: 38,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: categories.length,
+                          itemBuilder: (context, index) {
+                            final cat = categories[index];
+                            final isSelected = _selectedCategory == cat;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: GestureDetector(
+                                onTap: () => setState(() => _selectedCategory = cat),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppColors.saffron : Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected ? AppColors.saffron : Colors.black12,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    cat,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: isSelected ? Colors.white : AppColors.darkCharcoal,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.search_off_rounded, color: AppColors.softGrey.withOpacity(0.3), size: 48),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No items found',
+                                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.softGrey),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : GridView.builder(
+                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 0.82,
+                              ),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final item = filtered[index];
+                                final qty = cart.items[item] ?? 0;
+                                return SamagriItemCard(
+                                  name: item.name,
+                                  price: item.price.toInt(),
+                                  quantity: qty,
+                                  onAdd: () {
+                                    ref.read(samagriCartProvider.notifier).addItem(item);
+                                  },
+                                  onRemove: () {
+                                    ref.read(samagriCartProvider.notifier).removeItem(item);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.saffron),
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = _items[index];
-                  final qty = cart.items[item] ?? 0;
-                  return SamagriItemCard(
-                    name: item.name,
-                    price: item.price.toInt(),
-                    quantity: qty,
-                    onAdd: () {
-                      ref.read(samagriCartProvider.notifier).addItem(item);
-                    },
-                    onRemove: () {
-                      ref.read(samagriCartProvider.notifier).removeItem(item);
-                    },
-                  );
-                },
-                childCount: _items.length,
+              error: (err, stack) => Center(
+                child: Text('Error loading samagri: $err'),
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-        child: PrimaryButton(
-          label: hasItems ? 'Continue • ₹$total' : 'Select items',
-          onTap: hasItems ? () {
-            // Convert cart state to SamagriSession before navigating
-            final sessionItems = cart.items.entries.map((e) =>
-              session.SamagriItem(
-                itemId: e.key.id,
-                name: e.key.name,
-                unitPrice: e.key.price.toInt(),
-                quantity: e.value,
-              ),
-            ).toList();
-            session.SamagriSession.createFromCart(items: sessionItems);
-            context.push('/samagri-summary');
-          } : null,
-          loading: false,
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+          child: PrimaryButton(
+            label: hasItems ? 'Continue • ₹$total' : 'Select items',
+            onTap: hasItems ? () {
+              // Convert cart to SamagriSession
+              final sessionItems = cart.items.entries.map((e) =>
+                session.SamagriItem(
+                  itemId: e.key.id,
+                  name: e.key.name,
+                  unitPrice: e.key.price.toInt(),
+                  quantity: e.value,
+                ),
+              ).toList();
+              session.SamagriSession.createFromCart(items: sessionItems);
+              context.push('/samagri-summary');
+            } : null,
+            loading: false,
+          ),
         ),
       ),
     );

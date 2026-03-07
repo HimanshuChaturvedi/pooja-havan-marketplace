@@ -1,22 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
 import 'package:app/src/features/booking/application/booking_session.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import '../../data/samagri_repository_provider.dart';
+import 'package:app/src/features/home_booking/presentation/address/home_address_page.dart';
+import 'package:app/src/features/booking/data/booking_providers.dart';
 
-class SamagriSummaryPage extends StatefulWidget {
+class SamagriSummaryPage extends ConsumerStatefulWidget {
   const SamagriSummaryPage({super.key});
 
   @override
-  State<SamagriSummaryPage> createState() => _SamagriSummaryPageState();
+  ConsumerState<SamagriSummaryPage> createState() => _SamagriSummaryPageState();
 }
 
-class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
+class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
   late List<SamagriItem> _items;
   bool _initialized = false;
   final bool _isBookingFlow = BookingSession.current != null;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -34,13 +44,11 @@ class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
         _items = [];
       }
       _initialized = true;
+      _syncSession(); // 🚀 ENSURE PRICING IS SYNCED ON LOAD
     }
   }
 
   int get _itemsTotal => _items.fold(0, (sum, i) => sum + i.lineTotal);
-  static const int _deliveryFee = 50;
-  static const int _platformFee = 20;
-  int get _finalTotal => _itemsTotal + _deliveryFee + _platformFee;
 
   void _incrementItem(int index) {
     setState(() {
@@ -73,10 +81,60 @@ class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
   }
 
   void _syncSession() {
+    // ✅ PRESERVE ADDRESS before createFromCart wipes it
+    final savedAddress = SamagriSession.current?.addressText;
+
     SamagriSession.createFromCart(
       items: _items,
       isPartOfBooking: _isBookingFlow,
     );
+
+    // Re-attach address if it was set
+    if (savedAddress != null) {
+      SamagriSession.attachAddress(savedAddress);
+    }
+
+    BookingSession.samagriTotal = _itemsTotal.toDouble();
+  }
+
+  Future<void> _handleConfirm() async {
+    setState(() => _isSubmitting = true);
+    
+    try {
+      // Read address BEFORE _syncSession (which recreates the session)
+      final deliveryAddr = _isBookingFlow
+          ? BookingSession.current?.address
+          : SamagriSession.current?.addressText;
+
+      _syncSession();
+
+      final orderId = await ref.read(samagriRepositoryProvider).createOrder(
+        items: _items,
+        totalAmount: BookingSession.totalAmount,
+        bookingId: null,
+        deliveryAddress: deliveryAddr,
+      );
+      
+      if (mounted) {
+        // 🚀 REFRESH HISTORY
+        ref.invalidate(bookingsProvider);
+        
+        if (_isBookingFlow) {
+          context.go('/home-summary');
+        } else {
+          // 🚀 SUCCESS REDIRECT: Go to dedicated success page
+          context.go('/samagri-success'); 
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating order: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -137,7 +195,6 @@ class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
                         children: [
-                          // Item name
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +219,6 @@ class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
                               ],
                             ),
                           ),
-                          // Quantity controls
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -188,7 +244,6 @@ class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
                             ],
                           ),
                           const SizedBox(width: 12),
-                          // Line total
                           SizedBox(
                             width: 56,
                             child: Text(
@@ -206,8 +261,8 @@ class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
                   }),
                   const Divider(height: 32, color: Colors.black12),
                   _priceLine('Items Total', _itemsTotal),
-                  _priceLine('Delivery Fee', _deliveryFee),
-                  _priceLine('Platform Fee', _platformFee),
+                  _priceLine('Delivery Fee', BookingSession.deliveryFee.toInt()),
+                  _priceLine('Platform Fee', BookingSession.platformFee.toInt()),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -221,7 +276,7 @@ class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
                         ),
                       ),
                       Text(
-                        '₹$_finalTotal',
+                        '₹${BookingSession.totalAmount.toInt()}',
                         style: AppTextStyles.title.copyWith(
                           fontSize: 24,
                           color: AppColors.saffron,
@@ -233,21 +288,79 @@ class _SamagriSummaryPageState extends State<SamagriSummaryPage> {
                 ],
               ),
             ),
+            if (!_isBookingFlow) ...[
+              const SizedBox(height: 16),
+              PrimaryCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Delivery Address',
+                          style: AppTextStyles.title.copyWith(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.darkCharcoal,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                             Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => HomeAddressPage(
+                                    city: 'Ghaziabad', 
+                                    onAddressSaved: (addr) {
+                                      setState(() {
+                                        SamagriSession.attachAddress(addr);
+                                      });
+                                      Navigator.of(context).pop();
+                                    },
+                                  ),
+                                ),
+                              );
+                          },
+                          child: Text(
+                            SamagriSession.current?.addressText != null ? 'Change' : 'Select',
+                            style: AppTextStyles.button.copyWith(color: AppColors.saffron),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (SamagriSession.current?.addressText != null)
+                      Text(
+                        SamagriSession.current!.addressText!,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.darkCharcoal,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else
+                      Text(
+                        'Please select a delivery address to continue.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         child: PrimaryButton(
-          label: 'Confirm Order • ₹$_finalTotal',
-          onTap: () {
-            _syncSession();
-            if (_isBookingFlow) {
-              context.go('/home-summary');
-            } else {
-              context.push('/payment');
-            }
-          },
+          label: 'Confirm Order • ₹${BookingSession.totalAmount.toInt()}',
+          onTap: (_isSubmitting || (!_isBookingFlow && SamagriSession.current?.addressText == null)) 
+              ? null 
+              : _handleConfirm,
+          loading: _isSubmitting,
         ),
       ),
     );

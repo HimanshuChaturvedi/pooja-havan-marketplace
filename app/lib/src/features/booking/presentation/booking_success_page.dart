@@ -12,14 +12,17 @@ import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class BookingSuccessPage extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
+
+class BookingSuccessPage extends ConsumerStatefulWidget {
   const BookingSuccessPage({super.key});
 
   @override
-  State<BookingSuccessPage> createState() => _BookingSuccessPageState();
+  ConsumerState<BookingSuccessPage> createState() => _BookingSuccessPageState();
 }
 
-class _BookingSuccessPageState extends State<BookingSuccessPage> with TickerProviderStateMixin {
+class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> with TickerProviderStateMixin {
   late final AnimationController _animController;
   late final AnimationController _iconAnimController;
   late final AnimationController _entryController;
@@ -59,12 +62,17 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> with TickerProv
     BookingSession.transactionId ??= 'BKG-${DateTime.now().millisecondsSinceEpoch}';
     final uniqueLogId = '${BookingSession.transactionId}-${DateTime.now().millisecondsSinceEpoch}';
 
+    final samagri = SamagriSession.current;
+    final int poojaDakshina = 2100;
+    final int samagriCharges = (samagri != null && samagri.isPartOfBooking) ? samagri.totalAmount : 0;
+    final int computedTotal = poojaDakshina + samagriCharges;
+
     TransactionLogService.append(
       TransactionLogEntry(
         id: uniqueLogId,
         type: TransactionType.booking,
         title: booking.ritualName,
-        amount: 3000,
+        amount: computedTotal,
         status: TransactionStatus.completed,
         createdAt: DateTime.now(),
         userLabel: displayUserId,
@@ -254,7 +262,12 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> with TickerProv
                             ),
                             const SizedBox(height: 20),
                             TextButton(
-                              onPressed: () => context.go('/landing'),
+                              onPressed: () {
+                                BookingSession.reset();
+                                SamagriSession.clear();
+                                ref.read(samagriCartProvider.notifier).clearCart();
+                                context.go('/landing');
+                              },
                               child: Text(
                                 'Return to Home',
                                 style: AppTextStyles.button.copyWith(

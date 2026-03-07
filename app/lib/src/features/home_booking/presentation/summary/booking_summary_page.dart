@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../booking/application/booking_session.dart';
 import '../../../booking/domain/booking_draft.dart';
@@ -6,15 +7,17 @@ import '../../../samagri_flow/application/samagri_session.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import '../../../services/data/ritual_repository_provider.dart';
+import '../../../services/data/ritual_repository.dart';
 
-class BookingSummaryPage extends StatefulWidget {
+class BookingSummaryPage extends ConsumerStatefulWidget {
   const BookingSummaryPage({super.key});
 
   @override
-  State<BookingSummaryPage> createState() => _BookingSummaryPageState();
+  ConsumerState<BookingSummaryPage> createState() => _BookingSummaryPageState();
 }
 
-class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTickerProviderStateMixin {
+class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
   @override
@@ -36,24 +39,30 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTick
   Widget build(BuildContext context) {
     BookingSession.activeFlow = ActiveFlow.booking;
     final booking = BookingSession.current;
+    if (booking == null) return const Scaffold(body: Center(child: Text('No active booking')));
 
-    if (booking == null) {
-      return const AppScaffold(
-        title: 'Error',
-        body: Center(child: Text('No booking data found')),
-      );
-    }
+    final ritualPricingAsync = booking.ritualId != null
+        ? ref.watch(ritualPricingProvider(PricingParams(
+            ritualId: booking.ritualId!,
+            cityId: booking.cityId,
+            location: booking.bookingType == BookingType.home
+                ? BookingLocation.home
+                : BookingLocation.temple,
+          )))
+        : null;
 
-    const int poojaCost = 2100;
     final bool samagriRequired = BookingSession.samagriDecisionTaken;
     final samagriSession = SamagriSession.current;
+    
+    // Fallback or calculated costs
+    final int displayPoojaCost = 2100; // UI fallback
     final int samagriCost = samagriRequired && samagriSession != null ? samagriSession.totalAmount : 0;
-    final int totalAmount = poojaCost + samagriCost;
+    final int totalAmount = displayPoojaCost + samagriCost;
 
-    return WillPopScope(
-      onWillPop: () async {
-        BookingSession.reset();
-        return true;
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) {
+        if (didPop) BookingSession.reset();
       },
       child: AppScaffold(
         title: 'Booking Summary',
@@ -132,7 +141,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTick
                 controller: _animController,
                 delay: 900,
                 child: PrimaryCard(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -150,7 +159,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTick
                       _statusLine('Payment Status', 'Manual Payment'),
                       const SizedBox(height: 12),
                       _statusLine('Estimated Duration', '90 - 120 Mins'),
-                      const Divider(height: 48, color: Colors.black12),
+                      Divider(height: 48, color: Colors.black12),
                       Text(
                         'PRICE BREAKDOWN',
                         style: AppTextStyles.bodySmall.copyWith(
@@ -160,16 +169,48 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> with SingleTick
                         ),
                       ),
                       const SizedBox(height: 24),
-                      _PriceRow(label: 'Ritual Dakshina', amount: poojaCost),
-                      if (samagriRequired) ...[
-                        const SizedBox(height: 16),
-                        _PriceRow(label: 'Samagri Charges', amount: samagriCost),
+                      if (ritualPricingAsync != null)
+                        ritualPricingAsync.when(
+                          data: (pricing) {
+                            final double poojaCost = pricing['pooja_dakshina'] ?? 0.0;
+                            final double samagriTotalCost = samagriRequired 
+                                ? (samagriSession != null ? samagriSession.totalAmount.toDouble() : (pricing['samagri_charges'] ?? 0.0))
+                                : 0.0;
+                            
+                            // 🚀 SYNC TO CENTRAL SOURCE OF TRUTH
+                            BookingSession.ritualDakshina = poojaCost;
+                            BookingSession.samagriTotal = samagriTotalCost;
+                            // Fees are default in session (50 & 20)
+
+                            return Column(
+                              children: [
+                                _PriceRow(label: 'Ritual Dakshina', amount: BookingSession.ritualDakshina.toInt()),
+                                if (samagriRequired) ...[
+                                  const SizedBox(height: 16),
+                                  _PriceRow(label: 'Samagri Charges', amount: BookingSession.samagriTotal.toInt()),
+                                ],
+                                _PriceRow(label: 'Delivery Fee', amount: BookingSession.deliveryFee.toInt()),
+                                _PriceRow(label: 'Platform Fee', amount: BookingSession.platformFee.toInt()),
+                                
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 20),
+                                  child: Divider(color: Colors.black12, height: 1),
+                                ),
+                                _PriceRow(label: 'Total Amount', amount: BookingSession.totalAmount.toInt(), isTotal: true),
+                              ],
+                            );
+                          },
+                          loading: () => Center(child: CircularProgressIndicator(color: AppColors.saffron)),
+                          error: (err, stack) => Text('Error loading prices: $err'),
+                        )
+                      else ...[
+                        _PriceRow(label: 'Ritual Dakshina', amount: displayPoojaCost),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Divider(color: Colors.black12, height: 1),
+                        ),
+                        _PriceRow(label: 'Total Amount', amount: displayPoojaCost, isTotal: true),
                       ],
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Divider(color: Colors.black12, height: 1),
-                      ),
-                      _PriceRow(label: 'Total Amount', amount: totalAmount, isTotal: true),
                     ],
                   ),
                 ),

@@ -11,14 +11,18 @@ import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class SamagriSuccessPage extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
+import 'package:app/src/features/main/presentation/state/main_navigation_provider.dart';
+
+class SamagriSuccessPage extends ConsumerStatefulWidget {
   const SamagriSuccessPage({super.key});
 
   @override
-  State<SamagriSuccessPage> createState() => _SamagriSuccessPageState();
+  ConsumerState<SamagriSuccessPage> createState() => _SamagriSuccessPageState();
 }
 
-class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTickerProviderStateMixin {
+class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
   bool _logged = false;
 
@@ -111,11 +115,13 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
                 ),
               ),
               SafeArea(
-                child: Padding(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      const SizedBox(height: 40),
                       ScaleTransition(
                         scale: CurvedAnimation(parent: _animController, curve: Curves.elasticOut),
                         child: Container(
@@ -135,11 +141,12 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
                         ),
                       ),
                       const SizedBox(height: 48),
+                      // ... [rest of the column content remains staggered]
                       _StaggeredFade(
                         controller: _animController,
                         delay: 800,
                         child: Text(
-                          "Order Submitted!",
+                          "Order Successful 🙏",
                           textAlign: TextAlign.center,
                           style: AppTextStyles.titleLarge.copyWith(
                             color: AppColors.darkCharcoal, 
@@ -153,7 +160,7 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
                         controller: _animController,
                         delay: 1000,
                         child: Text(
-                          "Your samagri request has been sent to the vendor. They will contact you shortly for delivery.",
+                          "Your samagri order has been placed successfully. Our vendor will contact you for delivery.",
                           textAlign: TextAlign.center,
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.softGrey, 
@@ -162,7 +169,7 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
                           ),
                         ),
                       ),
-                      const SizedBox(height: 48),
+                      const SizedBox(height: 32),
                       _StaggeredFade(
                         controller: _animController,
                         delay: 1200,
@@ -172,7 +179,13 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
                             children: [
                               _InfoRow(
                                 label: 'Order ID', 
-                                value: samagri?.sessionId.substring(0, 10).toUpperCase() ?? '---',
+                                value: 'SAM-${samagri?.sessionId.substring(0, 6).toUpperCase() ?? "XXXX"}',
+                              ),
+                              const Divider(height: 24, color: Colors.black12),
+                               _InfoRow(
+                                label: 'Total Amount', 
+                                value: '₹${samagri?.totalAmount.toInt() ?? 0}',
+                                isHighlight: true,
                               ),
                               const Divider(height: 24, color: Colors.black12),
                               _InfoRow(label: 'Delivery City', value: city),
@@ -180,25 +193,26 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
                           ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(height: 40),
                       _StaggeredFade(
                         controller: _animController,
                         delay: 1400,
                         child: PrimaryButton(
                           icon: Icons.chat_bubble_outline,
-                          label: 'Send details to Vendor',
+                          label: 'Send to WhatsApp',
                           onTap: () {
+                            final String orderId = 'SAM-${samagri?.sessionId.substring(0, 6).toUpperCase() ?? "XXXX"}';
+                            final String total = '₹${samagri?.totalAmount.toInt() ?? 0}';
+                            
                             WhatsAppHelper.openChat(
-                              message: 'Namaste,\n\n'
-                                  'A samagri order has been placed via Bharat Pooja Setu.\n\n'
-                                  'User ID: $displayUserId\n'
-                                  'Transaction ID: ${samagri?.sessionId}\n\n'
-                                  '📍 City: $city\n\n'
+                              message: 'Namaste 🙏\n\n'
+                                  'Your Bharat Pooja Setu samagri order has been confirmed.\n\n'
+                                  'Order ID: $orderId\n'
+                                  'Total Amount: $total\n\n'
+                                  '📍 Delivery to: $city\n'
+                                  'Address: $deliveryAddress\n\n'
                                   'Items:\n'
                                   '${samagri?.items.map((e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
-                                  'Delivery Address:\n'
-                                  '$deliveryAddress\n\n'
-                                  'Please confirm availability.\n\n'
                                   '— Bharat Pooja Setu',
                             );
                           },
@@ -213,12 +227,16 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
                             if (isBookingFlow) {
                               context.go('/home-summary');
                             } else {
+                              BookingSession.reset();
                               SamagriSession.clear();
-                              context.go('/landing');
+                              ref.read(samagriCartProvider.notifier).clearCart();
+                              // 🚀 RESET NAVIGATION: Go to Home Tab (index 0)
+                              ref.read(mainNavigationProvider.notifier).state = 0;
+                              context.go('/');
                             }
                           },
                           child: Text(
-                            'Continue',
+                            'Go to Home',
                             style: AppTextStyles.button.copyWith(
                               color: AppColors.softGrey,
                               fontWeight: FontWeight.w800,
@@ -226,6 +244,7 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
                           ),
                         ),
                       ),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
@@ -241,7 +260,8 @@ class _SamagriSuccessPageState extends State<SamagriSuccessPage> with SingleTick
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-  const _InfoRow({required this.label, required this.value});
+  final bool isHighlight;
+  const _InfoRow({required this.label, required this.value, this.isHighlight = false});
 
   @override
   Widget build(BuildContext context) {
@@ -261,8 +281,9 @@ class _InfoRow extends StatelessWidget {
             value, 
             textAlign: TextAlign.right,
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.darkCharcoal, 
+              color: isHighlight ? AppColors.saffron : AppColors.darkCharcoal, 
               fontWeight: FontWeight.w900,
+              fontSize: isHighlight ? 20 : 16,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

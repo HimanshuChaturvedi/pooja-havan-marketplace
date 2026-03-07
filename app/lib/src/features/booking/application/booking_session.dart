@@ -1,3 +1,4 @@
+import '../../../core/pricing/pricing_service.dart';
 import '../domain/booking_draft.dart';
 
 enum BookingStatus {
@@ -23,6 +24,19 @@ class BookingSession {
   /// 🔑 STABLE TRANSACTION ID (CRITICAL)
   static String? transactionId;
 
+  // --- 💰 CENTRALIZED PRICING STATE ---
+  static double ritualDakshina = 0;
+  static double samagriTotal = 0;
+  static double deliveryFee = 50;
+  static double platformFee = 20;
+
+  static double get totalAmount => PricingService.calculateTotal(
+        ritualDakshina: ritualDakshina,
+        samagriTotal: samagriTotal,
+        deliveryFee: deliveryFee,
+        platformFee: platformFee,
+      );
+
   /// 🔒 FULL RESET (USED AFTER BOOKING COMPLETION)
   static void reset() {
     current = null;
@@ -30,6 +44,12 @@ class BookingSession {
     samagriDecisionTaken = false;
     activeFlow = null;
     transactionId = null;
+    
+    // Reset pricing
+    ritualDakshina = 0;
+    samagriTotal = 0;
+    deliveryFee = 50;
+    platformFee = 20;
   }
 
   /// ✅ SAFE AUTO-CLEAR (BOOKING FLOW ONLY)

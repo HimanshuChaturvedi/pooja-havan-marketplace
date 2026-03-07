@@ -2,24 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class HomeAddressPage extends StatefulWidget {
-  final String city;
-  final void Function(String address)? onAddressSaved;
-
-  const HomeAddressPage({
-    super.key,
-    required this.city,
-    this.onAddressSaved,
-  });
+class SamagriDeliveryAddressPage extends StatefulWidget {
+  const SamagriDeliveryAddressPage({super.key});
 
   @override
-  State<HomeAddressPage> createState() => _HomeAddressPageState();
+  State<SamagriDeliveryAddressPage> createState() => _SamagriDeliveryAddressPageState();
 }
 
-class _HomeAddressPageState extends State<HomeAddressPage> {
+class _SamagriDeliveryAddressPageState extends State<SamagriDeliveryAddressPage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
   String _selectedCity = 'Ghaziabad';
@@ -38,7 +31,6 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
   @override
   void initState() {
     super.initState();
-    _selectedCity = widget.city.isNotEmpty ? widget.city : 'Ghaziabad';
     _addressController.addListener(() => setState(() {}));
   }
 
@@ -52,14 +44,14 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      title: 'Confirm Ceremony Address',
+      title: 'Delivery Address',
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Where should we send\nthe Pandit?',
+              'Where should we deliver\nyour samagri?',
               style: AppTextStyles.title.copyWith(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
@@ -68,7 +60,7 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Please provide the exact address for the sacred ceremony.',
+              'Please provide the delivery address for your order.',
               style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGrey),
             ),
             const SizedBox(height: 32),
@@ -77,7 +69,6 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
             if (!_showManualForm) ...[
               GestureDetector(
                 onTap: () {
-                  // Placeholder — will integrate GPS later
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Location feature coming soon')),
                   );
@@ -108,7 +99,7 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Auto-detect your ceremony address',
+                              'Auto-detect your delivery address',
                               style: AppTextStyles.bodySmall.copyWith(
                                 color: AppColors.softGrey,
                                 fontWeight: FontWeight.w600,
@@ -123,8 +114,6 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // ✏️ ENTER MANUALLY BUTTON
               GestureDetector(
                 onTap: () => setState(() => _showManualForm = true),
                 child: PrimaryCard(
@@ -171,7 +160,6 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
 
             // 📝 MANUAL ENTRY FORM
             if (_showManualForm) ...[
-              // City Dropdown
               const SectionHeader(title: 'City'),
               const SizedBox(height: 12),
               PrimaryCard(
@@ -193,10 +181,7 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // Address Field
               const SectionHeader(title: 'Full Address'),
               const SizedBox(height: 12),
               PrimaryCard(
@@ -214,10 +199,7 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // Pincode Field (Optional)
               const SectionHeader(title: 'Pincode (Optional)'),
               const SizedBox(height: 12),
               PrimaryCard(
@@ -237,10 +219,7 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Back to options
               TextButton.icon(
                 onPressed: () => setState(() => _showManualForm = false),
                 icon: const Icon(Icons.arrow_back_rounded, color: AppColors.saffron, size: 18),
@@ -253,7 +232,6 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
                 ),
               ),
             ],
-
             const SizedBox(height: 24),
           ],
         ),
@@ -262,17 +240,14 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
           ? Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               child: PrimaryButton(
-                label: 'Continue to Pandit Selection →',
+                label: 'Continue to Payment →',
                 onTap: _isFormValid
                     ? () {
                         final address = '${_addressController.text.trim()}, $_selectedCity';
-                        if (widget.onAddressSaved != null) {
-                          widget.onAddressSaved!(address);
-                          return;
-                        }
-                        BookingSession.current?.address = address;
-                        BookingSession.current?.city = _selectedCity;
-                        context.push('/pandit-selection');
+                        final pincode = _pincodeController.text.trim();
+                        final fullAddress = pincode.isNotEmpty ? '$address - $pincode' : address;
+                        SamagriSession.attachAddress(fullAddress);
+                        context.push('/payment');
                       }
                     : null,
               ),

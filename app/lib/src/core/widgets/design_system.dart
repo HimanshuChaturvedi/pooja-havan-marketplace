@@ -144,30 +144,51 @@ class PrimaryButton extends StatelessWidget {
     this.color,
   });
 
+  bool get _isDisabled => onTap == null && !loading;
+
   @override
   Widget build(BuildContext context) {
+    final Color bgColor;
+    final Color textColor;
+
+    if (_isDisabled) {
+      bgColor = Colors.grey.shade300;
+      textColor = Colors.grey.shade500;
+    } else if (loading) {
+      bgColor = (color ?? AppColors.saffron).withOpacity(0.6);
+      textColor = Colors.white;
+    } else {
+      bgColor = color ?? AppColors.saffron;
+      textColor = Colors.white;
+    }
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: loading ? null : onTap,
+        onPressed: (_isDisabled || loading) ? null : onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? AppColors.saffron,
+          backgroundColor: bgColor,
+          disabledBackgroundColor: bgColor,
+          foregroundColor: textColor,
+          disabledForegroundColor: textColor,
           padding: const EdgeInsets.symmetric(vertical: 18),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: _isDisabled ? 0 : 2,
         ),
         child: loading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                child: CircularProgressIndicator(color: textColor, strokeWidth: 2),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 20),
+                    Icon(icon, size: 20, color: textColor),
                     const SizedBox(width: 8),
                   ],
-                  Text(label),
+                  Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.w800)),
                 ],
               ),
       ),

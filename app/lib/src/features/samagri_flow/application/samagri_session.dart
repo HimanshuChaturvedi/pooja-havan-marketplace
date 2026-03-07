@@ -28,6 +28,8 @@ class SamagriSession {
   final String sessionId;
   final List<SamagriItem> items;
   final int totalAmount;
+  final int deliveryFee;
+  final int platformFee;
   final String vendorLabel;
 
   /// ✅ RAW ADDRESS TEXT
@@ -42,10 +44,14 @@ class SamagriSession {
   final SamagriOrderStatus status;
   final DateTime createdAt;
 
+  int get finalTotal => totalAmount + deliveryFee + platformFee;
+
   SamagriSession._internal({
     required this.sessionId,
     required this.items,
     required this.totalAmount,
+    this.deliveryFee = 50,
+    this.platformFee = 20,
     required this.vendorLabel,
     required this.status,
     required this.createdAt,
@@ -67,6 +73,8 @@ class SamagriSession {
       sessionId: _generateSessionId(),
       items: items,
       totalAmount: total,
+      deliveryFee: 50, // Standard centralized fee
+      platformFee: 20, // Standard centralized fee
       vendorLabel: 'Trusted Samagri Partner',
       addressText: null,
       addressId: null,
@@ -83,6 +91,8 @@ class SamagriSession {
       sessionId: current!.sessionId,
       items: current!.items,
       totalAmount: current!.totalAmount,
+      deliveryFee: current!.deliveryFee,
+      platformFee: current!.platformFee,
       vendorLabel: current!.vendorLabel,
       addressText: addressText,
       addressId: addressId,
@@ -99,6 +109,8 @@ class SamagriSession {
       sessionId: current!.sessionId,
       items: current!.items,
       totalAmount: current!.totalAmount,
+      deliveryFee: current!.deliveryFee,
+      platformFee: current!.platformFee,
       vendorLabel: current!.vendorLabel,
       addressText: current!.addressText,
       addressId: current!.addressId,

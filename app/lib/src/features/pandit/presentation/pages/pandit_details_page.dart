@@ -101,22 +101,25 @@ class _PanditDetailsPageState extends State<PanditDetailsPage> with SingleTicker
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    _infoSection(title: 'Experience', value: '12+ years of experience in Vedic rituals'),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Divider(color: Colors.black12, height: 1),
+                    const _InfoSection(
+                      title: 'Experience',
+                      value: '12+ years of experience in Vedic rituals',
                     ),
-                    _infoSection(title: 'Specialization', value: 'Grih Pravesh, Havan, Satyanarayan Katha, Marriage Rituals'),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Divider(color: Colors.black12, height: 1),
+                    const _Divider(),
+                    const _InfoSection(
+                      title: 'Specialization',
+                      value: 'Grih Pravesh, Havan, Satyanarayan Katha, Marriage Rituals',
                     ),
-                    _infoSection(title: 'Languages', value: 'Hindi, Sanskrit'),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Divider(color: Colors.black12, height: 1),
+                    const _Divider(),
+                    const _InfoSection(
+                      title: 'Languages',
+                      value: 'Hindi, Sanskrit',
                     ),
-                    _infoSection(title: 'Education', value: 'Shastri from Kashi Vidyapeeth'),
+                    const _Divider(),
+                    const _InfoSection(
+                      title: 'Education',
+                      value: 'Shastri from Kashi Vidyapeeth',
+                    ),
                   ],
                 ),
               ),
@@ -137,29 +140,51 @@ class _PanditDetailsPageState extends State<PanditDetailsPage> with SingleTicker
       ),
     );
   }
+}
 
-  Widget _infoSection({required String title, required String value}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title, 
-          style: AppTextStyles.title.copyWith(
-            color: AppColors.saffron, 
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
+class _InfoSection extends StatelessWidget {
+  final String title;
+  final String value;
+  const _InfoSection({required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTextStyles.title.copyWith(
+              color: AppColors.saffron,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value, 
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.darkCharcoal, 
-            height: 1.4,
-            fontWeight: FontWeight.w600,
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.darkCharcoal,
+              height: 1.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  const _Divider();
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 20),
+      child: Divider(color: Colors.black12, height: 1),
     );
   }
 }

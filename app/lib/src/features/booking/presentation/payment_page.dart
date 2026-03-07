@@ -7,6 +7,8 @@ import 'package:app/src/features/booking/application/booking_session.dart';
 import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import '../../booking/data/booking_providers.dart';
+import '../../samagri_flow/data/samagri_repository_provider.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   const PaymentPage({super.key});
@@ -17,6 +19,7 @@ class PaymentPage extends ConsumerStatefulWidget {
 
 class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -45,14 +48,71 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
     return true;
   }
 
+  Future<void> _handlePayment() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    final booking = BookingSession.current;
+    final samagri = SamagriSession.current;
+
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (!mounted) return;
+
+    if (booking != null) {
+      try {
+        final items = samagri?.items;
+        await ref.read(bookingRepositoryProvider).createBooking(
+          booking,
+          samagriItems: items,
+        );
+        BookingSession.status = BookingStatus.confirmed;
+        if (mounted) {
+          ref.invalidate(bookingsProvider);
+          context.go('/booking-success');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Booking failed: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+      return;
+    }
+
+    if (samagri != null) {
+      try {
+        await ref.read(samagriRepositoryProvider).createOrder(
+          items: samagri.items,
+          totalAmount: samagri.totalAmount.toDouble(),
+          deliveryAddress: samagri.addressText,
+        );
+        SamagriSession.markPaid();
+        ref.read(samagriCartProvider.notifier).clearCart();
+        if (mounted) {
+          ref.invalidate(bookingsProvider);
+          context.go('/samagri-success');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Order failed: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final booking = BookingSession.current;
-    final samagri = SamagriSession.current;
-    
-    const int ritualDakshina = 2100;
-    final int samagriCost = samagri != null ? samagri.totalAmount : 0;
-    final int amount = (booking != null) ? (ritualDakshina + samagriCost) : samagriCost;
+    final double amount = BookingSession.totalAmount;
+    final bool payEnabled = canPayNow();
 
     return AppScaffold(
       title: 'Payment',
@@ -145,24 +205,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         child: PrimaryButton(
           label: 'Confirm Booking ₹$amount',
-          onTap: () async {
-            await Future.delayed(const Duration(milliseconds: 500));
-            if (booking != null) {
-              BookingSession.status = BookingStatus.confirmed;
-              context.go('/booking-success');
-              return;
-            }
-            if (samagri != null) {
-              SamagriSession.markPaid();
-              ref.read(samagriCartProvider.notifier).clearCart();
-              context.go('/samagri-success');
-            }
-          },
-          loading: false, // Could be state driven
-          color: canPayNow() ? null : AppColors.softGrey.withOpacity(0.3),
+          onTap: payEnabled ? _handlePayment : null,
+          loading: _isLoading,
         ),
       ),
     );
