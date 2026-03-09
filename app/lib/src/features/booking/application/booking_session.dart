@@ -27,8 +27,8 @@ class BookingSession {
   // --- 💰 CENTRALIZED PRICING STATE ---
   static double ritualDakshina = 0;
   static double samagriTotal = 0;
-  static double deliveryFee = 50;
-  static double platformFee = 20;
+  static double deliveryFee = 0; // Default to 0, sets to 50 if samagri used
+  static double platformFee = 20; // Standard Service Fee
 
   static double get totalAmount => PricingService.calculateTotal(
         ritualDakshina: ritualDakshina,
@@ -48,7 +48,7 @@ class BookingSession {
     // Reset pricing
     ritualDakshina = 0;
     samagriTotal = 0;
-    deliveryFee = 50;
+    deliveryFee = 0;
     platformFee = 20;
   }
 

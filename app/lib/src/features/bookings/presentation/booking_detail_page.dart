@@ -73,7 +73,7 @@ class BookingDetailPage extends StatelessWidget {
                     ),
                   if (booking.address != null)
                     _DetailRow(label: 'Address', value: booking.address!),
-                  if (booking.bookingType != BookingType.other)
+                  if (booking.bookingType != BookingType.shop)
                     _DetailRow(label: 'Pandit', value: booking.panditName ?? 'Allocating Soon'),
                 ],
               ),
@@ -150,7 +150,7 @@ class BookingDetailPage extends StatelessWidget {
         return 'Home Pooja';
       case BookingType.temple:
         return 'Temple Ritual';
-      case BookingType.other:
+      case BookingType.shop:
         return 'Shop Order';
       default:
         return 'Booking';

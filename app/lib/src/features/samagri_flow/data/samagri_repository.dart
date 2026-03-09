@@ -1,6 +1,7 @@
 import '../../../core/supabase/supabase_client.dart';
 import '../application/samagri_session.dart' as session;
 import '../state/samagri_item.dart';
+import '../../../core/utils/logger.dart';
 
 abstract class SamagriRepository {
   Future<List<SamagriItem>> getItems();
@@ -27,7 +28,7 @@ class SupabaseSamagriRepository implements SamagriRepository {
         categoryId: json['category'] ?? 'General',
       )).toList();
     } catch (e) {
-      print('Error fetching samagri items: $e');
+      AppLogger.error('Error fetching samagri items', e);
       return [];
     }
   }
@@ -63,7 +64,7 @@ class SupabaseSamagriRepository implements SamagriRepository {
 
       return orderId.toString();
     } catch (e) {
-      print('Error creating samagri order: $e');
+      AppLogger.error('Error creating samagri order', e);
       rethrow;
     }
   }

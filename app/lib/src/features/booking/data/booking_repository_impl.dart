@@ -4,6 +4,7 @@ import '../domain/booking_draft.dart';
 import 'booking_repository.dart';
 import '../../samagri_flow/application/samagri_session.dart' as session;
 import '../application/booking_session.dart';
+import '../../../core/utils/logger.dart';
 
 class BookingRepositoryImpl implements BookingRepository {
   @override
@@ -50,7 +51,7 @@ class BookingRepositoryImpl implements BookingRepository {
         await supabase.from('samagri_order_items').insert(samagriData);
       } catch (e) {
         // Log error but don't fail the entire booking if samagri order fails
-        print('Error creating samagri order for booking: $e');
+        AppLogger.error('Error creating samagri order for booking', e);
       }
     }
 
@@ -74,7 +75,7 @@ class BookingRepositoryImpl implements BookingRepository {
         ? List<Map<String, dynamic>>.from(bookingsResponse) 
         : [];
         
-    debugPrint('📊 Fetched ${rawBookings.length} bookings for user: $userId');
+    AppLogger.debug('Fetched ${rawBookings.length} bookings for user: $userId');
 
     final samagriResponse = await supabase
         .from('samagri_orders')
@@ -85,13 +86,12 @@ class BookingRepositoryImpl implements BookingRepository {
         ? List<Map<String, dynamic>>.from(samagriResponse)
         : [];
 
-    debugPrint('📊 Fetched ${rawSamagri.length} samagri orders');
+    AppLogger.debug('Fetched ${rawSamagri.length} samagri orders');
 
-    // 3. Map for lookup: bookingId -> totalAmount
     final Map<String, Map<String, dynamic>> samagriByBookingId = {
       for (var s in rawSamagri) 
         if (s['booking_id'] != null)
-          s['booking_id'].toString(): s
+          s['booking_id'].toString().toLowerCase().trim(): s
     };
 
     final List<BookingDraft> unifiedHistory = [];
@@ -101,8 +101,8 @@ class BookingRepositoryImpl implements BookingRepository {
       final String bid = data['id'].toString();
       final rituals = data['rituals'] as Map<String, dynamic>?;
       
-      // Look for linked samagri order
-      final linkedSamagri = samagriByBookingId[bid];
+      // Look for linked samagri order (Case-insensitive match)
+      final linkedSamagri = samagriByBookingId[bid.toLowerCase().trim()];
       final double samagriTotal = (linkedSamagri?['total_amount'] ?? 0.0).toDouble();
       final bool hasSamagri = samagriTotal > 0;
       
@@ -127,9 +127,9 @@ class BookingRepositoryImpl implements BookingRepository {
            ? ((data['total_amount'] as num).toDouble() - samagriTotal - 70.0).clamp(0.0, double.infinity)
            : poojaDakshina,
         samagriCharges: samagriTotal,
-        samagriRequired: data['samagri_required'] ?? hasSamagri,
-        // Standard delivery/platform fees are ALWAYS 50 and 20 respectively
-        deliveryFee: 50.0,
+        samagriRequired: (data['samagri_required'] == true) || hasSamagri,
+        // 🚀 BUG FIX: Delivery Fee ONLY if hasSamagri
+        deliveryFee: hasSamagri ? 50.0 : 0.0,
         platformFee: 20.0,
       ));
     }
@@ -138,9 +138,9 @@ class BookingRepositoryImpl implements BookingRepository {
     final Set<String> linkedBookingIds = rawBookings.map((b) => b['id'].toString()).toSet();
     
     for (var s in rawSamagri) {
-      final String? bid = s['booking_id']?.toString();
+      final String? bid = s['booking_id']?.toString().toLowerCase().trim();
       // If NOT linked to any booking FETCHED above, it's a standalone shop order
-      if (bid == null || !linkedBookingIds.contains(bid)) {
+      if (bid == null || !linkedBookingIds.any((id) => id.toLowerCase().trim() == bid)) {
         // 🚀 FIX: Use .toLocal() so IST time is shown, not UTC
         final createdAt = s['created_at'] != null 
             ? DateTime.parse(s['created_at']).toLocal() 
@@ -152,7 +152,7 @@ class BookingRepositoryImpl implements BookingRepository {
 
         unifiedHistory.add(BookingDraft(
            id: s['id'].toString(),
-           bookingType: BookingType.other, // Representing Shop Order
+           bookingType: BookingType.shop, // Representing Shop Order
            ritualName: 'Samagri Order',
            address: s['delivery_address'],
            city: 'Varanasi',
@@ -176,8 +176,9 @@ class BookingRepositoryImpl implements BookingRepository {
 
   BookingType _parseBookingType(String? type) {
     if (type == null) return BookingType.home;
+    final normalized = type.toLowerCase().trim();
     return BookingType.values.firstWhere(
-      (e) => e.name == type,
+      (e) => e.name.toLowerCase() == normalized,
       orElse: () => BookingType.home,
     );
   }

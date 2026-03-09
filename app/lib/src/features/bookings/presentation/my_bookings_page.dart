@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:app/src/features/booking/data/booking_providers.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'package:app/src/core/utils/logger.dart';
 
 import 'booking_detail_page.dart';
 
@@ -21,11 +23,11 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> with SingleTick
   @override
   void initState() {
     super.initState();
+    AppLogger.info('MyBookingsPage mounted');
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..forward();
-    // autoDispose on bookingsProvider guarantees fresh fetch on every mount
   }
 
   @override
@@ -42,10 +44,16 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> with SingleTick
       title: 'My Bookings',
       body: RefreshIndicator(
         color: AppColors.saffron,
-        onRefresh: () async => ref.invalidate(bookingsProvider),
+        onRefresh: () async {
+          AppLogger.debug('Refreshing bookings list');
+          return ref.invalidate(bookingsProvider);
+        },
         child: bookingsAsync.when(
           loading: () => Center(child: CircularProgressIndicator(color: AppColors.saffron)),
-          error: (err, stack) => Center(child: Text('Error: $err', style: AppTextStyles.bodyMedium)),
+          error: (err, stack) {
+            AppLogger.error('Failed to fetch bookings', err, stack);
+            return Center(child: Text('Error: $err', style: AppTextStyles.bodyMedium));
+          },
           data: (bookings) => bookings.isEmpty
               ? const _EmptyState()
               : ListView.builder(
@@ -75,9 +83,8 @@ class _BookingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => BookingDetailPage(booking: booking)),
-        );
+        AppLogger.info('Navigating to detail for: ${booking.id}');
+        context.pushNamed('booking-detail', extra: booking);
       },
       child: Padding(
         padding: EdgeInsets.only(bottom: 16),
@@ -89,21 +96,31 @@ class _BookingCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.saffron.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _titleFromBooking(booking).toUpperCase(),
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.saffron,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.1,
-                      fontSize: 10,
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.saffron.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _titleFromBooking(booking).toUpperCase(),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.saffron,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1,
+                          fontSize: 10,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    // 🚀 UX TAGS — distinguish shop orders from pooja items
+                    if (booking.bookingType == BookingType.shop)
+                      _Badge(label: 'STANDALONE', color: Colors.blue),
+                    if (booking.bookingType != BookingType.shop && booking.samagriRequired)
+                      _Badge(label: '+ SAMAGRI', color: Colors.green),
+                  ],
                 ),
                 Text(
                   '₹${booking.totalAmount}',
@@ -127,7 +144,7 @@ class _BookingCard extends StatelessWidget {
             SizedBox(height: 12),
             _InfoLine(
               label: 'Type', 
-              value: booking.bookingType == BookingType.other ? 'SAMAGRI' : booking.bookingType.name.toUpperCase(),
+              value: booking.bookingType == BookingType.shop ? 'SHOP ORDER' : booking.bookingType.name.toUpperCase(),
             ),
             const SizedBox(height: 6),
             if (booking.selectedDate != null) ...[
@@ -149,13 +166,38 @@ class _BookingCard extends StatelessWidget {
   }
 }
 
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _Badge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.bodySmall.copyWith(
+          color: color,
+          fontSize: 8,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
 String _titleFromBooking(BookingDraft b) {
   switch (b.bookingType) {
     case BookingType.home:
       return 'Home Pooja';
     case BookingType.temple:
       return 'Temple Ritual';
-    case BookingType.other:
+    case BookingType.shop:
       return 'Shop Order';
     default:
       return 'Booking';

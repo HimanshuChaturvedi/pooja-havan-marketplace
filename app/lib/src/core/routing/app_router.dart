@@ -42,6 +42,8 @@ import '../../features/pandit/presentation/pages/pandit_details_page.dart';
 
 import '../../features/services/domain/explore_service.dart';
 import '../../features/services/presentation/explore_service_detail_page.dart';
+import '../../features/booking/domain/booking_draft.dart';
+import '../../features/bookings/presentation/booking_detail_page.dart';
 import '../../features/bookings/presentation/my_bookings_page.dart';
 import '../../features/samagri_flow/presentation/success/samagri_success_page.dart';
 import '../../features/samagri_flow/presentation/address/samagri_delivery_address_page.dart';
@@ -127,6 +129,19 @@ final GoRouter appRouter = GoRouter(
         final name = Uri.decodeComponent(state.pathParameters['name']!);
         return PoojaDetailsPage(
           poojaSlug: slug,
+          poojaName: name,
+        );
+      },
+    ),
+
+    // SERVICE DETAILS (BY NAME)
+    GoRoute(
+      path: '/ritual/:name',
+      name: 'ritual-detail',
+      builder: (context, state) {
+        final name = Uri.decodeComponent(state.pathParameters['name']!);
+        return PoojaDetailsPage(
+          poojaSlug: name.toLowerCase().replaceAll(' ', '-'),
           poojaName: name,
         );
       },
@@ -285,7 +300,16 @@ final GoRouter appRouter = GoRouter(
 
     GoRoute(
       path: '/bookings',
+      name: 'bookings',
       builder: (context, state) => const MyBookingsPage(),
+    ),
+    GoRoute(
+      path: '/booking-detail',
+      name: 'booking-detail',
+      builder: (context, state) {
+        final booking = state.extra as BookingDraft;
+        return BookingDetailPage(booking: booking);
+      },
     ),
 GoRoute(
   path: '/samagri-success',

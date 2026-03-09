@@ -93,7 +93,19 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
     if (savedAddress != null) {
       SamagriSession.attachAddress(savedAddress);
     }
-
+ 
+    if (_isBookingFlow) {
+      if (_items.isNotEmpty) {
+        BookingSession.current?.samagriRequired = true;
+        BookingSession.deliveryFee = 50.0;
+        BookingSession.platformFee = 20.0;
+      } else {
+        BookingSession.current?.samagriRequired = false;
+        BookingSession.deliveryFee = 0.0;
+        BookingSession.platformFee = 20.0;
+      }
+    }
+ 
     BookingSession.samagriTotal = _itemsTotal.toDouble();
   }
 
@@ -107,13 +119,17 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
           : SamagriSession.current?.addressText;
 
       _syncSession();
-
-      final orderId = await ref.read(samagriRepositoryProvider).createOrder(
-        items: _items,
-        totalAmount: BookingSession.totalAmount,
-        bookingId: null,
-        deliveryAddress: deliveryAddr,
-      );
+ 
+      if (!_isBookingFlow) {
+        // 🚀 ONLY create a standalone order if NOT in a Pooja flow.
+        // Linked orders are handled by BookingRepository.createBooking().
+        await ref.read(samagriRepositoryProvider).createOrder(
+          items: _items,
+          totalAmount: BookingSession.totalAmount,
+          bookingId: null,
+          deliveryAddress: deliveryAddr,
+        );
+      }
       
       if (mounted) {
         // 🚀 REFRESH HISTORY
@@ -356,7 +372,9 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         child: PrimaryButton(
-          label: 'Confirm Order • ₹${BookingSession.totalAmount.toInt()}',
+          label: _isBookingFlow 
+              ? 'Next: Review Pooja • ₹${BookingSession.totalAmount.toInt()}'
+              : 'Confirm Order • ₹${BookingSession.totalAmount.toInt()}',
           onTap: (_isSubmitting || (!_isBookingFlow && SamagriSession.current?.addressText == null)) 
               ? null 
               : _handleConfirm,

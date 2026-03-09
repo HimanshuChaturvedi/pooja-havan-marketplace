@@ -2,7 +2,7 @@ enum BookingType {
   home,
   temple,
   tirth,
-  other,
+  shop,
 }
 
 class BookingDraft {
