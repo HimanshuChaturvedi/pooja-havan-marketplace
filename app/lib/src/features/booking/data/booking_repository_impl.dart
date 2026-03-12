@@ -9,9 +9,27 @@ import '../../../core/utils/logger.dart';
 class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<String> createBooking(BookingDraft booking, {List<session.SamagriItem>? samagriItems}) async {
+    final user = supabase.auth.currentUser;
+    final String? userId = user?.id;
+    final String? email = user?.email;
+    
+    AppLogger.debug('--- BOOKING ATTEMPT ---');
+    AppLogger.debug('User ID: $userId');
+    AppLogger.debug('User Email: $email');
+    AppLogger.debug('Is Anonymous: ${user?.isAnonymous ?? "Unknown"}');
+    AppLogger.debug('-----------------------');
+
+    if (userId == null) {
+      throw Exception('Unauthenticated: No active user session found. Please log in.');
+    }
+
+    if (user!.isAnonymous || (email?.isEmpty ?? true)) {
+      throw Exception('Security: Anonymous/guest users cannot create bookings. Please sign in with email.');
+    }
+
     // 1. Insert the main booking (Matching User Schema exactly)
     final response = await supabase.from('bookings').insert({
-      'user_id': supabase.auth.currentUser?.id, // 🚀 NEW: Scoped to anonymous user
+      'user_id': userId, // Scoped to verified user
       'booking_type': booking.bookingType.name.toUpperCase(),
       'ritual_id': booking.ritualId,
       'ritual_name': booking.ritualName,
@@ -21,11 +39,18 @@ class BookingRepositoryImpl implements BookingRepository {
       'selected_time': booking.selectedTime,
       'samagri_required': booking.samagriRequired,
       'status': 'CREATED',
+      'reference_id': _generateReferenceId(),
       // ✅ FIX: Save total amount for My Bookings display
       'total_amount': BookingSession.totalAmount,
-    }).select('id').single();
+    }).select('id, reference_id').single();
 
     final String bookingId = response['id'].toString();
+    final String? refId = response['reference_id']?.toString();
+    
+    // Save reference ID to session for success page display
+    if (refId != null && booking.referenceId == null) {
+      booking.referenceId = refId;
+    }
 
     // 2. Insert linked samagri if any (Using samagri_orders table for consistency)
     if (samagriItems != null && samagriItems.isNotEmpty) {
@@ -110,7 +135,9 @@ class BookingRepositoryImpl implements BookingRepository {
 
       unifiedHistory.add(BookingDraft(
         id: bid,
+        referenceId: data['reference_id']?.toString() ?? 'PHM-PENDING',
         bookingType: _parseBookingType(data['booking_type']),
+        status: _parseBookingStatus(data['status']),
         ritualName: rituals?['name'] ?? data['ritual_name'] ?? 'Pooja',
         ritualId: data['ritual_id'],
         city: 'Varanasi', // Placeholder or add city_name to join
@@ -124,7 +151,7 @@ class BookingRepositoryImpl implements BookingRepository {
         // 🚀 FIX: Use pooja_dakshina from DB. If no samagri linked, add standard fees.
         // 🚀 FIX: Separate fees from total_amount so they don't merge into Dakshina
         poojaDakshina: (data['total_amount'] ?? 0.0) > 0 
-           ? ((data['total_amount'] as num).toDouble() - samagriTotal - 70.0).clamp(0.0, double.infinity)
+           ? ((data['total_amount'] as num).toDouble() - samagriTotal - (hasSamagri ? 70.0 : 20.0)).clamp(0.0, double.infinity)
            : poojaDakshina,
         samagriCharges: samagriTotal,
         samagriRequired: (data['samagri_required'] == true) || hasSamagri,
@@ -162,6 +189,7 @@ class BookingRepositoryImpl implements BookingRepository {
            poojaDakshina: 0.0,
            deliveryFee: 50.0, 
            platformFee: 20.0,
+           referenceId: s['reference_id']?.toString() ?? 'PHM-PENDING',
            selectedDate: createdAt,
            selectedTime: timeString,
          ));
@@ -181,5 +209,20 @@ class BookingRepositoryImpl implements BookingRepository {
       (e) => e.name.toLowerCase() == normalized,
       orElse: () => BookingType.home,
     );
+  }
+ 
+  BookingStatusDetailed _parseBookingStatus(String? status) {
+    if (status == null) return BookingStatusDetailed.created;
+    final normalized = status.toLowerCase().trim().replaceAll('_', '');
+    return BookingStatusDetailed.values.firstWhere(
+      (e) => e.name.toLowerCase() == normalized,
+      orElse: () => BookingStatusDetailed.created,
+    );
+  }
+ 
+  String _generateReferenceId() {
+    final year = DateTime.now().year;
+    final random = (DateTime.now().millisecondsSinceEpoch % 1000).toString().padLeft(3, '0');
+    return 'PHM-$year-$random';
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/booking/application/booking_session.dart';
+import '../supabase/supabase_client.dart';
 
 import '../../features/splash/presentation/splash_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
@@ -47,6 +48,7 @@ import '../../features/bookings/presentation/booking_detail_page.dart';
 import '../../features/bookings/presentation/my_bookings_page.dart';
 import '../../features/samagri_flow/presentation/success/samagri_success_page.dart';
 import '../../features/samagri_flow/presentation/address/samagri_delivery_address_page.dart';
+import '../../features/auth/presentation/login_page.dart';
 
 
 import '../../features/home_booking/presentation/home_screen.dart';
@@ -80,6 +82,14 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SplashPage(),
     ),
 
+    // LOGIN
+    GoRoute(
+      path: '/login',
+      builder: (context, state) {
+        final redirectTo = state.uri.queryParameters['redirectTo'];
+        return LoginPage(redirectTo: redirectTo);
+      },
+    ),
     // LANDING
     GoRoute(
       path: '/home',
@@ -215,15 +225,29 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const BookingSummaryPage(),
     ),
 
-    // BOOKING PAYMENT
+    // BOOKING PAYMENT (GUARDED)
     GoRoute(
       path: '/payment',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous || (user.email?.isEmpty ?? true)) {
+          return '/login?redirectTo=/payment';
+        }
+        return null;
+      },
       builder: (context, state) => const PaymentPage(),
     ),
 
-    // BOOKING SUCCESS
+    // BOOKING SUCCESS (GUARDED)
     GoRoute(
       path: '/booking-success',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous || (user.email?.isEmpty ?? true)) {
+          return '/login';
+        }
+        return null;
+      },
       builder: (context, state) => const BookingSuccessPage(),
     ),
 
@@ -311,11 +335,18 @@ final GoRouter appRouter = GoRouter(
         return BookingDetailPage(booking: booking);
       },
     ),
-GoRoute(
-  path: '/samagri-success',
-  builder: (context, state) =>
-      const SamagriSuccessPage(),
-),
+    // SAMAGRI SUCCESS (GUARDED)
+    GoRoute(
+      path: '/samagri-success',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous || (user.email?.isEmpty ?? true)) {
+          return '/login?redirectTo=/samagri-summary';
+        }
+        return null;
+      },
+      builder: (context, state) => const SamagriSuccessPage(),
+    ),
     GoRoute(
       path: '/samagri-delivery-address',
       builder: (context, state) => const SamagriDeliveryAddressPage(),

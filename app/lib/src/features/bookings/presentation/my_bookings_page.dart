@@ -141,6 +141,16 @@ class _BookingCard extends StatelessWidget {
                 color: AppColors.darkCharcoal,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'ID: ${booking.referenceId ?? 'PHM-PENDING'}',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.softGrey,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
             SizedBox(height: 12),
             _InfoLine(
               label: 'Type', 
@@ -156,7 +166,8 @@ class _BookingCard extends StatelessWidget {
             const SizedBox(height: 6),
             _InfoLine(
               label: 'Status',
-              value: 'Confirmed',
+              value: booking.status.name.toUpperCase(),
+              valueColor: _statusColor(booking.status),
             ),
             ],
           ),
@@ -207,7 +218,8 @@ String _titleFromBooking(BookingDraft b) {
 class _InfoLine extends StatelessWidget {
   final String label;
   final String value;
-  const _InfoLine({required this.label, required this.value});
+  final Color? valueColor;
+  const _InfoLine({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -224,14 +236,31 @@ class _InfoLine extends StatelessWidget {
           child: Text(
             value,
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.darkCharcoal,
-              fontWeight: FontWeight.w600,
+              color: valueColor ?? AppColors.darkCharcoal,
+              fontWeight: FontWeight.w900,
             ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
     );
+  }
+}
+
+Color _statusColor(BookingStatusDetailed status) {
+  switch (status) {
+    case BookingStatusDetailed.created:
+      return AppColors.saffron;
+    case BookingStatusDetailed.assigned:
+      return Colors.blue;
+    case BookingStatusDetailed.onWay:
+      return Colors.orange;
+    case BookingStatusDetailed.inProgress:
+      return Colors.purple;
+    case BookingStatusDetailed.completed:
+      return Colors.green;
+    case BookingStatusDetailed.cancelled:
+      return Colors.red;
   }
 }
 

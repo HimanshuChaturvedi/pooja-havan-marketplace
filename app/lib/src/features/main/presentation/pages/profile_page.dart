@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:app/src/core/supabase/supabase_client.dart';
+import 'package:app/src/features/main/presentation/state/main_navigation_provider.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = supabase.auth.currentUser;
+    final bool isAnonymous = user == null || user.isAnonymous;
+
     return Container(
       color: AppColors.warmIvory,
       child: SingleChildScrollView(
@@ -33,15 +40,19 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 48,
-                      backgroundColor: AppColors.saffron,
-                      child: Icon(Icons.person_rounded, size: 50, color: Colors.white),
+                      backgroundColor: isAnonymous ? Colors.grey.shade200 : AppColors.saffron,
+                      child: Icon(
+                        isAnonymous ? Icons.person_outline_rounded : Icons.person_rounded, 
+                        size: 50, 
+                        color: isAnonymous ? Colors.grey : Colors.white
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Sacred Devotee',
+                    isAnonymous ? 'Sacred Guest' : 'Sacred Devotee',
                     style: AppTextStyles.title.copyWith(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
@@ -49,7 +60,7 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'devotee@poojasetu.com',
+                    isAnonymous ? 'Sign in to sync your bookings' : (user.email ?? 'devotee@poojasetu.com'),
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.softGrey,
                       fontWeight: FontWeight.w600,
@@ -61,37 +72,49 @@ class ProfilePage extends StatelessWidget {
 
             const SizedBox(height: 48),
 
-            // SETTINGS OPTIONS
-            _ProfileOption(
-              icon: Icons.person_outline_rounded,
-              label: 'Personal Details',
-              onTap: () {},
-            ),
-            const SizedBox(height: 16),
-            _ProfileOption(
-              icon: Icons.location_on_outlined,
-              label: 'Saved Addresses',
-              onTap: () {},
-            ),
-            const SizedBox(height: 16),
-            _ProfileOption(
-              icon: Icons.notifications_none_rounded,
-              label: 'Notifications',
-              onTap: () {},
-            ),
-            const SizedBox(height: 16),
-            _ProfileOption(
-              icon: Icons.help_outline_rounded,
-              label: 'Support & Help',
-              onTap: () {},
-            ),
-            const SizedBox(height: 32),
-            
-            // LOGOUT
-            PrimaryButton(
-              label: 'Sign Out',
-              onTap: () {},
-            ),
+            if (isAnonymous)
+              PrimaryButton(
+                label: 'Sign In / Register',
+                icon: Icons.login_rounded,
+                onTap: () => context.push('/login'),
+              )
+            else ...[
+              // SETTINGS OPTIONS
+              _ProfileOption(
+                icon: Icons.person_outline_rounded,
+                label: 'Personal Details',
+                onTap: () {},
+              ),
+              const SizedBox(height: 16),
+              _ProfileOption(
+                icon: Icons.location_on_outlined,
+                label: 'Saved Addresses',
+                onTap: () {},
+              ),
+              const SizedBox(height: 16),
+              _ProfileOption(
+                icon: Icons.notifications_none_rounded,
+                label: 'Notifications',
+                onTap: () {},
+              ),
+              const SizedBox(height: 16),
+              _ProfileOption(
+                icon: Icons.help_outline_rounded,
+                label: 'Support & Help',
+                onTap: () {},
+              ),
+              const SizedBox(height: 32),
+              
+              // LOGOUT
+              SecondaryButton(
+                label: 'Sign Out',
+                onTap: () async {
+                  await supabase.auth.signOut();
+                  // Reset navigation to Home
+                  ref.read(mainNavigationProvider.notifier).state = 0;
+                },
+              ),
+            ],
             const SizedBox(height: 100),
           ],
         ),

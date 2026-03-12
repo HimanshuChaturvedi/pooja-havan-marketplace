@@ -4,11 +4,22 @@ enum BookingType {
   tirth,
   shop,
 }
+ 
+enum BookingStatusDetailed {
+  created,
+  assigned,
+  onWay,
+  inProgress,
+  completed,
+  cancelled,
+}
 
 class BookingDraft {
   // Common
   String? id; // Unique ID from Supabase
+  String? referenceId; // Human readable ID (e.g. PHM-2024-XXX)
   BookingType bookingType;
+  BookingStatusDetailed status;
   String ritualName;
   String? ritualId; // UUID from Supabase
   String city;
@@ -45,7 +56,9 @@ class BookingDraft {
 
   BookingDraft({
     this.id,
+    this.referenceId,
     required this.bookingType,
+    this.status = BookingStatusDetailed.created,
     required this.ritualName,
     this.ritualId,
     required this.city,

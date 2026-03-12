@@ -11,6 +11,7 @@ import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'package:app/src/core/supabase/supabase_client.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
@@ -212,7 +213,9 @@ class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> with Ti
                           padding: const EdgeInsets.all(24),
                           child: Column(
                             children: [
-                              _detailItem('Booking ID', BookingSession.transactionId ?? '---'),
+                              _detailItem('Booking ID', BookingSession.current?.referenceId ?? BookingSession.transactionId ?? '---'),
+                              const Divider(height: 32, color: Colors.black12),
+                              _detailItem('Account', supabase.auth.currentUser?.email ?? 'Sacred Guest'),
                               const Divider(height: 32, color: Colors.black12),
                               _detailItem('Ritual', booking?.ritualName ?? '---'),
                               const Divider(height: 32, color: Colors.black12),

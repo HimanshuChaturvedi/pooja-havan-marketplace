@@ -7,6 +7,7 @@ import 'package:app/src/features/booking/application/booking_session.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/features/booking/presentation/booking_step1_page.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
 
 class BookingReviewPage extends ConsumerStatefulWidget {
   final String panditName;
@@ -129,6 +130,13 @@ class _BookingReviewPageState extends ConsumerState<BookingReviewPage> with Sing
         child: PrimaryButton(
           label: 'Proceed to Payment →',
           onTap: () {
+            final isAuthenticated = ref.read(isAuthenticatedProvider);
+            if (!isAuthenticated) {
+              // Redirect to login with a back-reference
+              context.push('/login?redirectTo=/payment');
+              return;
+            }
+            
             BookingSession.status = BookingStatus.paymentPending;
             context.push('/payment');
           },

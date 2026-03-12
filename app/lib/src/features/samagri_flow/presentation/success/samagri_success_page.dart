@@ -179,12 +179,14 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                             children: [
                               _InfoRow(
                                 label: 'Order ID', 
-                                value: 'SAM-${samagri?.sessionId.substring(0, 6).toUpperCase() ?? "XXXX"}',
+                                value: samagri?.isPartOfBooking == true 
+                                    ? (booking?.referenceId ?? 'PHM-PENDING')
+                                    : 'SMG-${samagri?.sessionId.substring(samagri.sessionId.length - 6).toUpperCase() ?? "XXXX"}',
                               ),
                               const Divider(height: 24, color: Colors.black12),
                                _InfoRow(
                                 label: 'Total Amount', 
-                                value: '₹${samagri?.totalAmount.toInt() ?? 0}',
+                                value: '₹${samagri?.finalTotal ?? 0}',
                                 isHighlight: true,
                               ),
                               const Divider(height: 24, color: Colors.black12),
@@ -201,8 +203,10 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                           icon: Icons.chat_bubble_outline,
                           label: 'Send to WhatsApp',
                           onTap: () {
-                            final String orderId = 'SAM-${samagri?.sessionId.substring(0, 6).toUpperCase() ?? "XXXX"}';
-                            final String total = '₹${samagri?.totalAmount.toInt() ?? 0}';
+                            final String orderId = samagri?.isPartOfBooking == true 
+                                ? (booking?.referenceId ?? 'PHM-PENDING')
+                                : 'SMG-${samagri?.sessionId.substring(samagri.sessionId.length - 6).toUpperCase() ?? "XXXX"}';
+                            final String total = '₹${samagri?.finalTotal ?? 0}';
                             
                             WhatsAppHelper.openChat(
                               message: 'Namaste 🙏\n\n'

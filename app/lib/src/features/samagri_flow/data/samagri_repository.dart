@@ -40,14 +40,32 @@ class SupabaseSamagriRepository implements SamagriRepository {
     String? bookingId,
     String? deliveryAddress,
   }) async {
+    final user = supabase.auth.currentUser;
+    final String? userId = user?.id;
+    final String? email = user?.email;
+
+    AppLogger.debug('--- SAMAGRI ORDER ATTEMPT ---');
+    AppLogger.debug('User ID: $userId');
+    AppLogger.debug('User Email: $email');
+    AppLogger.debug('----------------------------');
+
+    if (userId == null) {
+      throw Exception('Unauthenticated: User must be logged in to order Samagri.');
+    }
+
+    if (user!.isAnonymous || (email?.isEmpty ?? true)) {
+      throw Exception('Security: Anonymous/guest users cannot order Samagri. Please sign in with email.');
+    }
+
     try {
       // 1. Create the order
       final orderResponse = await supabase.from('samagri_orders').insert({
-        'user_id': supabase.auth.currentUser?.id,
+        'user_id': userId,
         'booking_id': bookingId,
         'total_amount': totalAmount,
         'delivery_address': deliveryAddress,
         'status': 'pending',
+        'reference_id': _generateReferenceId(),
       }).select('id').single();
 
       final orderId = orderResponse['id'];
@@ -67,5 +85,11 @@ class SupabaseSamagriRepository implements SamagriRepository {
       AppLogger.error('Error creating samagri order', e);
       rethrow;
     }
+  }
+ 
+  String _generateReferenceId() {
+    final year = DateTime.now().year;
+    final random = (DateTime.now().millisecondsSinceEpoch % 1000).toString().padLeft(3, '0');
+    return 'PHM-SMG-$year-$random';
   }
 }

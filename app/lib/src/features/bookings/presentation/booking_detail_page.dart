@@ -24,18 +24,18 @@ class BookingDetailPage extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: _statusColor(booking.status).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 32),
+                    child: Icon(_statusIcon(booking.status), color: _statusColor(booking.status), size: 32),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Confirmed',
+                    booking.status.name.toUpperCase(),
                     style: AppTextStyles.title.copyWith(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
-                      color: Colors.green,
+                      color: _statusColor(booking.status),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -65,7 +65,7 @@ class BookingDetailPage extends StatelessWidget {
                   ),
                   const Divider(height: 32, color: Colors.black12),
                   _DetailRow(label: 'Item/Ritual', value: booking.ritualName),
-                  _DetailRow(label: 'Order ID', value: booking.id?.substring(0, 8).toUpperCase() ?? '-'),
+                  _DetailRow(label: 'Reference ID', value: booking.referenceId ?? 'PHM-PENDING'),
                   if (booking.selectedDate != null)
                     _DetailRow(
                       label: 'Date',
@@ -162,7 +162,7 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
   const _DetailRow({required this.label, required this.value});
-
+ 
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -192,5 +192,39 @@ class _DetailRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+ 
+Color _statusColor(BookingStatusDetailed status) {
+  switch (status) {
+    case BookingStatusDetailed.created:
+      return AppColors.saffron;
+    case BookingStatusDetailed.assigned:
+      return Colors.blue;
+    case BookingStatusDetailed.onWay:
+      return Colors.orange;
+    case BookingStatusDetailed.inProgress:
+      return Colors.purple;
+    case BookingStatusDetailed.completed:
+      return Colors.green;
+    case BookingStatusDetailed.cancelled:
+      return Colors.red;
+  }
+}
+ 
+IconData _statusIcon(BookingStatusDetailed status) {
+  switch (status) {
+    case BookingStatusDetailed.created:
+      return Icons.info_outline;
+    case BookingStatusDetailed.assigned:
+      return Icons.person_outline;
+    case BookingStatusDetailed.onWay:
+      return Icons.directions_bike;
+    case BookingStatusDetailed.inProgress:
+      return Icons.sync;
+    case BookingStatusDetailed.completed:
+      return Icons.check_circle_outline;
+    case BookingStatusDetailed.cancelled:
+      return Icons.cancel_outlined;
   }
 }

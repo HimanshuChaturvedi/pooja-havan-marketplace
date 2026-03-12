@@ -27,6 +27,7 @@ class AppScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.warmIvory,
       extendBodyBehindAppBar: extendBodyBehindAppBar,
+      resizeToAvoidBottomInset: true,
       appBar: showAppBar
           ? AppBar(
               title: title != null ? Text(title!) : null,

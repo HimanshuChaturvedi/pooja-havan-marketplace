@@ -9,6 +9,7 @@ import 'package:app/src/core/widgets/design_system.dart';
 import '../../data/samagri_repository_provider.dart';
 import 'package:app/src/features/home_booking/presentation/address/home_address_page.dart';
 import 'package:app/src/features/booking/data/booking_providers.dart';
+import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
 
 class SamagriSummaryPage extends ConsumerStatefulWidget {
   const SamagriSummaryPage({super.key});
@@ -104,12 +105,28 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
         BookingSession.deliveryFee = 0.0;
         BookingSession.platformFee = 20.0;
       }
+    } else {
+      // 🚀 STANDALONE SYNC: Ensure fees show up in Payment Screen
+      BookingSession.deliveryFee = 50.0;
+      BookingSession.platformFee = 20.0;
     }
  
     BookingSession.samagriTotal = _itemsTotal.toDouble();
   }
 
   Future<void> _handleConfirm() async {
+    if (_isSubmitting) return;
+
+    // 🚀 JUST-IN-TIME AUTH GUARD
+    final isAuthed = ref.read(isAuthenticatedProvider);
+    if (!isAuthed) {
+      debugPrint('🚨 SAMAGRI AUTH GUARD: Redirecting to Login.');
+      // 🚀 v5.3: Use correct redirect based on flow to avoid "double-click" bug
+      final target = _isBookingFlow ? '/home-summary' : '/samagri-summary';
+      context.push('/login?redirectTo=$target');
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     
     try {
@@ -372,9 +389,11 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         child: PrimaryButton(
-          label: _isBookingFlow 
-              ? 'Next: Review Pooja • ₹${BookingSession.totalAmount.toInt()}'
-              : 'Confirm Order • ₹${BookingSession.totalAmount.toInt()}',
+          label: (ref.watch(isAuthenticatedProvider)) 
+              ? (_isBookingFlow 
+                  ? 'Next: Review Pooja • ₹${BookingSession.totalAmount.toInt()}'
+                  : 'Confirm Order • ₹${BookingSession.totalAmount.toInt()}')
+              : 'Sign In to Order • ₹${BookingSession.totalAmount.toInt()}',
           onTap: (_isSubmitting || (!_isBookingFlow && SamagriSession.current?.addressText == null)) 
               ? null 
               : _handleConfirm,

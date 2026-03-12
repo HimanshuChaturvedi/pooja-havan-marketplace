@@ -54,7 +54,12 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
     return AppScaffold(
       title: 'Confirm Ceremony Address',
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          24,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 100,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -255,29 +260,30 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
             ],
 
             const SizedBox(height: 24),
+
+            // Continue button - inside scroll body so it's visible when keyboard is open
+            if (_showManualForm)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: PrimaryButton(
+                  label: 'Continue to Pandit Selection →',
+                  onTap: _isFormValid
+                      ? () {
+                          final address = '${_addressController.text.trim()}, $_selectedCity';
+                          if (widget.onAddressSaved != null) {
+                            widget.onAddressSaved!(address);
+                            return;
+                          }
+                          BookingSession.current?.address = address;
+                          BookingSession.current?.city = _selectedCity;
+                          context.push('/pandit-selection');
+                        }
+                      : null,
+                ),
+              ),
           ],
         ),
       ),
-      bottomNavigationBar: _showManualForm
-          ? Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: PrimaryButton(
-                label: 'Continue to Pandit Selection →',
-                onTap: _isFormValid
-                    ? () {
-                        final address = '${_addressController.text.trim()}, $_selectedCity';
-                        if (widget.onAddressSaved != null) {
-                          widget.onAddressSaved!(address);
-                          return;
-                        }
-                        BookingSession.current?.address = address;
-                        BookingSession.current?.city = _selectedCity;
-                        context.push('/pandit-selection');
-                      }
-                    : null,
-              ),
-            )
-          : null,
     );
   }
 }
