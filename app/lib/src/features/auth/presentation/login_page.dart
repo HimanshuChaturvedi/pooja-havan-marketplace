@@ -419,18 +419,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             style: TextStyle(color: AppColors.saffron, fontWeight: FontWeight.w800, decoration: TextDecoration.underline),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   InputDecoration designInputDecoration(String hint, {IconData? prefix}) {
     return InputDecoration(
