@@ -221,7 +221,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _launchPrivacyPolicy() async {
-    final url = Uri.parse('https://himanshuchaturvedi.github.io/pooja-havan-marketplace/app/privacy-policy.html');
+    final url = Uri.parse('https://himanshuchaturvedi.github.io/pooja-havan-marketplace/privacy-policy.html');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
