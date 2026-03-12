@@ -221,7 +221,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _launchPrivacyPolicy() async {
-    final url = Uri.parse('https://huchaturvedi.github.io/pooja-havan-marketplace/privacy-policy.html');
+    final url = Uri.parse('https://himanshuchaturvedi.github.io/pooja-havan-marketplace/privacy-policy.html');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -254,61 +254,54 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           ),
 
+          // 🔙 ABSOLUTE POSITIONED BACK BUTTON (Pinned to top-left)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 8,
+            child: IconButton(
+              onPressed: () {
+                if (_isOtpSent) {
+                  setState(() => _isOtpSent = false);
+                } else {
+                  context.pop();
+                }
+              },
+              icon: Icon(
+                _isOtpSent ? Icons.arrow_back : Icons.arrow_back_ios_new, 
+                color: AppColors.darkCharcoal
+              ),
+            ),
+          ),
+
           SingleChildScrollView(
             padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 70, // Start content below back button
               bottom: MediaQuery.of(context).viewInsets.bottom + 60,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 60),
-                // 🔙 ABSOLUTE LEFT BACK BUTTON (6px from edge)
-                Padding(
-                  padding: const EdgeInsets.only(left: 6),
-                  child: IconButton(
-                    onPressed: () {
-                      if (_isOtpSent) {
-                        setState(() => _isOtpSent = false);
-                      } else {
-                        context.pop();
-                      }
-                    },
-                    padding: EdgeInsets.zero,
-                    alignment: Alignment.centerLeft,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      _isOtpSent ? Icons.arrow_back : Icons.arrow_back_ios_new, 
-                      color: AppColors.darkCharcoal
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isOtpSent ? 'Verify your\nEmail ✉️' : 'Join the Sacred\nMarketplace 🙏',
+                    style: AppTextStyles.titleLarge.copyWith(
+                      fontSize: 34, height: 1.2,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.darkCharcoal,
                     ),
                   ),
-                ),
-                const SizedBox(height: 32),
-                
-                // 📝 CONTENT WITH 24px PADDING
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _isOtpSent ? 'Verify your\nEmail ✉️' : 'Join the Sacred\nMarketplace 🙏',
-                        style: AppTextStyles.titleLarge.copyWith(
-                          fontSize: 34, height: 1.2,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.darkCharcoal,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _isOtpSent 
-                          ? 'Enter the 6-digit code sent to ${_emailController.text}'
-                          : 'Sign in to manage your ritual bookings and samagri orders seamlessly.',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.softGrey,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 40),
+                  const SizedBox(height: 16),
+                  Text(
+                    _isOtpSent 
+                      ? 'Enter the 6-digit code sent to ${_emailController.text}'
+                      : 'Sign in to manage your ritual bookings and samagri orders seamlessly.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.softGrey,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
 
                   if (!_isOtpSent) ...[
                     // 🚀 GOOGLE BUTTON
@@ -419,16 +412,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             style: TextStyle(color: AppColors.saffron, fontWeight: FontWeight.w800, decoration: TextDecoration.underline),
                           ),
                         ),
-                  ],
-                ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   InputDecoration designInputDecoration(String hint, {IconData? prefix}) {
     return InputDecoration(
