@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../booking/application/booking_session.dart';
-import '../../../booking/domain/booking_draft.dart';
-import '../../../samagri_flow/application/samagri_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
@@ -37,8 +37,10 @@ class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with Si
 
   @override
   Widget build(BuildContext context) {
-    BookingSession.activeFlow = ActiveFlow.booking;
-    final booking = BookingSession.current;
+    // 🚀 Update active flow via notifier side-effect or just rely on state
+    final bookingState = ref.watch(bookingSessionProvider);
+    final booking = bookingState.current;
+    
     if (booking == null) return const Scaffold(body: Center(child: Text('No active booking')));
 
     final ritualPricingAsync = booking.ritualId != null
@@ -51,18 +53,16 @@ class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with Si
           )))
         : null;
 
-    final bool samagriRequired = BookingSession.samagriDecisionTaken;
-    final samagriSession = SamagriSession.current;
+    final samagriState = ref.watch(samagriSessionProvider);
+    final bool samagriRequired = bookingState.samagriDecisionTaken;
     
-    // Fallback or calculated costs
-    final int displayPoojaCost = 2100; // UI fallback
-    final int samagriCost = samagriRequired && samagriSession != null ? samagriSession.totalAmount : 0;
-    final int totalAmount = displayPoojaCost + samagriCost;
+    // totalAmount is already calculated by BookingSessionState.totalAmount
+    // which includes ritualDakshina, samagriTotal, deliveryFee, and platformFee.
 
     return PopScope(
       canPop: true,
       onPopInvoked: (didPop) {
-        if (didPop) BookingSession.reset();
+        // State is intentionally preserved so user can review Samagri or previous steps.
       },
       child: AppScaffold(
         title: 'Booking Summary',
@@ -130,9 +130,9 @@ class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with Si
                 delay: 800,
                 child: !samagriRequired
                     ? const _InfoCard(text: 'Samagri will be arranged by you', icon: Icons.shopping_basket_rounded)
-                    : (samagriSession == null || samagriSession.items.isEmpty)
+                    : (samagriState.items.isEmpty)
                         ? const _InfoCard(text: 'Full samagri set will be arranged by us', icon: Icons.auto_awesome_rounded)
-                        : _SamagriSummaryCard(session: samagriSession),
+                        : _SamagriSummaryCard(session: samagriState),
               ),
 
               const SizedBox(height: 48),
@@ -174,42 +174,47 @@ class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with Si
                           data: (pricing) {
                             final double poojaCost = pricing['pooja_dakshina'] ?? 0.0;
                             final double samagriTotalCost = samagriRequired 
-                                ? (samagriSession != null ? samagriSession.totalAmount.toDouble() : (pricing['samagri_charges'] ?? 0.0))
+                                ? (samagriState.items.isNotEmpty ? samagriState.totalAmount.toDouble() : (pricing['samagri_charges'] ?? 0.0))
                                 : 0.0;
                             
-                            // 🚀 SYNC TO CENTRAL SOURCE OF TRUTH
-                            BookingSession.ritualDakshina = poojaCost;
-                            BookingSession.samagriTotal = samagriTotalCost;
-                            // Fees are default in session (50 & 20)
+                            // 🚀 SYNC TO CENTRAL SOURCE OF TRUTH via side-effect (Debounced or post-build)
+                            // In a real app, this should be handled by a provider logic, 
+                            // but for migration we'll trigger a notifier update.
+                            Future.microtask(() {
+                               ref.read(bookingSessionProvider.notifier).updatePricing(
+                                  ritualDakshina: poojaCost,
+                                  samagriTotal: samagriTotalCost,
+                                );
+                            });
 
                             return Column(
                               children: [
-                                _PriceRow(label: 'Ritual Dakshina', amount: BookingSession.ritualDakshina.toInt()),
+                                _PriceRow(label: 'Ritual Dakshina', amount: bookingState.ritualDakshina.toInt()),
                                 if (samagriRequired) ...[
                                   const SizedBox(height: 16),
-                                  _PriceRow(label: 'Samagri Charges', amount: BookingSession.samagriTotal.toInt()),
+                                  _PriceRow(label: 'Samagri Charges', amount: bookingState.samagriTotal.toInt()),
                                 ],
-                                _PriceRow(label: 'Delivery Fee', amount: BookingSession.deliveryFee.toInt()),
-                                _PriceRow(label: 'Platform Fee', amount: BookingSession.platformFee.toInt()),
+                                _PriceRow(label: 'Delivery Fee', amount: bookingState.deliveryFee.toInt()),
+                                _PriceRow(label: 'Platform Fee', amount: bookingState.platformFee.toInt()),
                                 
                                 const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 20),
                                   child: Divider(color: Colors.black12, height: 1),
                                 ),
-                                _PriceRow(label: 'Total Amount', amount: BookingSession.totalAmount.toInt(), isTotal: true),
+                                _PriceRow(label: 'Total Amount', amount: bookingState.totalAmount.toInt(), isTotal: true),
                               ],
                             );
                           },
-                          loading: () => Center(child: CircularProgressIndicator(color: AppColors.saffron)),
+                          loading: () => const Center(child: CircularProgressIndicator(color: AppColors.saffron)),
                           error: (err, stack) => Text('Error loading prices: $err'),
                         )
                       else ...[
-                        _PriceRow(label: 'Ritual Dakshina', amount: displayPoojaCost),
-                        Padding(
+                        _PriceRow(label: 'Ritual Dakshina', amount: bookingState.ritualDakshina.toInt()),
+                        const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
                           child: Divider(color: Colors.black12, height: 1),
                         ),
-                        _PriceRow(label: 'Total Amount', amount: displayPoojaCost, isTotal: true),
+                        _PriceRow(label: 'Total Amount', amount: bookingState.totalAmount.toInt(), isTotal: true),
                       ],
                     ],
                   ),
@@ -224,7 +229,7 @@ class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with Si
           child: PrimaryButton(
             label: 'Proceed to Payment →',
             onTap: () {
-              BookingSession.status = BookingStatus.paymentPending;
+              ref.read(bookingSessionProvider.notifier).updateBookingStatus(BookingStatus.paymentPending);
               context.push('/payment');
             },
           ),
@@ -293,7 +298,7 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _SamagriSummaryCard extends StatelessWidget {
-  final SamagriSession session;
+  final SamagriSessionState session;
   const _SamagriSummaryCard({required this.session});
 
   @override

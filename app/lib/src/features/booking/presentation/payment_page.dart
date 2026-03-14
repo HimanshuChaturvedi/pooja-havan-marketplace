@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
-import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
@@ -39,11 +39,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
   }
 
   bool canPayNow() {
-    if (BookingSession.current != null) {
-      return BookingSession.status == BookingStatus.paymentPending;
+    final bookingSession = ref.read(bookingSessionProvider);
+    if (bookingSession.current != null) {
+      return bookingSession.status == BookingStatus.paymentPending;
     }
-    final samagri = SamagriSession.current;
-    if (samagri == null) return false;
+    final samagri = ref.read(samagriSessionProvider);
+    if (samagri.sessionId == null) return false;
     if (samagri.addressText == null || samagri.addressText!.trim().isEmpty) {
       return false;
     }
@@ -53,11 +54,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
   Future<void> _handlePayment() async {
     if (_isLoading) return;
     
-    // 🔒 Security Guard: Uses SAME check as Profile page
+    // 🔒 Security Guard
     final currentUser = supabase.auth.currentUser;
     final bool isGuest = currentUser == null || currentUser.isAnonymous || (currentUser.email?.isEmpty ?? true);
-    
-    debugPrint('Payment Guard: isGuest=$isGuest, isAnonymous=${currentUser?.isAnonymous}, email="${currentUser?.email}"');
     
     if (isGuest) {
       context.push('/login?redirectTo=/payment');
@@ -66,8 +65,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
 
     setState(() => _isLoading = true);
 
-    final booking = BookingSession.current;
-    final samagri = SamagriSession.current;
+    final bookingSession = ref.read(bookingSessionProvider);
+    final booking = bookingSession.current;
+    final samagri = ref.read(samagriSessionProvider);
 
     await Future.delayed(const Duration(milliseconds: 800));
 
@@ -75,12 +75,15 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
 
     if (booking != null) {
       try {
-        final items = samagri?.items;
-        await ref.read(bookingRepositoryProvider).createBooking(
+        final items = samagri.items.isNotEmpty ? samagri.items : null;
+        final String bookingId = await ref.read(bookingRepositoryProvider).createBooking(
           booking,
           samagriItems: items,
         );
-        BookingSession.status = BookingStatus.confirmed;
+        
+        ref.read(bookingSessionProvider.notifier).updateStatus(BookingStatus.confirmed);
+        ref.read(bookingSessionProvider.notifier).setTransactionId(booking.referenceId ?? bookingId);
+        
         if (mounted) {
           ref.invalidate(bookingsProvider);
           context.go('/booking-success');
@@ -97,14 +100,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       return;
     }
 
-    if (samagri != null) {
+    if (samagri.sessionId != null) {
       try {
         await ref.read(samagriRepositoryProvider).createOrder(
           items: samagri.items,
           totalAmount: samagri.totalAmount.toDouble(),
           deliveryAddress: samagri.addressText,
         );
-        SamagriSession.markPaid();
+        ref.read(samagriSessionProvider.notifier).markPaid();
         ref.read(samagriCartProvider.notifier).clearCart();
         if (mounted) {
           ref.invalidate(bookingsProvider);
@@ -184,8 +187,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
     }
 
     // ── LOGGED IN: Show normal payment ──
-    final booking = BookingSession.current;
-    final double amount = BookingSession.totalAmount;
+    final bookingSession = ref.watch(bookingSessionProvider);
+    final booking = bookingSession.current;
+    final double amount = bookingSession.totalAmount;
     final bool payEnabled = canPayNow();
 
     return AppScaffold(

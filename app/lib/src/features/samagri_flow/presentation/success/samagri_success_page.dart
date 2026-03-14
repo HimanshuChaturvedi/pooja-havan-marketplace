@@ -5,8 +5,8 @@ import 'dart:math' as math;
 import 'package:app/src/logs/transaction_log.dart';
 import 'package:app/src/core/utils/whatsapp_helper.dart';
 import 'package:app/src/core/utils/app_identity.dart';
-import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
@@ -39,7 +39,8 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
 
   Future<void> _logTransaction() async {
     if (_logged) return;
-    final samagri = SamagriSession.current;
+    final samagri = ref.read(samagriSessionProvider);
+    final bookingState = ref.read(bookingSessionProvider);
     if (samagri == null) return;
 
     final rawUserId = await AppIdentity.userId;
@@ -47,14 +48,14 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
 
     TransactionLogService.append(
       TransactionLogEntry(
-        id: samagri.sessionId,
+        id: samagri.sessionId ?? 'UNKNOWN',
         type: TransactionType.samagri,
         title: 'Samagri Order Request',
-        amount: samagri.totalAmount,
+        amount: bookingState.samagriTotal.toInt(),
         status: TransactionStatus.completed,
         createdAt: DateTime.now(),
         userLabel: displayUserId,
-        samagriSessionId: samagri.sessionId,
+        samagriSessionId: samagri.sessionId ?? 'UNKNOWN',
       ),
     );
     _logged = true;
@@ -73,8 +74,9 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
 
   @override
   Widget build(BuildContext context) {
-    final samagri = SamagriSession.current;
-    final booking = BookingSession.current;
+    final samagri = ref.watch(samagriSessionProvider);
+    final bookingState = ref.watch(bookingSessionProvider);
+    final booking = bookingState.current;
     final isBookingFlow = booking != null;
 
     return FutureBuilder<String>(
@@ -83,10 +85,10 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
         final rawUserId = snapshot.hasData ? snapshot.data! : '0000';
         final displayUserId = _shortUserId(rawUserId);
 
-        final String city = isBookingFlow ? booking!.city : 'Ghaziabad';
+        final String city = isBookingFlow ? booking.city : 'Ghaziabad';
         final String deliveryAddress = isBookingFlow
-            ? '${booking!.address ?? "NA"}, ${booking.city}'
-            : (samagri?.addressText ?? 'Address not provided');
+            ? '${booking.address ?? "NA"}, ${booking.city}'
+            : (samagri.addressText ?? 'Address not provided');
 
         return AppScaffold(
           showAppBar: false,
@@ -141,7 +143,6 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                         ),
                       ),
                       const SizedBox(height: 48),
-                      // ... [rest of the column content remains staggered]
                       _StaggeredFade(
                         controller: _animController,
                         delay: 800,
@@ -179,14 +180,14 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                             children: [
                               _InfoRow(
                                 label: 'Order ID', 
-                                value: samagri?.isPartOfBooking == true 
+                                value: samagri.isPartOfBooking == true 
                                     ? (booking?.referenceId ?? 'PHM-PENDING')
-                                    : 'SMG-${samagri?.sessionId.substring(samagri.sessionId.length - 6).toUpperCase() ?? "XXXX"}',
+                                    : 'SMG-${(samagri.sessionId ?? "0000000000").substring((samagri.sessionId ?? "0000000000").length - 6).toUpperCase()}',
                               ),
                               const Divider(height: 24, color: Colors.black12),
                                _InfoRow(
                                 label: 'Total Amount', 
-                                value: '₹${samagri?.finalTotal ?? 0}',
+                                value: '₹${bookingState.samagriTotal.toInt()}',
                                 isHighlight: true,
                               ),
                               const Divider(height: 24, color: Colors.black12),
@@ -203,10 +204,10 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                           icon: Icons.chat_bubble_outline,
                           label: 'Send to WhatsApp',
                           onTap: () {
-                            final String orderId = samagri?.isPartOfBooking == true 
+                            final String orderId = samagri.isPartOfBooking == true 
                                 ? (booking?.referenceId ?? 'PHM-PENDING')
-                                : 'SMG-${samagri?.sessionId.substring(samagri.sessionId.length - 6).toUpperCase() ?? "XXXX"}';
-                            final String total = '₹${samagri?.finalTotal ?? 0}';
+                                : 'SMG-${(samagri.sessionId ?? "0000000000").substring((samagri.sessionId ?? "0000000000").length - 6).toUpperCase()}';
+                            final String total = '₹${bookingState.samagriTotal.toInt()}';
                             
                             WhatsAppHelper.openChat(
                               message: 'Namaste 🙏\n\n'
@@ -216,7 +217,7 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                                   '📍 Delivery to: $city\n'
                                   'Address: $deliveryAddress\n\n'
                                   'Items:\n'
-                                  '${samagri?.items.map((e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
+                                  '${samagri.items.map((e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
                                   '— Bharat Pooja Setu',
                             );
                           },
@@ -231,8 +232,8 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                             if (isBookingFlow) {
                               context.go('/home-summary');
                             } else {
-                              BookingSession.reset();
-                              SamagriSession.clear();
+                              ref.read(bookingSessionProvider.notifier).reset();
+                              ref.read(samagriSessionProvider.notifier).clear();
                               ref.read(samagriCartProvider.notifier).clearCart();
                               // 🚀 RESET NAVIGATION: Go to Home Tab (index 0)
                               ref.read(mainNavigationProvider.notifier).state = 0;

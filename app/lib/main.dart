@@ -54,15 +54,16 @@ Future<void> main() async {
   );
 }
 
-class PoojaHavanApp extends StatelessWidget {
+class PoojaHavanApp extends ConsumerWidget {
   const PoojaHavanApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Pooja Havan App',
-      routerConfig: appRouter,
+      routerConfig: router,
       theme: buildAppTheme(),
     );
   }

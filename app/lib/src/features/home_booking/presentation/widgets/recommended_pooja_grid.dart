@@ -60,10 +60,12 @@ class RecommendedPoojaGrid extends StatelessWidget {
                                       color: AppColors.saffron.withOpacity(0.12),
                                     ),
                                   ),
-                                  Image.asset(
-                                    pooja.imagePath,
-                                    fit: BoxFit.contain,
+                                  Padding(
                                     padding: const EdgeInsets.all(12),
+                                    child: Image.asset(
+                                      pooja.imagePath,
+                                      fit: BoxFit.contain,
+                                    ),
                                   ),
                                 ],
                               ),

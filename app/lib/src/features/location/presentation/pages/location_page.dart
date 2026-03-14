@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class LocationPage extends StatefulWidget {
+class LocationPage extends ConsumerStatefulWidget {
   final String ritualSlug;
   final String ritualName;
 
@@ -18,10 +19,10 @@ class LocationPage extends StatefulWidget {
   });
 
   @override
-  State<LocationPage> createState() => _LocationPageState();
+  ConsumerState<LocationPage> createState() => _LocationPageState();
 }
 
-class _LocationPageState extends State<LocationPage> with SingleTickerProviderStateMixin {
+class _LocationPageState extends ConsumerState<LocationPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
   static const String _pilotCity = 'Ghaziabad';
 
@@ -165,11 +166,13 @@ class _LocationPageState extends State<LocationPage> with SingleTickerProviderSt
         child: PrimaryButton(
           label: 'Continue to Booking →',
           onTap: () {
-            BookingSession.current = BookingDraft(
+            final draft = BookingDraft(
               bookingType: BookingType.home,
               ritualName: widget.ritualName,
+              ritualId: widget.ritualSlug,
               city: _pilotCity,
             );
+            ref.read(bookingSessionProvider.notifier).updateBookingDraft(draft);
             context.push('/at-home-or-temple');
           },
         ),

@@ -1,24 +1,24 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'dart:ui';
-
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
-import '../../../features/booking/application/booking_session.dart';
-import '../../samagri_flow/application/samagri_session.dart';
+import '../../booking/state/booking_session_notifier.dart';
+import '../../samagri_flow/state/samagri_session_notifier.dart';
 import 'package:app/src/core/widgets/divine_background.dart';
 import 'package:app/src/core/widgets/divine_glass_card.dart';
 
-class LandingPage extends StatefulWidget {
+class LandingPage extends ConsumerStatefulWidget {
   static const routeName = '/landing';
 
   const LandingPage({super.key});
 
   @override
-  State<LandingPage> createState() => _LandingPageState();
+  ConsumerState<LandingPage> createState() => _LandingPageState();
 }
 
-class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin {
+class _LandingPageState extends ConsumerState<LandingPage> with TickerProviderStateMixin {
   late final AnimationController _mainController;
   late final AnimationController _floatController;
   int _selectedIndex = 0;
@@ -36,9 +36,11 @@ class _LandingPageState extends State<LandingPage> with TickerProviderStateMixin
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
 
-    // 🔒 SESSION BOUNDARY RESET
-    BookingSession.reset();
-    SamagriSession.current = null;
+    // 🔒 SESSION BOUNDARY RESET (Riverpod)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(bookingSessionProvider.notifier).reset();
+      ref.read(samagriSessionProvider.notifier).clear();
+    });
   }
 
   @override

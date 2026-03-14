@@ -5,7 +5,7 @@ import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import '../../data/temple_repository_provider.dart';
-import '../../../../features/booking/application/booking_session.dart';
+import '../../../../features/booking/state/booking_session_notifier.dart';
 import '../../../../features/booking/domain/booking_draft.dart';
 
 class TempleCityPage extends ConsumerStatefulWidget {
@@ -102,12 +102,22 @@ class _TempleCityPageState extends ConsumerState<TempleCityPage> {
                       child: GestureDetector(
                         onTap: () {
                           setState(() => _selectedCityId = city.id);
-                          final current = BookingSession.current;
+                          final current = ref.read(bookingSessionProvider).current;
                           if (current != null) {
-                            current.city = city.name;
-                            current.cityId = city.id;
+                            final updated = current.copyWith(
+                              city: city.name,
+                              cityId: city.id,
+                            );
+                            ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
                           } else {
-                            // Should theoretically exist if coming from Home -> Select City
+                            // Initiating a temple booking draft if none exists
+                            final draft = BookingDraft(
+                              bookingType: BookingType.temple,
+                              city: city.name,
+                              cityId: city.id,
+                              ritualName: '',
+                            );
+                            ref.read(bookingSessionProvider.notifier).updateBookingDraft(draft);
                           }
                         },
                         child: PrimaryCard(

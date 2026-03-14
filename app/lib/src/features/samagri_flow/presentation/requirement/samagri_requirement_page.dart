@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class SamagriRequirementPage extends StatefulWidget {
+class SamagriRequirementPage extends ConsumerStatefulWidget {
   const SamagriRequirementPage({super.key});
 
   @override
-  State<SamagriRequirementPage> createState() => _SamagriRequirementPageState();
+  ConsumerState<SamagriRequirementPage> createState() => _SamagriRequirementPageState();
 }
 
-class _SamagriRequirementPageState extends State<SamagriRequirementPage> with SingleTickerProviderStateMixin {
+class _SamagriRequirementPageState extends ConsumerState<SamagriRequirementPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
   @override
@@ -62,7 +63,7 @@ class _SamagriRequirementPageState extends State<SamagriRequirementPage> with Si
                 subtitle: 'Select from our curated list of authentic ritual items',
                 icon: Icons.auto_awesome,
                 onTap: () {
-                  BookingSession.samagriDecisionTaken = true;
+                  ref.read(bookingSessionProvider.notifier).setSamagriDecision(true);
                   context.push('/samagri-list');
                 },
               ),
@@ -79,7 +80,7 @@ class _SamagriRequirementPageState extends State<SamagriRequirementPage> with Si
                 subtitle: 'Proceed to summary with your own ritual materials',
                 icon: Icons.person_outline,
                 onTap: () {
-                  BookingSession.samagriDecisionTaken = false;
+                  ref.read(bookingSessionProvider.notifier).setSamagriDecision(false);
                   context.push('/home-summary');
                 },
               ),

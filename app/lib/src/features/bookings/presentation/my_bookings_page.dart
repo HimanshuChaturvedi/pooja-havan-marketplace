@@ -49,7 +49,14 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> with SingleTick
           return ref.invalidate(bookingsProvider);
         },
         child: bookingsAsync.when(
-          loading: () => Center(child: CircularProgressIndicator(color: AppColors.saffron)),
+          loading: () => ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            itemCount: 5,
+            itemBuilder: (context, index) => const Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: ShimmerCard(height: 160),
+            ),
+          ),
           error: (err, stack) {
             AppLogger.error('Failed to fetch bookings', err, stack);
             return Center(child: Text('Error: $err', style: AppTextStyles.bodyMedium));

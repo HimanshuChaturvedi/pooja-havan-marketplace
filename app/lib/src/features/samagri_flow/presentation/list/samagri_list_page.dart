@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_item.dart';
 import 'package:app/src/features/samagri_flow/presentation/list/widgets/samagri_item_card.dart';
 import 'package:app/src/features/samagri_flow/application/samagri_session.dart'
@@ -202,7 +204,7 @@ class _SamagriListPageState extends ConsumerState<SamagriListPage> {
           child: PrimaryButton(
             label: hasItems ? 'Continue • ₹$total' : 'Select items',
             onTap: hasItems ? () {
-              // Convert cart to SamagriSession
+              // Convert cart to SamagriItem list for the session
               final sessionItems = cart.items.entries.map((e) =>
                 session.SamagriItem(
                   itemId: e.key.id,
@@ -211,7 +213,16 @@ class _SamagriListPageState extends ConsumerState<SamagriListPage> {
                   quantity: e.value,
                 ),
               ).toList();
-              session.SamagriSession.createFromCart(items: sessionItems);
+              
+              // ✅ Use Riverpod instead of static legacy field
+              // 🚀 v6.9: Detect if this is a sub-flow of a Pooja booking
+              final inBookingFlow = ref.read(bookingSessionProvider).current != null;
+              
+              ref.read(samagriSessionProvider.notifier).createFromCart(
+                items: sessionItems,
+                isPartOfBooking: inBookingFlow, 
+              );
+              
               context.push('/samagri-summary');
             } : null,
             loading: false,

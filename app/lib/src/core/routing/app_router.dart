@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../features/booking/state/booking_session_notifier.dart';
 
 import '../../features/booking/application/booking_session.dart';
 import '../supabase/supabase_client.dart';
@@ -51,13 +54,13 @@ import '../../features/samagri_flow/presentation/address/samagri_delivery_addres
 import '../../features/auth/presentation/login_page.dart';
 
 
-import '../../features/home_booking/presentation/home_screen.dart';
-
+import '../../features/landing/presentation/landing_enhanced_page.dart';
 import '../../features/main/presentation/pages/main_page.dart';
 
-final GoRouter appRouter = GoRouter(
-  debugLogDiagnostics: true,
-  initialLocation: '/',
+final routerProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    debugLogDiagnostics: true,
+    initialLocation: '/splash',
 
   errorBuilder: (context, state) => Scaffold(
     appBar: AppBar(title: const Text('Page Not Found')),
@@ -174,7 +177,8 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/start-booking',
       redirect: (context, state) {
-        if (BookingSession.current == null) {
+        final booking = ref.read(bookingSessionProvider).current;
+        if (booking == null) {
           return '/landing';
         }
         return '/services';
@@ -185,7 +189,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/at-home-or-temple',
       builder: (context, state) {
-        final booking = BookingSession.current;
+        final booking = ref.read(bookingSessionProvider).current;
         if (booking == null) {
           return const Scaffold(
             body: Center(child: Text('No booking found')),
@@ -203,7 +207,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/home-address',
       builder: (context, state) {
-        final booking = BookingSession.current;
+        final booking = ref.read(bookingSessionProvider).current;
         if (booking == null) {
           return const Scaffold(
             body: Center(child: Text('No booking found')),
@@ -302,7 +306,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/pandit-selection',
       builder: (context, state) {
-        final booking = BookingSession.current;
+        final booking = ref.read(bookingSessionProvider).current;
         if (booking == null) {
           return const Scaffold(
             body: Center(child: Text('No booking found')),
@@ -448,3 +452,4 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
+});

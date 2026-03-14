@@ -6,7 +6,7 @@ import 'package:app/src/features/temple/data/temple_data.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 
 class TempleSelectionPage extends ConsumerStatefulWidget {
   final String city;
@@ -180,10 +180,13 @@ class _TempleSelectionPageState extends ConsumerState<TempleSelectionPage> {
                 onTap: _selectedTempleId != null
                     ? () {
                         final selected = temples.firstWhere((t) => t.id == _selectedTempleId);
-                        final current = BookingSession.current;
+                        final current = ref.read(bookingSessionProvider).current;
                         if (current != null) {
-                          current.templeName = selected.name;
-                          current.templeId = selected.id;
+                          final updated = current.copyWith(
+                            templeName: selected.name,
+                            templeId: selected.id,
+                          );
+                          ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
                         }
                         context.push('/temple-ritual?temple=${Uri.encodeComponent(selected.name)}&city=${widget.city}');
                       }

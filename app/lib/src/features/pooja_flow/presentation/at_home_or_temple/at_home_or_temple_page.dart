@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import 'widgets/choice_card.dart';
 
 enum PoojaLocationType { home, temple }
 
-class AtHomeOrTemplePage extends StatefulWidget {
+class AtHomeOrTemplePage extends ConsumerStatefulWidget {
   final String city;
   final String ritualSlug;
   final String ritualName;
@@ -23,10 +24,10 @@ class AtHomeOrTemplePage extends StatefulWidget {
   });
 
   @override
-  State<AtHomeOrTemplePage> createState() => _AtHomeOrTemplePageState();
+  ConsumerState<AtHomeOrTemplePage> createState() => _AtHomeOrTemplePageState();
 }
 
-class _AtHomeOrTemplePageState extends State<AtHomeOrTemplePage> with SingleTickerProviderStateMixin {
+class _AtHomeOrTemplePageState extends ConsumerState<AtHomeOrTemplePage> with SingleTickerProviderStateMixin {
   PoojaLocationType? selectedType;
   late final AnimationController _animController;
 
@@ -126,15 +127,30 @@ class _AtHomeOrTemplePageState extends State<AtHomeOrTemplePage> with SingleTick
           onTap: selectedType == null
               ? null
               : () {
-                  if (BookingSession.current == null) return;
+                  final current = ref.read(bookingSessionProvider).current;
+                  final type = selectedType == PoojaLocationType.home ? BookingType.home : BookingType.temple;
+                  
+                  if (current != null) {
+                    final updated = current.copyWith(
+                      bookingType: type,
+                      city: widget.city,
+                    );
+                    ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
+                  } else {
+                    final draft = BookingDraft(
+                      bookingType: type,
+                      city: widget.city,
+                      ritualName: widget.ritualName,
+                      ritualId: widget.ritualSlug,
+                    );
+                    ref.read(bookingSessionProvider.notifier).updateBookingDraft(draft);
+                  }
 
                   if (selectedType == PoojaLocationType.home) {
-                    BookingSession.current!.bookingType = BookingType.home;
                     context.push('/home-address');
                   } else {
-                    BookingSession.current!.bookingType = BookingType.temple;
-                    final city = Uri.encodeComponent(widget.city);
-                    context.push('/temples/$city');
+                    final cityEncoded = Uri.encodeComponent(widget.city);
+                    context.push('/temples/$cityEncoded');
                   }
                 },
         ),

@@ -5,6 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'package:app/src/features/home_booking/presentation/widgets/banner_carousel.dart';
+import 'package:app/src/features/main/presentation/state/main_navigation_provider.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
 
 const String kRouteLanding = '/landing';
 
@@ -52,17 +57,22 @@ class LandingEnhancedPage extends ConsumerWidget {
                   context.push('/services');
                   break;
                 case _LandingAction.buySamagri:
-                  context.push('/samagri');
+                  ref.read(mainNavigationProvider.notifier).state = 2; // Shop tab
+                  ref.read(bookingSessionProvider.notifier).reset();
+                  ref.read(samagriSessionProvider.notifier).clear();
+                  ref.read(samagriCartProvider.notifier).clearCart();
                   break;
                 case _LandingAction.havanAtTemple:
                   context.push('/location-selection?type=temple');
                   break;
                 case _LandingAction.explore:
-                  context.push('/explore');
+                  context.push('/explore-services');
                   break;
               }
             }),
 
+            const SizedBox(height: 32),
+            const BannerCarousel(),
             const SizedBox(height: 32),
 
             // Popular rituals

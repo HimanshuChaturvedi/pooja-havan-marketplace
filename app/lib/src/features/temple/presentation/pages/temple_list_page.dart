@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class TempleListPage extends StatefulWidget {
+class TempleListPage extends ConsumerStatefulWidget {
   final String city;
   const TempleListPage({super.key, required this.city});
 
   @override
-  State<TempleListPage> createState() => _TempleListPageState();
+  ConsumerState<TempleListPage> createState() => _TempleListPageState();
 }
 
-class _TempleListPageState extends State<TempleListPage> with SingleTickerProviderStateMixin {
+class _TempleListPageState extends ConsumerState<TempleListPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
   @override
@@ -68,9 +69,23 @@ class _TempleListPageState extends State<TempleListPage> with SingleTickerProvid
             delay: 200 + (index * 150),
             child: GestureDetector(
               onTap: () {
-                BookingSession.current?.bookingType = BookingType.temple;
-                BookingSession.current?.templeName = templeName;
-                BookingSession.current?.city = widget.city;
+                final current = ref.read(bookingSessionProvider).current;
+                if (current != null) {
+                  final updated = current.copyWith(
+                    bookingType: BookingType.temple,
+                    templeName: templeName,
+                    city: widget.city,
+                  );
+                  ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
+                } else {
+                  final draft = BookingDraft(
+                    bookingType: BookingType.temple,
+                    templeName: templeName,
+                    city: widget.city,
+                    ritualName: '',
+                  );
+                  ref.read(bookingSessionProvider.notifier).updateBookingDraft(draft);
+                }
                 context.push('/temple-details');
               },
               child: PrimaryCard(

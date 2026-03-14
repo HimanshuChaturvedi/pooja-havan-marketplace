@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
 import '../../data/samagri_repository_provider.dart';
 import 'package:app/src/features/home_booking/presentation/address/home_address_page.dart';
 import 'package:app/src/features/booking/data/booking_providers.dart';
@@ -21,20 +22,16 @@ class SamagriSummaryPage extends ConsumerStatefulWidget {
 class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
   late List<SamagriItem> _items;
   bool _initialized = false;
-  final bool _isBookingFlow = BookingSession.current != null;
+  bool _isBookingFlow = false;
   bool _isSubmitting = false;
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initialized) {
-      final samagri = SamagriSession.current;
-      if (samagri != null) {
+      final samagri = ref.read(samagriSessionProvider);
+      if (samagri.sessionId != null) {
+        _isBookingFlow = samagri.isPartOfBooking; // ✅ SYNC FLOW TYPE
         _items = samagri.items.map((i) => SamagriItem(
           itemId: i.itemId,
           name: i.name,
@@ -45,7 +42,9 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
         _items = [];
       }
       _initialized = true;
-      _syncSession(); // 🚀 ENSURE PRICING IS SYNCED ON LOAD
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _syncSession(); // 🚀 ENSURE PRICING IS SYNCED ON LOAD
+      });
     }
   }
 
@@ -82,36 +81,28 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
   }
 
   void _syncSession() {
-    // ✅ PRESERVE ADDRESS before createFromCart wipes it
-    final savedAddress = SamagriSession.current?.addressText;
+    // ✅ Use Riverpod to update samagri draft
+    ref.read(samagriSessionProvider.notifier).updateSamagriDraft(
+          items: _items,
+          isPartOfBooking: _isBookingFlow,
+        );
 
-    SamagriSession.createFromCart(
-      items: _items,
-      isPartOfBooking: _isBookingFlow,
-    );
+    final deliveryFee = (_isBookingFlow && _items.isNotEmpty) || !_isBookingFlow ? 50.0 : 0.0;
+    const platformFee = 20.0;
 
-    // Re-attach address if it was set
-    if (savedAddress != null) {
-      SamagriSession.attachAddress(savedAddress);
-    }
- 
     if (_isBookingFlow) {
-      if (_items.isNotEmpty) {
-        BookingSession.current?.samagriRequired = true;
-        BookingSession.deliveryFee = 50.0;
-        BookingSession.platformFee = 20.0;
-      } else {
-        BookingSession.current?.samagriRequired = false;
-        BookingSession.deliveryFee = 0.0;
-        BookingSession.platformFee = 20.0;
+      final current = ref.read(bookingSessionProvider).current;
+      if (current != null) {
+        final updated = current.copyWith(samagriRequired: _items.isNotEmpty);
+        ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
       }
-    } else {
-      // 🚀 STANDALONE SYNC: Ensure fees show up in Payment Screen
-      BookingSession.deliveryFee = 50.0;
-      BookingSession.platformFee = 20.0;
     }
- 
-    BookingSession.samagriTotal = _itemsTotal.toDouble();
+
+    ref.read(bookingSessionProvider.notifier).updatePricing(
+          samagriTotal: _itemsTotal.toDouble(),
+          deliveryFee: deliveryFee,
+          platformFee: platformFee,
+        );
   }
 
   Future<void> _handleConfirm() async {
@@ -130,19 +121,24 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
     setState(() => _isSubmitting = true);
     
     try {
-      // Read address BEFORE _syncSession (which recreates the session)
+      // ✅ Read address from Riverpod state BEFORE sync
+      final currentBooking = ref.read(bookingSessionProvider).current;
+      final currentSamagri = ref.read(samagriSessionProvider);
+      
       final deliveryAddr = _isBookingFlow
-          ? BookingSession.current?.address
-          : SamagriSession.current?.addressText;
+          ? currentBooking?.address
+          : currentSamagri?.addressText;
 
       _syncSession();
+      
+      final bookingState = ref.read(bookingSessionProvider);
  
       if (!_isBookingFlow) {
         // 🚀 ONLY create a standalone order if NOT in a Pooja flow.
         // Linked orders are handled by BookingRepository.createBooking().
         await ref.read(samagriRepositoryProvider).createOrder(
           items: _items,
-          totalAmount: BookingSession.totalAmount,
+          totalAmount: bookingState.totalAmount,
           bookingId: null,
           deliveryAddress: deliveryAddr,
         );
@@ -153,10 +149,10 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
         ref.invalidate(bookingsProvider);
         
         if (_isBookingFlow) {
-          context.go('/home-summary');
+          context.push('/home-summary');
         } else {
           // 🚀 SUCCESS REDIRECT: Go to dedicated success page
-          context.go('/samagri-success'); 
+          context.push('/samagri-success'); 
         }
       }
     } catch (e) {
@@ -201,6 +197,10 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
         ),
       );
     }
+
+    final bookingState = ref.watch(bookingSessionProvider);
+    final samagriState = ref.watch(samagriSessionProvider);
+    final localTotal = _itemsTotal + bookingState.deliveryFee.toInt() + bookingState.platformFee.toInt();
 
     return AppScaffold(
       title: 'Order Summary',
@@ -294,8 +294,8 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
                   }),
                   const Divider(height: 32, color: Colors.black12),
                   _priceLine('Items Total', _itemsTotal),
-                  _priceLine('Delivery Fee', BookingSession.deliveryFee.toInt()),
-                  _priceLine('Platform Fee', BookingSession.platformFee.toInt()),
+                  _priceLine('Delivery Fee', bookingState.deliveryFee.toInt()),
+                  _priceLine('Platform Fee', bookingState.platformFee.toInt()),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -309,7 +309,7 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
                         ),
                       ),
                       Text(
-                        '₹${BookingSession.totalAmount.toInt()}',
+                        '₹$localTotal',
                         style: AppTextStyles.title.copyWith(
                           fontSize: 24,
                           color: AppColors.saffron,
@@ -346,9 +346,7 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
                                   builder: (_) => HomeAddressPage(
                                     city: 'Ghaziabad', 
                                     onAddressSaved: (addr) {
-                                      setState(() {
-                                        SamagriSession.attachAddress(addr);
-                                      });
+                                      ref.read(samagriSessionProvider.notifier).attachAddress(addr);
                                       Navigator.of(context).pop();
                                     },
                                   ),
@@ -356,16 +354,16 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
                               );
                           },
                           child: Text(
-                            SamagriSession.current?.addressText != null ? 'Change' : 'Select',
+                          samagriState.addressText != null ? 'Change' : 'Select',
                             style: AppTextStyles.button.copyWith(color: AppColors.saffron),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if (SamagriSession.current?.addressText != null)
+                    if (samagriState.addressText != null)
                       Text(
-                        SamagriSession.current!.addressText!,
+                        samagriState.addressText!,
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.darkCharcoal,
                           fontWeight: FontWeight.w600,
@@ -391,10 +389,10 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
         child: PrimaryButton(
           label: (ref.watch(isAuthenticatedProvider)) 
               ? (_isBookingFlow 
-                  ? 'Next: Review Pooja • ₹${BookingSession.totalAmount.toInt()}'
-                  : 'Confirm Order • ₹${BookingSession.totalAmount.toInt()}')
-              : 'Sign In to Order • ₹${BookingSession.totalAmount.toInt()}',
-          onTap: (_isSubmitting || (!_isBookingFlow && SamagriSession.current?.addressText == null)) 
+                  ? 'Next: Review Pooja'
+                  : 'Confirm Order • ₹$localTotal')
+              : 'Sign In to Order • ₹$localTotal',
+          onTap: (_isSubmitting || (!_isBookingFlow && samagriState.addressText == null)) 
               ? null 
               : _handleConfirm,
           loading: _isSubmitting,

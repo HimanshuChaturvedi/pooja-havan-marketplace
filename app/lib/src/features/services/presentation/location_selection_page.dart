@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/services/location_service.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class LocationSelectionPage extends StatefulWidget {
+class LocationSelectionPage extends ConsumerStatefulWidget {
   final String mode; // home | temple | tirth | other
 
   const LocationSelectionPage({super.key, required this.mode});
 
   @override
-  State<LocationSelectionPage> createState() => _LocationSelectionPageState();
+  ConsumerState<LocationSelectionPage> createState() => _LocationSelectionPageState();
 }
 
-class _LocationSelectionPageState extends State<LocationSelectionPage> {
+class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
   bool _isDetecting = false;
   UserLocation? _detectedLocation;
   String? _error;
@@ -51,7 +52,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     if (_detectedLocation == null && widget.mode != 'temple') return;
     final city = _detectedLocation?.city ?? 'Ghaziabad';
 
-    BookingSession.current = BookingDraft(
+    final draft = BookingDraft(
       bookingType: widget.mode == 'temple' ? BookingType.temple : BookingType.home,
       ritualName: '', 
       city: city,
@@ -59,6 +60,8 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
       longitude: _detectedLocation?.longitude,
       area: _detectedLocation?.area,
     );
+
+    ref.read(bookingSessionProvider.notifier).updateBookingDraft(draft);
 
     if (widget.mode == 'temple') {
       context.push('/temples/${Uri.encodeComponent(city)}');

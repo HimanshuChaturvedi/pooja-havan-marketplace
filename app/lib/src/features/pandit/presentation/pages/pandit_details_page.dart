@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class PanditDetailsPage extends StatefulWidget {
+class PanditDetailsPage extends ConsumerStatefulWidget {
   final String panditName;
   const PanditDetailsPage({super.key, required this.panditName});
 
   @override
-  State<PanditDetailsPage> createState() => _PanditDetailsPageState();
+  ConsumerState<PanditDetailsPage> createState() => _PanditDetailsPageState();
 }
 
-class _PanditDetailsPageState extends State<PanditDetailsPage> with SingleTickerProviderStateMixin {
+class _PanditDetailsPageState extends ConsumerState<PanditDetailsPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
   @override
@@ -133,7 +134,11 @@ class _PanditDetailsPageState extends State<PanditDetailsPage> with SingleTicker
         child: PrimaryButton(
           label: 'Select ${widget.panditName} →',
           onTap: () {
-            BookingSession.current?.panditName = widget.panditName;
+            final current = ref.read(bookingSessionProvider).current;
+            if (current != null) {
+              final updated = current.copyWith(panditName: widget.panditName);
+              ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
+            }
             context.push('/home-date-time');
           },
         ),

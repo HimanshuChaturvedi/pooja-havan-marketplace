@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class HomeDateTimePage extends StatefulWidget {
+class HomeDateTimePage extends ConsumerStatefulWidget {
   const HomeDateTimePage({super.key});
 
   @override
-  State<HomeDateTimePage> createState() => _HomeDateTimePageState();
+  ConsumerState<HomeDateTimePage> createState() => _HomeDateTimePageState();
 }
 
-class _HomeDateTimePageState extends State<HomeDateTimePage> with SingleTickerProviderStateMixin {
+class _HomeDateTimePageState extends ConsumerState<HomeDateTimePage> with SingleTickerProviderStateMixin {
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
   late final AnimationController _animController;
@@ -162,9 +163,14 @@ class _HomeDateTimePageState extends State<HomeDateTimePage> with SingleTickerPr
           label: 'Continue to Samagri Selection →',
           onTap: isValid
               ? () {
-                  BookingSession.current?.selectedDate = selectedDate;
-                  BookingSession.current?.selectedTime =
-                      selectedTime!.format(context);
+                  final current = ref.read(bookingSessionProvider).current;
+                  if (current != null) {
+                    final updated = current.copyWith(
+                      selectedDate: selectedDate,
+                      selectedTime: selectedTime!.format(context),
+                    );
+                    ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
+                  }
                   context.push('/samagri-required');
                 }
               : null,

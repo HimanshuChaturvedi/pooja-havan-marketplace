@@ -3,7 +3,6 @@ import '../../../core/supabase/supabase_client.dart';
 import '../domain/booking_draft.dart';
 import 'booking_repository.dart';
 import '../../samagri_flow/application/samagri_session.dart' as session;
-import '../application/booking_session.dart';
 import '../../../core/utils/logger.dart';
 
 class BookingRepositoryImpl implements BookingRepository {
@@ -40,8 +39,8 @@ class BookingRepositoryImpl implements BookingRepository {
       'samagri_required': booking.samagriRequired,
       'status': 'CREATED',
       'reference_id': _generateReferenceId(),
-      // ✅ FIX: Save total amount for My Bookings display
-      'total_amount': BookingSession.totalAmount,
+      // ✅ FIX: total_amount passed in or derived from booking
+      'total_amount': booking.totalAmount, 
     }).select('id, reference_id').single();
 
     final String bookingId = response['id'].toString();

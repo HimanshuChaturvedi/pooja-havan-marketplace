@@ -125,18 +125,61 @@ class SupabaseRitualRepository implements RitualRepository {
 
   @override
   Future<Map<String, double>> getRitualPricing(PricingParams params) async {
-    // 1. Fetch pricing for specific ritual (Matching User Requirement)
-    final data = await supabase
-        .from('ritual_pricing')
-        .select('price, pooja_dakshina, samagri_charges')
-        .eq('ritual_id', params.ritualId)
-        .single();
+    try {
+      // 1. Try to fetch city-specific pricing first
+      if (params.cityId != null) {
+        final List<dynamic> cityData = await supabase
+            .from('ritual_pricing')
+            .select('pooja_dakshina, samagri_charges, platform_fee_override, delivery_fee_override')
+            .eq('ritual_id', params.ritualId)
+            .eq('city_id', params.cityId!)
+            .eq('location_type', params.location.name);
+        
+        if (cityData.isNotEmpty) {
+          final data = cityData.first;
+          return {
+            'pooja_dakshina': (data['pooja_dakshina'] as num).toDouble(),
+            'samagri_charges': (data['samagri_charges'] as num).toDouble(),
+            'platform_fee': (data['platform_fee_override'] ?? 20.0 as num).toDouble(),
+            'delivery_fee': (data['delivery_fee_override'] ?? 50.0 as num).toDouble(),
+          };
+        }
+      }
 
-    return {
-      'price': (data['price'] as num).toDouble(),
-      'pooja_dakshina': (data['pooja_dakshina'] as num).toDouble(),
-      'samagri_charges': (data['samagri_charges'] as num).toDouble(),
-    };
+      // 2. Fallback to default pricing (where city_id is null)
+      final List<dynamic> defaultData = await supabase
+          .from('ritual_pricing')
+          .select('pooja_dakshina, samagri_charges')
+          .eq('ritual_id', params.ritualId)
+          .eq('location_type', params.location.name)
+          .filter('city_id', 'is', null);
+
+      if (defaultData.isNotEmpty) {
+        final data = defaultData.first;
+        return {
+          'pooja_dakshina': (data['pooja_dakshina'] as num).toDouble(),
+          'samagri_charges': (data['samagri_charges'] as num).toDouble(),
+          'platform_fee': 20.0,
+          'delivery_fee': 50.0,
+        };
+      }
+
+      // 3. Final safety fallback
+      return {
+        'pooja_dakshina': 2100.0,
+        'samagri_charges': 1100.0,
+        'platform_fee': 20.0,
+        'delivery_fee': 50.0,
+      };
+    } catch (e) {
+      debugPrint('Error fetching pricing: $e');
+      return {
+        'pooja_dakshina': 2100.0,
+        'samagri_charges': 1100.0,
+        'platform_fee': 20.0,
+        'delivery_fee': 50.0,
+      };
+    }
   }
 }
 

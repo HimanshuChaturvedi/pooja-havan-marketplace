@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/features/booking/presentation/booking_step1_page.dart';
 import 'package:app/src/core/widgets/design_system.dart';
@@ -37,7 +37,9 @@ class _BookingReviewPageState extends ConsumerState<BookingReviewPage> with Sing
 
   @override
   Widget build(BuildContext context) {
-    final booking = BookingSession.current;
+    final bookingSession = ref.watch(bookingSessionProvider);
+    final booking = bookingSession.current;
+    
     if (booking == null) {
       return const AppScaffold(
         title: "Error",
@@ -137,7 +139,7 @@ class _BookingReviewPageState extends ConsumerState<BookingReviewPage> with Sing
               return;
             }
             
-            BookingSession.status = BookingStatus.paymentPending;
+            ref.read(bookingSessionProvider.notifier).updateStatus(BookingStatus.paymentPending);
             context.push('/payment');
           },
         ),

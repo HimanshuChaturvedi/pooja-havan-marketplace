@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class HomeAddressPage extends StatefulWidget {
+class HomeAddressPage extends ConsumerStatefulWidget {
   final String city;
   final void Function(String address)? onAddressSaved;
 
@@ -16,10 +17,10 @@ class HomeAddressPage extends StatefulWidget {
   });
 
   @override
-  State<HomeAddressPage> createState() => _HomeAddressPageState();
+  ConsumerState<HomeAddressPage> createState() => _HomeAddressPageState();
 }
 
-class _HomeAddressPageState extends State<HomeAddressPage> {
+class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
   String _selectedCity = 'Ghaziabad';
@@ -274,8 +275,16 @@ class _HomeAddressPageState extends State<HomeAddressPage> {
                             widget.onAddressSaved!(address);
                             return;
                           }
-                          BookingSession.current?.address = address;
-                          BookingSession.current?.city = _selectedCity;
+                          
+                          final current = ref.read(bookingSessionProvider).current;
+                          if (current != null) {
+                            final updated = current.copyWith(
+                              address: address,
+                              city: _selectedCity,
+                            );
+                            ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
+                          }
+                          
                           context.push('/pandit-selection');
                         }
                       : null,

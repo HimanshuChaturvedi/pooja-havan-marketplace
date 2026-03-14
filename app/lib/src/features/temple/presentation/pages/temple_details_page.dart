@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class TempleDetailsPage extends StatefulWidget {
+class TempleDetailsPage extends ConsumerStatefulWidget {
   const TempleDetailsPage({super.key});
 
   @override
-  State<TempleDetailsPage> createState() => _TempleDetailsPageState();
+  ConsumerState<TempleDetailsPage> createState() => _TempleDetailsPageState();
 }
 
-class _TempleDetailsPageState extends State<TempleDetailsPage> with SingleTickerProviderStateMixin {
+class _TempleDetailsPageState extends ConsumerState<TempleDetailsPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
   @override
@@ -33,7 +34,7 @@ class _TempleDetailsPageState extends State<TempleDetailsPage> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final booking = BookingSession.current;
+    final booking = ref.watch(bookingSessionProvider).current;
     final templeName = booking?.templeName ?? 'Selected Temple';
     final city = booking?.city ?? '';
 

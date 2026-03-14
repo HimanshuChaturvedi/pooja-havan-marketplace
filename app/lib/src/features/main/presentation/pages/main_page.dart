@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:app/src/features/home_booking/presentation/home_screen.dart';
+import 'package:app/src/features/landing/presentation/landing_enhanced_page.dart';
 import 'package:app/src/core/widgets/glass_bottom_nav.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/features/bookings/presentation/my_bookings_page.dart';
@@ -14,11 +14,11 @@ class MainPage extends ConsumerWidget {
 
   Widget _buildPage(int index) {
     switch (index) {
-      case 0: return const HomeScreen();
+      case 0: return const LandingEnhancedPage();
       case 1: return const MyBookingsPage();  // ← mounts fresh on every tab switch
       case 2: return const SamagriListPage();
       case 3: return const ProfilePage();
-      default: return const HomeScreen();
+      default: return const LandingEnhancedPage();
     }
   }
 

@@ -4,8 +4,8 @@ import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/features/home_booking/presentation/widgets/action_card.dart';
 import 'package:app/src/features/home_booking/presentation/widgets/banner_carousel.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
-import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
 import 'package:app/src/features/main/presentation/state/main_navigation_provider.dart';
@@ -65,8 +65,8 @@ class HomeScreen extends ConsumerWidget {
                             icon: Icons.temple_hindu_rounded,
                             onTap: () {
                               ref.read(mainNavigationProvider.notifier).state = 0; // Home tab
-                              BookingSession.reset();
-                              SamagriSession.clear();
+                              ref.read(bookingSessionProvider.notifier).reset();
+                              ref.read(samagriSessionProvider.notifier).clear();
                               ref.read(samagriCartProvider.notifier).clearCart();
                               context.push('/services');
                             },
@@ -83,8 +83,8 @@ class HomeScreen extends ConsumerWidget {
                             icon: Icons.shopping_basket_rounded,
                             onTap: () {
                               ref.read(mainNavigationProvider.notifier).state = 2; // Shop tab
-                              BookingSession.reset();
-                              SamagriSession.clear();
+                              ref.read(bookingSessionProvider.notifier).reset();
+                              ref.read(samagriSessionProvider.notifier).clear();
                               ref.read(samagriCartProvider.notifier).clearCart();
                               // Simply going to landing will now show index 2
                               context.go('/landing');
@@ -96,8 +96,8 @@ class HomeScreen extends ConsumerWidget {
                             icon: Icons.account_balance_rounded,
                             onTap: () {
                               ref.read(mainNavigationProvider.notifier).state = 0; // Home tab
-                              BookingSession.reset();
-                              SamagriSession.clear();
+                              ref.read(bookingSessionProvider.notifier).reset();
+                              ref.read(samagriSessionProvider.notifier).clear();
                               ref.read(samagriCartProvider.notifier).clearCart();
                               context.push('/temple-services');
                             },

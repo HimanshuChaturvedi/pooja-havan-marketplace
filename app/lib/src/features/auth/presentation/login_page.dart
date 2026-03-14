@@ -173,7 +173,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
       if (mounted) {
         if (widget.redirectTo != null) {
-          context.go(widget.redirectTo!);
+          context.pushReplacement(widget.redirectTo!);
         } else {
           context.go('/home');
         }
@@ -208,7 +208,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       
       if (mounted) {
         if (widget.redirectTo != null) {
-          context.go(widget.redirectTo!);
+          context.pushReplacement(widget.redirectTo!);
         } else {
           context.go('/home');
         }
@@ -254,29 +254,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           ),
 
-          // 🔙 ABSOLUTE POSITIONED BACK BUTTON (Pinned to top-left)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 8,
-            child: IconButton(
-              onPressed: () {
-                if (_isOtpSent) {
-                  setState(() => _isOtpSent = false);
-                } else {
-                  context.pop();
-                }
-              },
-              icon: Icon(
-                _isOtpSent ? Icons.arrow_back : Icons.arrow_back_ios_new, 
-                color: AppColors.darkCharcoal
-              ),
-            ),
-          ),
-
           SingleChildScrollView(
             padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 70, // Start content below back button
-              bottom: MediaQuery.of(context).viewInsets.bottom + 60,
+              top: MediaQuery.of(context).padding.top + 60, // Squeezed up slightly
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20, // Reduced bottom space
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -397,7 +378,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                     ),
 
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 24), // Reduced from 48
                   // 📜 PRIVACY POLICY ONLY
                   Center(
                     child: Column(
@@ -415,8 +396,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20), // Reduced from 40
                 ],
+              ),
+            ),
+          ),
+
+          // 🔙 ABSOLUTE POSITIONED BACK BUTTON (Pinned to top-left)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 8,
+            child: IconButton(
+              onPressed: () {
+                if (_isOtpSent) {
+                  setState(() => _isOtpSent = false);
+                } else {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home'); // Fallback if no history exists
+                  }
+                }
+              },
+              icon: Icon(
+                _isOtpSent ? Icons.arrow_back : Icons.arrow_back_ios_new, 
+                color: AppColors.darkCharcoal
               ),
             ),
           ),

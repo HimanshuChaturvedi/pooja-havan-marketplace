@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 
@@ -10,6 +11,7 @@ class AppScaffold extends StatelessWidget {
   final bool showAppBar;
   final bool extendBodyBehindAppBar;
   final Widget? floatingActionButton;
+  final bool? centerTitle;
 
   const AppScaffold({
     super.key,
@@ -20,6 +22,7 @@ class AppScaffold extends StatelessWidget {
     this.showAppBar = true,
     this.extendBodyBehindAppBar = false,
     this.floatingActionButton,
+    this.centerTitle,
   });
 
   @override
@@ -31,6 +34,7 @@ class AppScaffold extends StatelessWidget {
       appBar: showAppBar
           ? AppBar(
               title: title != null ? Text(title!) : null,
+              centerTitle: centerTitle,
               actions: actions,
               backgroundColor: extendBodyBehindAppBar ? Colors.transparent : Colors.white,
               surfaceTintColor: Colors.transparent,
@@ -93,6 +97,8 @@ class PrimaryCard extends StatelessWidget {
   final double borderRadius;
   final Color? color;
   final bool showShadow;
+  final double? width;
+  final double? height;
 
   const PrimaryCard({
     super.key,
@@ -101,11 +107,15 @@ class PrimaryCard extends StatelessWidget {
     this.borderRadius = 22,
     this.color = Colors.white,
     this.showShadow = true,
+    this.width,
+    this.height,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: width,
+      height: height,
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color,
@@ -224,6 +234,62 @@ class SecondaryButton extends StatelessWidget {
             color: AppColors.saffron,
             fontWeight: FontWeight.w900,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class AppShimmer extends StatelessWidget {
+  final double width;
+  final double height;
+  final double borderRadius;
+
+  const AppShimmer({
+    super.key,
+    required this.width,
+    required this.height,
+    this.borderRadius = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade200,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
+    );
+  }
+}
+
+class ShimmerCard extends StatelessWidget {
+  final double height;
+  final double borderRadius;
+
+  const ShimmerCard({
+    super.key,
+    this.height = 120,
+    this.borderRadius = 22,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.white.withOpacity(0.5),
+      highlightColor: Colors.white.withOpacity(0.8),
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
         ),
       ),
     );

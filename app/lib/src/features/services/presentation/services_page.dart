@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import '../data/ritual_repository.dart';
@@ -162,17 +162,21 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: GestureDetector(
                         onTap: () {
-                          final current = BookingSession.current;
+                          final current = ref.read(bookingSessionProvider).current;
                           if (current != null) {
-                            current.ritualName = ritual.name;
-                            current.ritualId = ritual.id;
+                            final updated = current.copyWith(
+                              ritualName: ritual.name,
+                              ritualId: ritual.id,
+                            );
+                            ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
                           } else {
-                            BookingSession.current = BookingDraft(
+                            final draft = BookingDraft(
                               bookingType: entryType == 'temple' ? BookingType.temple : BookingType.home,
                               ritualName: ritual.name,
                               ritualId: ritual.id,
                               city: '',
                             );
+                            ref.read(bookingSessionProvider.notifier).updateBookingDraft(draft);
                           }
                           context.push('/service/${ritual.id}/${Uri.encodeComponent(ritual.name)}');
                         },
@@ -239,8 +243,13 @@ class _ServicesPageState extends ConsumerState<ServicesPage> {
                   },
                 );
               },
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.saffron),
+              loading: () => ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                itemCount: 8,
+                itemBuilder: (context, index) => const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: ShimmerCard(height: 90),
+                ),
               ),
               error: (err, stack) => Center(
                 child: Text('Error loading rituals: $err'),

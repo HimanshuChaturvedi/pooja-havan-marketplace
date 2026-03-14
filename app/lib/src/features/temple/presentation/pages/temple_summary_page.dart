@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
-import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
 
@@ -94,8 +94,8 @@ class TempleSummaryPage extends ConsumerWidget {
         child: PrimaryButton(
           label: 'Confirm Temple Booking',
           onTap: () {
-            BookingSession.reset();
-            SamagriSession.clear();
+            ref.read(bookingSessionProvider.notifier).reset();
+            ref.read(samagriSessionProvider.notifier).clear();
             ref.read(samagriCartProvider.notifier).clearCart();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Temple booking confirmed! (Pilot mode)')),

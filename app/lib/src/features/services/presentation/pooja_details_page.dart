@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/booking/application/booking_session.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import '../data/ritual_repository_provider.dart';
@@ -153,7 +153,7 @@ class _PoojaDetailsPageState extends ConsumerState<PoojaDetailsPage> with Single
         child: PrimaryButton(
           label: 'Select Location →',
           onTap: () {
-            final booking = BookingSession.current;
+            final booking = ref.read(bookingSessionProvider).current;
             if (booking != null) {
               if (booking.bookingType == BookingType.temple) {
                 if (booking.templeName == null) {
