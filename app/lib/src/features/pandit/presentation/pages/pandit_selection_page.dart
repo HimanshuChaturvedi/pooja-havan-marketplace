@@ -7,6 +7,7 @@ import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/pandit/state/pandit_selection_provider.dart';
+import '../../../../core/utils/ritual_slug_mapper.dart';
 import '../../../pandit_onboarding/domain/pandit_profile.dart';
 
 class PanditSelectionPage extends ConsumerStatefulWidget {
@@ -92,9 +93,16 @@ class _PanditList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final booking = ref.watch(bookingSessionProvider).current;
-    final ritualSlug = (booking?.ritualName ?? '').toLowerCase().replaceAll(' ', '_');
+    final city = booking?.city ?? '';
     
-    final panditsAsync = ref.watch(panditsByRitualProvider(ritualSlug));
+    final ritualSlug = RitualSlugMapper.getSlug(
+      id: booking?.ritualId,
+      name: booking?.ritualName,
+    );
+    
+    debugPrint('DEBUG: Selection Search -> RitualSlug: $ritualSlug, City: $city');
+    
+    final panditsAsync = ref.watch(panditsByRitualProvider((ritualSlug: ritualSlug, city: city)));
 
     return panditsAsync.when(
       data: (pandits) {
@@ -119,10 +127,13 @@ class _PanditList extends ConsumerWidget {
                     final current = ref.read(bookingSessionProvider).current;
                     if (current != null) {
                       ref.read(bookingSessionProvider.notifier).updateBookingDraft(
-                        current.copyWith(panditName: '${pandit.firstName} ${pandit.lastName}'),
+                        current.copyWith(
+                          panditName: '${pandit.firstName} ${pandit.lastName}',
+                          panditId: pandit.id,
+                        ),
                       );
                     }
-                    context.push('/home-summary');
+                    context.push('/home-date-time');
                   },
                 ),
               ),

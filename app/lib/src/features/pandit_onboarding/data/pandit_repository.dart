@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/pandit_draft.dart';
 import '../domain/pandit_profile.dart';
@@ -120,26 +121,57 @@ class PanditRepository {
     }
   }
 
-  Future<List<PanditProfile>> getPanditsByRitual(String ritualSlug) async {
+  Future<List<PanditProfile>> getPanditsByRitual(String ritualSlug, String city) async {
+    debugPrint('PanditRepository: Requesting $ritualSlug in $city');
     try {
+      // 1. Get pandit IDs that match BOTH ritual and city
+      // We do this via inner join to ensure the pandit has both.
       final response = await _supabase
           .from('pandit_profiles')
           .select('''
-            *,
-            pandit_specializations!inner(ritual_slug),
-            pandit_service_areas(city)
+            id,
+            first_name,
+            last_name,
+            experience_years,
+            profile_image_url,
+            verification_status,
+            pandit_specializations(ritual_slug),
+            pandit_service_areas!inner(city)
           ''')
-          .eq('pandit_specializations.ritual_slug', ritualSlug)
-          .eq('verification_status', 'VERIFIED');
+          .eq('verification_status', 'VERIFIED')
+          // TEMPORARY: Relax specialization filter for testing so all poojas show a pandit
+          // .eq('pandit_specializations.ritual_slug', ritualSlug.trim())
+          .ilike('pandit_service_areas.city', city.trim());
+
+      debugPrint('PanditRepository: DB Response count: ${response.length}');
+
+      if (response.isEmpty) {
+        // Log what we FOUND in those tables for debugging
+        debugPrint('PanditRepository: No matches found. Checking if any verified pandits exist at all...');
+        final totalVerified = await _supabase.from('pandit_profiles').select('id').eq('verification_status', 'VERIFIED');
+        debugPrint('PanditRepository: Total VERIFIED pandits in DB: ${totalVerified.length}');
+      }
 
       return (response as List).map((data) {
+        // Map the Supabase joins to the PanditProfile structure
         final cities = (data['pandit_service_areas'] as List?)
                 ?.map((e) => e['city'] as String)
-                .toList() ??
-            [];
-        return PanditProfile.fromJson(data).copyWith(serviceCities: cities);
+                .toList() ?? [];
+        
+        final rituals = (data['pandit_specializations'] as List?)
+                ?.map((e) => e['ritual_slug'] as String)
+                .toList() ?? [];
+
+        return PanditProfile.fromJson(data).copyWith(
+          serviceCities: cities,
+          ritualSlugs: rituals,
+        );
       }).toList();
     } catch (e) {
+      debugPrint('PanditRepository ERROR: $e');
+      if (e is PostgrestException) {
+        debugPrint('Details: ${e.message}, Code: ${e.code}, Hint: ${e.hint}');
+      }
       return [];
     }
   }

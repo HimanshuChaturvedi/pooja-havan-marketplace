@@ -67,16 +67,16 @@ class PanditProfile {
 
   factory PanditProfile.fromJson(Map<String, dynamic> json) {
     return PanditProfile(
-      id: json['id'] as String,
+      id: json['id'] as String? ?? '',
       firstName: json['first_name'] as String? ?? '',
       lastName: json['last_name'] as String? ?? '',
-      phoneNumber: json['phone_number'] as String,
+      phoneNumber: json['phone_number'] as String? ?? '',
       emailAddress: json['email_address'] as String?,
-      aadharNumber: json['aadhar_number'] as String,
+      aadharNumber: json['aadhar_number'] as String? ?? '',
       aadharFrontUrl: json['aadhar_front_url'] as String?,
       aadharBackUrl: json['aadhar_back_url'] as String?,
       panNumber: json['pan_number'] as String?,
-      experienceYears: json['experience_years'] as int? ?? 0,
+      experienceYears: (json['experience_years'] as num?)?.toInt() ?? 0,
       bio: json['bio'] as String?,
       addressLine1: json['address_line_1'] as String?,
       addressLine2: json['address_line_2'] as String?,

@@ -122,7 +122,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/home',
       builder: (context, state) => const MainPage(),
-      redirect: (context, state) => _panditGuard(context, state, ref),
     ),
     GoRoute(
       path: '/landing',
@@ -131,7 +130,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/',
       builder: (context, state) => const MainPage(),
-      redirect: (context, state) => _panditGuard(context, state, ref),
     ),
     
     // PANDIT ONBOARDING (NEW)

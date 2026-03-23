@@ -26,21 +26,32 @@ class BookingRepositoryImpl implements BookingRepository {
       throw Exception('Security: Anonymous/guest users cannot create bookings. Please sign in with email.');
     }
 
+    // Helper to ensure valid UUID or null
+    String? toUuid(String? input) {
+      if (input == null || input.trim().isEmpty) return null;
+      final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+      return uuidRegex.hasMatch(input.trim()) ? input.trim() : null;
+    }
+
+    final rId = toUuid(booking.ritualId);
+    final cId = toUuid(booking.cityId);
+    final pId = toUuid(booking.panditId);
+
     // 1. Insert the main booking (Matching User Schema exactly)
     final response = await supabase.from('bookings').insert({
       'user_id': userId, // Scoped to verified user
       'booking_type': booking.bookingType.name.toUpperCase(),
-      'ritual_id': booking.ritualId,
+      'ritual_id': rId,
       'ritual_name': booking.ritualName,
-      'city_id': booking.cityId,
+      'city_id': cId,
       'address': booking.address,
       'selected_date': booking.selectedDate?.toIso8601String(),
       'selected_time': booking.selectedTime,
       'samagri_required': booking.samagriRequired,
       'status': 'CREATED',
       'reference_id': _generateReferenceId(),
-      // ✅ FIX: total_amount passed in or derived from booking
       'total_amount': booking.totalAmount, 
+      'pandit_id': pId,
     }).select('id, reference_id').single();
 
     final String bookingId = response['id'].toString();
@@ -81,15 +92,11 @@ class BookingRepositoryImpl implements BookingRepository {
 
     return bookingId;
   }
-
   @override
   Future<List<BookingDraft>> getBookings() async {
     final String? userId = supabase.auth.currentUser?.id;
-    // 🚀 REMOVED: if (userId == null) return []; 
-    // This was blocking history for users not logged into Supabase Auth.
 
     // 1. Fetch all bookings
-    // We now fetch EVERYTHING because RLS filters by auth.uid() = user_id automatically
     final bookingsResponse = await supabase
         .from('bookings')
         .select('*')
@@ -99,8 +106,6 @@ class BookingRepositoryImpl implements BookingRepository {
         ? List<Map<String, dynamic>>.from(bookingsResponse) 
         : [];
         
-    AppLogger.debug('Fetched ${rawBookings.length} bookings for user: $userId');
-
     final samagriResponse = await supabase
         .from('samagri_orders')
         .select('*')
@@ -110,8 +115,43 @@ class BookingRepositoryImpl implements BookingRepository {
         ? List<Map<String, dynamic>>.from(samagriResponse)
         : [];
 
-    AppLogger.debug('Fetched ${rawSamagri.length} samagri orders');
+    return _mapBookings(rawBookings, rawSamagri);
+  }
 
+  @override
+  Future<List<BookingDraft>> getAssignedBookings() async {
+    final String? userId = supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    // 1. Fetch bookings assigned to this Pandit
+    final bookingsResponse = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('pandit_id', userId)
+        .order('created_at', ascending: false);
+
+    final List<Map<String, dynamic>> rawBookings = bookingsResponse != null 
+        ? List<Map<String, dynamic>>.from(bookingsResponse) 
+        : [];
+        
+    // 2. Fetch all samagri orders to link them
+    final samagriResponse = await supabase
+        .from('samagri_orders')
+        .select('*')
+        .order('created_at', ascending: false);
+    
+    final List<Map<String, dynamic>> rawSamagri = samagriResponse != null
+        ? List<Map<String, dynamic>>.from(samagriResponse)
+        : [];
+
+    return _mapBookings(rawBookings, rawSamagri, isAssignedView: true);
+  }
+
+  List<BookingDraft> _mapBookings(
+    List<Map<String, dynamic>> rawBookings, 
+    List<Map<String, dynamic>> rawSamagri,
+    {bool isAssignedView = false}
+  ) {
     final Map<String, Map<String, dynamic>> samagriByBookingId = {
       for (var s in rawSamagri) 
         if (s['booking_id'] != null)
@@ -120,16 +160,14 @@ class BookingRepositoryImpl implements BookingRepository {
 
     final List<BookingDraft> unifiedHistory = [];
 
-    // 4. Process Bookings (Pooja + optional Samagri)
+    // Process Bookings (Pooja + optional Samagri)
     for (var data in rawBookings) {
       final String bid = data['id'].toString();
       final rituals = data['rituals'] as Map<String, dynamic>?;
       
-      // Look for linked samagri order (Case-insensitive match)
       final linkedSamagri = samagriByBookingId[bid.toLowerCase().trim()];
       final double samagriTotal = (linkedSamagri?['total_amount'] ?? 0.0).toDouble();
       final bool hasSamagri = samagriTotal > 0;
-      
       final double poojaDakshina = (data['pooja_dakshina'] ?? 0.0).toDouble();
 
       unifiedHistory.add(BookingDraft(
@@ -139,7 +177,8 @@ class BookingRepositoryImpl implements BookingRepository {
         status: _parseBookingStatus(data['status']),
         ritualName: rituals?['name'] ?? data['ritual_name'] ?? 'Pooja',
         ritualId: data['ritual_id'],
-        city: 'Varanasi', // Placeholder or add city_name to join
+        panditId: data['pandit_id'],
+        city: 'Varanasi',
         cityId: data['city_id'],
         address: data['address'],
         templeName: data['temple_name'],
@@ -147,57 +186,49 @@ class BookingRepositoryImpl implements BookingRepository {
         panditName: data['pandit_name'],
         selectedDate: data['selected_date'] != null ? DateTime.parse(data['selected_date']) : null,
         selectedTime: data['selected_time'],
-        // 🚀 FIX: Use pooja_dakshina from DB. If no samagri linked, add standard fees.
-        // 🚀 FIX: Separate fees from total_amount so they don't merge into Dakshina
         poojaDakshina: (data['total_amount'] ?? 0.0) > 0 
            ? ((data['total_amount'] as num).toDouble() - samagriTotal - (hasSamagri ? 70.0 : 20.0)).clamp(0.0, double.infinity)
            : poojaDakshina,
         samagriCharges: samagriTotal,
         samagriRequired: (data['samagri_required'] == true) || hasSamagri,
-        // 🚀 BUG FIX: Delivery Fee ONLY if hasSamagri
         deliveryFee: hasSamagri ? 50.0 : 0.0,
         platformFee: 20.0,
       ));
     }
 
-    // 5. Process Standalone Samagri Orders
-    final Set<String> linkedBookingIds = rawBookings.map((b) => b['id'].toString()).toSet();
-    
-    for (var s in rawSamagri) {
-      final String? bid = s['booking_id']?.toString().toLowerCase().trim();
-      // If NOT linked to any booking FETCHED above, it's a standalone shop order
-      if (bid == null || !linkedBookingIds.any((id) => id.toLowerCase().trim() == bid)) {
-        // 🚀 FIX: Use .toLocal() so IST time is shown, not UTC
-        final createdAt = s['created_at'] != null 
-            ? DateTime.parse(s['created_at']).toLocal() 
-            : null;
-            
-        final timeString = createdAt != null 
-            ? "${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}"
-            : null;
+    // Only process standalone shop orders in the main history view
+    if (!isAssignedView) {
+      final Set<String> linkedBookingIds = rawBookings.map((b) => b['id'].toString()).toSet();
+      for (var s in rawSamagri) {
+        final String? bid = s['booking_id']?.toString().toLowerCase().trim();
+        if (bid == null || !linkedBookingIds.any((id) => id.toLowerCase().trim() == bid)) {
+          final createdAt = s['created_at'] != null 
+              ? DateTime.parse(s['created_at']).toLocal() 
+              : null;
+          final timeString = createdAt != null 
+              ? "${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}"
+              : null;
 
-        unifiedHistory.add(BookingDraft(
-           id: s['id'].toString(),
-           bookingType: BookingType.shop, // Representing Shop Order
-           ritualName: 'Samagri Order',
-           address: s['delivery_address'],
-           city: 'Varanasi',
-           // 🚀 FIX: Separate fees (70) from total so Detail Page shows breakdown
-           samagriCharges: ((s['total_amount'] ?? 0.0).toDouble() - 70.0).clamp(0.0, double.infinity),
-           samagriRequired: true,
-           poojaDakshina: 0.0,
-           deliveryFee: 50.0, 
-           platformFee: 20.0,
-           referenceId: s['reference_id']?.toString() ?? 'PHM-PENDING',
-           selectedDate: createdAt,
-           selectedTime: timeString,
-         ));
+          unifiedHistory.add(BookingDraft(
+             id: s['id'].toString(),
+             bookingType: BookingType.shop,
+             ritualName: 'Samagri Order',
+             address: s['delivery_address'],
+             city: 'Varanasi',
+             samagriCharges: ((s['total_amount'] ?? 0.0).toDouble() - 70.0).clamp(0.0, double.infinity),
+             samagriRequired: true,
+             poojaDakshina: 0.0,
+             deliveryFee: 50.0, 
+             platformFee: 20.0,
+             referenceId: s['reference_id']?.toString() ?? 'PHM-PENDING',
+             selectedDate: createdAt,
+             selectedTime: timeString,
+           ));
+        }
       }
     }
 
-    // Sort again by date (since we merged)
-    unifiedHistory.sort((a, b) => (b.selectedDate ?? DateTime(0)).compareTo(a.selectedDate ?? DateTime(0)));
-
+    unifiedHistory.sort((a, b) => (b.selectedDate ?? DateTime(1970)).compareTo(a.selectedDate ?? DateTime(1970)));
     return unifiedHistory;
   }
 

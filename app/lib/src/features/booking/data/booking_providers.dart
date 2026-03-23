@@ -12,3 +12,7 @@ final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
 final bookingsProvider = FutureProvider.autoDispose<List<BookingDraft>>((ref) {
   return ref.read(bookingRepositoryProvider).getBookings();
 });
+
+final assignedBookingsProvider = FutureProvider.autoDispose<List<BookingDraft>>((ref) {
+  return ref.read(bookingRepositoryProvider).getAssignedBookings();
+});

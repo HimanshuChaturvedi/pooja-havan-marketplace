@@ -18,6 +18,7 @@ class BookingDraft {
   // Common
   String? id; // Unique ID from Supabase
   String? referenceId; // Human readable ID (e.g. PHM-2024-XXX)
+  String? panditId; // UUID of assigned Pandit
   BookingType bookingType;
   BookingStatusDetailed status;
   String ritualName;
@@ -57,6 +58,7 @@ class BookingDraft {
   BookingDraft({
     this.id,
     this.referenceId,
+    this.panditId,
     required this.bookingType,
     this.status = BookingStatusDetailed.created,
     required this.ritualName,
@@ -83,6 +85,7 @@ class BookingDraft {
   BookingDraft copyWith({
     String? id,
     String? referenceId,
+    String? panditId,
     BookingType? bookingType,
     BookingStatusDetailed? status,
     String? ritualName,
@@ -108,6 +111,7 @@ class BookingDraft {
     return BookingDraft(
       id: id ?? this.id,
       referenceId: referenceId ?? this.referenceId,
+      panditId: panditId ?? this.panditId,
       bookingType: bookingType ?? this.bookingType,
       status: status ?? this.status,
       ritualName: ritualName ?? this.ritualName,

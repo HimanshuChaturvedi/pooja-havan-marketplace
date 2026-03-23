@@ -5,6 +5,8 @@ import '../../../core/widgets/design_system.dart';
 import '../../../theme/components/app_colors.dart';
 import '../../../theme/components/app_text_styles.dart';
 import '../../../core/supabase/supabase_client.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
+import '../../booking/data/booking_providers.dart';
 import '../../pandit_onboarding/data/pandit_repository_provider.dart';
 import '../../auth/presentation/state/auth_provider_impl.dart';
 
@@ -31,6 +33,7 @@ class PanditDashboardPage extends ConsumerWidget {
         }
 
         final profileAsync = ref.watch(panditProfileFutureProvider(user.id));
+        final bookingsAsync = ref.watch(assignedBookingsProvider);
 
         return AppScaffold(
           title: 'Pandit Dashboard',
@@ -52,92 +55,115 @@ class PanditDashboardPage extends ConsumerWidget {
                 onRefresh: () async {
                   // ignore: unused_result
                   ref.refresh(panditProfileFutureProvider(user.id));
+                  // ignore: unused_result
+                  ref.refresh(assignedBookingsProvider);
                 },
-                child: ListView(
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    // Profile Header
-                    PrimaryCard(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundColor: AppColors.saffron.withOpacity(0.2),
-                            backgroundImage: profile.profileImageUrl != null
-                                ? NetworkImage(profile.profileImageUrl!)
-                                : null,
-                            child: profile.profileImageUrl == null
-                                ? const Icon(Icons.person, color: AppColors.saffron, size: 30)
-                                : null,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${profile.firstName} ${profile.lastName}',
-                                  style: AppTextStyles.title.copyWith(fontSize: 18),
-                                ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: profile.verificationStatus.name == 'VERIFIED' ? Colors.green.shade50 : Colors.orange.shade50,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    profile.verificationStatus.name,
-                                    style: TextStyle(
-                                      color: profile.verificationStatus.name == 'VERIFIED' ? Colors.green : Colors.orange,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    Text('Overview', style: AppTextStyles.title.copyWith(fontSize: 18)),
-                    const SizedBox(height: 12),
-                    
-                    // Stat Grid
-                    Row(
-                      children: [
-                        _buildStatCard('Total Bookings', '0', Icons.assignment_outlined),
-                        const SizedBox(width: 12),
-                        _buildStatCard('Pending', '0', Icons.pending_actions_outlined),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _buildStatCard('Completed', '0', Icons.check_circle_outline),
-                        const SizedBox(width: 12),
-                        _buildStatCard('Earnings', '₹0', Icons.account_balance_wallet_outlined),
-                      ],
-                    ),
+                child: bookingsAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator(color: AppColors.saffron)),
+                  error: (e, __) => Center(child: Text('Error loading bookings: $e')),
+                  data: (bookings) {
+                    // Calculate Stats
+                    final total = bookings.length;
+                    final pending = bookings.where((b) => b.status == BookingStatusDetailed.created || b.status == BookingStatusDetailed.assigned).length;
+                    final completed = bookings.where((b) => b.status == BookingStatusDetailed.completed).length;
+                    final earnings = bookings
+                        .where((b) => b.status == BookingStatusDetailed.completed)
+                        .fold<double>(0, (sum, b) => sum + b.poojaDakshina);
 
-                    const SizedBox(height: 32),
-                    Text('Recent Requests', style: AppTextStyles.title.copyWith(fontSize: 18)),
-                    const SizedBox(height: 12),
-                    const Center(
-                       child: Padding(
-                         padding: EdgeInsets.all(32.0),
-                         child: Text(
-                           'No active bookings right now.\nWhen customers book you, they will appear here.', 
-                           textAlign: TextAlign.center, 
-                           style: TextStyle(color: Colors.grey)
-                         ),
-                       )
-                    ),
-                  ],
+                    return ListView(
+                      padding: const EdgeInsets.all(20),
+                      children: [
+                        // Profile Header
+                        PrimaryCard(
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 30,
+                                backgroundColor: AppColors.saffron.withOpacity(0.2),
+                                backgroundImage: profile.profileImageUrl != null
+                                    ? NetworkImage(profile.profileImageUrl!)
+                                    : null,
+                                child: profile.profileImageUrl == null
+                                    ? const Icon(Icons.person, color: AppColors.saffron, size: 30)
+                                    : null,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${profile.firstName} ${profile.lastName}',
+                                      style: AppTextStyles.title.copyWith(fontSize: 18),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: profile.verificationStatus.name == 'VERIFIED' ? Colors.green.shade50 : Colors.orange.shade50,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        profile.verificationStatus.name,
+                                        style: TextStyle(
+                                          color: profile.verificationStatus.name == 'VERIFIED' ? Colors.green : Colors.orange,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        Text('Overview', style: AppTextStyles.title.copyWith(fontSize: 18)),
+                        const SizedBox(height: 12),
+                        
+                        // Stat Grid
+                        Row(
+                          children: [
+                            _buildStatCard('Total Bookings', '$total', Icons.assignment_outlined),
+                            const SizedBox(width: 12),
+                            _buildStatCard('Pending', '$pending', Icons.pending_actions_outlined),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _buildStatCard('Completed', '$completed', Icons.check_circle_outline),
+                            const SizedBox(width: 12),
+                            _buildStatCard('Earnings', '₹${earnings.toInt()}', Icons.account_balance_wallet_outlined),
+                          ],
+                        ),
+
+                        const SizedBox(height: 32),
+                        Text('Assignments', style: AppTextStyles.title.copyWith(fontSize: 18)),
+                        const SizedBox(height: 12),
+                        
+                        if (bookings.isEmpty)
+                          const Center(
+                             child: Padding(
+                               padding: EdgeInsets.all(32.0),
+                               child: Text(
+                                 'No active bookings right now.\nWhen customers book you, they will appear here.', 
+                                 textAlign: TextAlign.center, 
+                                 style: TextStyle(color: Colors.grey)
+                               ),
+                             )
+                          )
+                        else
+                          ...bookings.map((booking) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _PanditBookingCard(booking: booking),
+                          )),
+                      ],
+                    );
+                  },
                 ),
               );
             },
@@ -159,6 +185,84 @@ class PanditDashboardPage extends ConsumerWidget {
             Text(value, style: AppTextStyles.title.copyWith(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGrey)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PanditBookingCard extends StatelessWidget {
+  final BookingDraft booking;
+  const _PanditBookingCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    return PrimaryCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  booking.ritualName,
+                  style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.saffron.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    booking.status.name.toUpperCase(),
+                    style: const TextStyle(color: AppColors.saffron, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 14, color: AppColors.softGrey),
+                const SizedBox(width: 8),
+                Text(
+                  booking.selectedDate != null 
+                      ? "${booking.selectedDate!.day}/${booking.selectedDate!.month}/${booking.selectedDate!.year}"
+                      : "Date TBD",
+                  style: AppTextStyles.bodySmall,
+                ),
+                const SizedBox(width: 16),
+                const Icon(Icons.access_time, size: 14, color: AppColors.softGrey),
+                const SizedBox(width: 8),
+                Text(booking.selectedTime ?? "Time TBD", style: AppTextStyles.bodySmall),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on_outlined, size: 14, color: AppColors.softGrey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    booking.address ?? "No address specified",
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Dakshina:', style: AppTextStyles.bodySmall),
+                Text('₹${booking.poojaDakshina.toInt()}', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold, color: Colors.green)),
+              ],
+            ),
           ],
         ),
       ),
