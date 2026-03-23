@@ -265,7 +265,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _isOtpSent ? 'Verify your\nEmail ✉️' : 'Join the Sacred\nMarketplace 🙏',
+                    _isOtpSent ? 'Verify your\nNumber 📱' : 'Join the Sacred\nMarketplace 🙏',
                     style: AppTextStyles.titleLarge.copyWith(
                       fontSize: 34, height: 1.2,
                       fontWeight: FontWeight.w900,
@@ -275,7 +275,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 16),
                   Text(
                     _isOtpSent 
-                      ? 'Enter the 6-digit code sent to ${_emailController.text}'
+                      ? 'Enter the 6-digit code sent to your WhatsApp'
                       : 'Sign in to manage your ritual bookings and samagri orders seamlessly.',
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.softGrey,
@@ -359,12 +359,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     onTap: _isOtpSent ? _handleVerifyOtp : _handleSendOtp,
                   ),
                   
-                  const SizedBox(height: 24),
                   Center(
                     child: Text(
                       _isOtpSent 
                         ? "Didn't receive the code? Wait 60s to resend." 
-                        : 'No password required. We will email you a secure login code.',
+                        : 'No password required. We will send you a secure login code on WhatsApp.',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.softGrey),
                     ),
@@ -391,6 +390,49 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           onPressed: _launchPrivacyPolicy,
                           child: const Text('Privacy Policy', 
                             style: TextStyle(color: AppColors.saffron, fontWeight: FontWeight.w800, decoration: TextDecoration.underline),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Divider(indent: 40, endIndent: 40, color: Colors.black12),
+                        const SizedBox(height: 24),
+                        
+                        // 🚩 PROMINENT PANDIT REGISTRATION CARD
+                        GestureDetector(
+                          onTap: () {
+                            if (supabase.auth.currentUser != null) {
+                              context.push('/pandit-onboarding');
+                            } else {
+                              context.pushReplacement('/login?redirectTo=/pandit-onboarding');
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please log in first to continue registration.')));
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppColors.saffron.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.saffron.withOpacity(0.3), width: 1.5),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: const BoxDecoration(color: AppColors.saffron, shape: BoxShape.circle),
+                                  child: const Icon(Icons.handshake_rounded, color: Colors.white, size: 24),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Become a Pandit Partner', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w900, color: AppColors.darkCharcoal)),
+                                      Text('Register to grow your reach & rituals', style: AppTextStyles.bodySmall.copyWith(color: AppColors.softGrey, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.saffron),
+                              ],
+                            ),
                           ),
                         ),
                       ],

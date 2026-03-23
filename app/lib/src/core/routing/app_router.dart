@@ -52,10 +52,35 @@ import '../../features/bookings/presentation/my_bookings_page.dart';
 import '../../features/samagri_flow/presentation/success/samagri_success_page.dart';
 import '../../features/samagri_flow/presentation/address/samagri_delivery_address_page.dart';
 import '../../features/auth/presentation/login_page.dart';
-
-
+import '../../features/pandit_onboarding/presentation/pandit_onboarding_page.dart'; // [NEW]
+import '../../features/pandit_onboarding/presentation/pandit_pending_approval_page.dart'; // [NEW]
+import '../../features/pandit_dashboard/presentation/pandit_dashboard_page.dart'; // [NEW]
+import '../../features/admin/presentation/admin_verification_page.dart'; // [NEW]
+import '../../features/auth/presentation/state/auth_provider_impl.dart'; // [NEW]
 import '../../features/landing/presentation/landing_enhanced_page.dart';
 import '../../features/main/presentation/pages/main_page.dart';
+import '../../features/pandit_onboarding/data/pandit_repository_provider.dart';
+
+Future<String?> _panditGuard(BuildContext context, GoRouterState state, ProviderRef ref) async {
+  final user = supabase.auth.currentUser;
+  if (user != null) {
+      final repo = ref.read(panditRepositoryProvider);
+      final profile = await repo.getPanditProfile(user.id);
+      if (profile != null) {
+          if (profile.verificationStatus.name.toUpperCase() == 'PENDING') {
+              return '/pandit-pending';
+          } else if (profile.verificationStatus.name.toUpperCase() == 'VERIFIED') {
+              // If they explicitly want to go to /home, allow it maybe? 
+              // Actually, force them to Dashboard for now to keep the MVP role separated.
+              // If we are already on /pandit-dashboard, don't redirect again in a loop!
+              if (state.uri.path != '/pandit-dashboard') {
+                return '/pandit-dashboard';
+              }
+          }
+      }
+  }
+  return null;
+}
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -97,6 +122,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/home',
       builder: (context, state) => const MainPage(),
+      redirect: (context, state) => _panditGuard(context, state, ref),
     ),
     GoRoute(
       path: '/landing',
@@ -105,6 +131,36 @@ final routerProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/',
       builder: (context, state) => const MainPage(),
+      redirect: (context, state) => _panditGuard(context, state, ref),
+    ),
+    
+    // PANDIT ONBOARDING (NEW)
+    GoRoute(
+      path: '/pandit-onboarding',
+      builder: (context, state) => const PanditOnboardingPage(),
+    ),
+    
+    // PANDIT PENDING APPROVAL (NEW)
+    GoRoute(
+      path: '/pandit-pending',
+      builder: (context, state) => const PanditPendingApprovalPage(),
+    ),
+
+    GoRoute(
+      path: '/pandit-dashboard',
+      name: 'panditDashboard',
+      builder: (context, state) => const PanditDashboardPage(),
+    ),
+
+    GoRoute(
+      path: '/admin-portal',
+      name: 'adminPortal',
+      builder: (context, state) => const AdminVerificationPage(),
+      redirect: (context, state) {
+        final isAdmin = ref.read(isAdminProvider);
+        if (!isAdmin) return '/home';
+        return null;
+      },
     ),
 
     // SHOP REDIRECT

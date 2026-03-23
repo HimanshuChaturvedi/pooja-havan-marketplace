@@ -21,7 +21,7 @@ class SamagriSessionState {
     this.totalAmount = 0,
     this.deliveryFee = 50,
     this.platformFee = 20,
-    this.vendorLabel = 'Trusted Samagri Partner',
+    this.vendorLabel = 'Trusted Samagri Store',
     this.addressText,
     this.addressId,
     this.isPartOfBooking = false,

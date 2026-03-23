@@ -28,3 +28,31 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
     error: (_, __) => false,
   );
 });
+/// Provider to check if the user is an administrator.
+final isAdminProvider = Provider<bool>((ref) {
+  final userAsync = ref.watch(supabaseUserProvider);
+  
+  // List of hardcoded admin emails for this phase.
+  const adminEmails = {
+    'bharatpoojasetu@gmail.com',
+  };
+
+  return userAsync.when(
+    data: (user) {
+      final email = user?.email;
+      final isAdmin = user != null && adminEmails.contains(email);
+      debugPrint('Admin Check: email="$email", isAdmin=$isAdmin');
+      return isAdmin;
+    },
+    loading: () {
+      final email = supabase.auth.currentUser?.email;
+      final isAdmin = adminEmails.contains(email);
+      debugPrint('Admin Check (loading): email="$email", isAdmin=$isAdmin');
+      return isAdmin;
+    },
+    error: (e, __) {
+      debugPrint('Admin Check (error): $e');
+      return false;
+    },
+  );
+});

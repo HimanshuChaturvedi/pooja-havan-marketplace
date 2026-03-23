@@ -75,7 +75,7 @@ class SamagriSession {
       totalAmount: total,
       deliveryFee: 50, // Standard centralized fee
       platformFee: 20, // Standard centralized fee
-      vendorLabel: 'Trusted Samagri Partner',
+      vendorLabel: 'Trusted Samagri Store',
       addressText: null,
       addressId: null,
       status: SamagriOrderStatus.summary,

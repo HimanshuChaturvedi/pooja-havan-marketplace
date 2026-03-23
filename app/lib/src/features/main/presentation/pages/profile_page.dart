@@ -6,20 +6,25 @@ import 'package:app/src/features/main/presentation/state/main_navigation_provide
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
+import 'package:app/src/features/pandit_onboarding/data/pandit_repository_provider.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = supabase.auth.currentUser;
-    final bool isAnonymous = user == null || user.isAnonymous;
+    final userAsync = ref.watch(supabaseUserProvider);
 
-    return Container(
-      color: AppColors.warmIvory,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
+    return userAsync.when(
+      data: (user) {
+        final bool isAnonymous = user == null || user.isAnonymous;
+        
+        return Container(
+          color: AppColors.warmIvory,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
           children: [
             const SizedBox(height: 40),
             // PROFILE AVATAR
@@ -103,21 +108,90 @@ class ProfilePage extends ConsumerWidget {
                 label: 'Support & Help',
                 onTap: () {},
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+
+              // Pandit Status Logic
+              ref.watch(panditProfileFutureProvider(user.id)).when(
+                data: (profile) {
+                  if (profile == null) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.saffron.withOpacity(0.5), width: 1.5),
+                        ),
+                        child: _ProfileOption(
+                          icon: Icons.handshake_rounded,
+                          label: 'Register as a Pandit',
+                          onTap: () => context.push('/pandit-onboarding'),
+                        ),
+                      ),
+                    );
+                  }
+                  
+                  if (profile.verificationStatus.name.toUpperCase() == 'PENDING') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _ProfileOption(
+                        icon: Icons.hourglass_top_rounded,
+                        label: 'Registration Pending',
+                        onTap: () => context.push('/pandit-pending'),
+                      ),
+                    );
+                  }
+                  
+                  if (profile.verificationStatus.name.toUpperCase() == 'VERIFIED') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _ProfileOption(
+                        icon: Icons.dashboard_outlined,
+                        label: 'Pandit Dashboard',
+                        onTap: () => context.push('/pandit-dashboard'),
+                      ),
+                    );
+                  }
+                  
+                  return const SizedBox.shrink();
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: AppShimmer(width: double.infinity, height: 60),
+                ),
+                error: (e, __) => const SizedBox.shrink(),
+              ),
+
+              if (ref.watch(isAdminProvider)) ...[
+                _ProfileOption(
+                  icon: Icons.admin_panel_settings_outlined,
+                  label: 'Admin Verification',
+                  onTap: () => context.push('/admin-portal'),
+                ),
+                const SizedBox(height: 16),
+              ],
+              
+              const SizedBox(height: 16), // Adjusted from 32 to keep spacing consistent
               
               // LOGOUT
               SecondaryButton(
                 label: 'Sign Out',
                 onTap: () async {
                   await supabase.auth.signOut();
-                  // Reset navigation to Home
-                  ref.read(mainNavigationProvider.notifier).state = 0;
+                  // Stay on current tab (Profile) as a guest
                 },
               ),
             ],
             const SizedBox(height: 100),
           ],
         ),
+      ),
+    );
+      },
+      loading: () => const AppScaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, __) => AppScaffold(
+        body: Center(child: Text('Error: $e')),
       ),
     );
   }
@@ -136,31 +210,35 @@ class _ProfileOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PrimaryCard(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.saffron.withOpacity(0.08),
-              shape: BoxShape.circle,
+    return InkWell( // Use InkWell for tap interaction
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: PrimaryCard(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.saffron.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppColors.saffron, size: 22),
             ),
-            child: Icon(icon, color: AppColors.saffron, size: 22),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              label,
-              style: AppTextStyles.bodyLarge.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppColors.darkCharcoal,
-                fontSize: 16,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.darkCharcoal,
+                  fontSize: 16,
+                ),
               ),
             ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.softGrey, size: 20),
-        ],
+            const Icon(Icons.chevron_right_rounded, color: AppColors.softGrey, size: 20),
+          ],
+        ),
       ),
     );
   }

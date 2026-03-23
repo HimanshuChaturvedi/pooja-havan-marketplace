@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'package:app/src/features/booking/state/booking_session_notifier.dart';
+import 'package:app/src/features/pandit/state/pandit_selection_provider.dart';
+import '../../../pandit_onboarding/domain/pandit_profile.dart';
 
-class PanditSelectionPage extends StatefulWidget {
+class PanditSelectionPage extends ConsumerStatefulWidget {
   final String templeName;
 
   const PanditSelectionPage({
@@ -14,10 +18,10 @@ class PanditSelectionPage extends StatefulWidget {
   });
 
   @override
-  State<PanditSelectionPage> createState() => _PanditSelectionPageState();
+  ConsumerState<PanditSelectionPage> createState() => _PanditSelectionPageState();
 }
 
-class _PanditSelectionPageState extends State<PanditSelectionPage> with SingleTickerProviderStateMixin {
+class _PanditSelectionPageState extends ConsumerState<PanditSelectionPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
   @override
@@ -81,36 +85,100 @@ class _PanditSelectionPageState extends State<PanditSelectionPage> with SingleTi
   }
 }
 
-class _PanditList extends StatelessWidget {
+class _PanditList extends ConsumerWidget {
   final AnimationController animController;
   const _PanditList({required this.animController});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, String>> pandits = [
-      {'name': 'Pandit Sharma', 'exp': '12+ years experience'},
-      {'name': 'Pandit Mishra', 'exp': '8+ years experience'},
-      {'name': 'Pandit Verma', 'exp': '15+ years experience'},
-    ];
+  Widget build(BuildContext context, WidgetRef ref) {
+    final booking = ref.watch(bookingSessionProvider).current;
+    final ritualSlug = (booking?.ritualName ?? '').toLowerCase().replaceAll(' ', '_');
+    
+    final panditsAsync = ref.watch(panditsByRitualProvider(ritualSlug));
 
-    return Column(
-      children: List.generate(pandits.length, (index) {
-        final pandit = pandits[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: _StaggeredFade(
-            controller: animController,
-            delay: 400 + (index * 150),
-            child: _PanditCard(
-              name: pandit['name']!,
-              experience: pandit['exp']!,
-              onTap: () {
-                context.push('/pandit-details', extra: pandit['name']);
-              },
-            ),
-          ),
+    return panditsAsync.when(
+      data: (pandits) {
+        if (pandits.isEmpty) {
+          return _EmptyPanditState(animController: animController);
+        }
+
+        return Column(
+          children: List.generate(pandits.length, (index) {
+            final pandit = pandits[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _StaggeredFade(
+                controller: animController,
+                delay: 400 + (index * 150),
+                child: _PanditCard(
+                  name: '${pandit.firstName} ${pandit.lastName}',
+                  experience: '${pandit.experienceYears}+ years experience',
+                  profileImageUrl: pandit.profileImageUrl,
+                  onTap: () {
+                    // Update session with selected pandit
+                    final current = ref.read(bookingSessionProvider).current;
+                    if (current != null) {
+                      ref.read(bookingSessionProvider.notifier).updateBookingDraft(
+                        current.copyWith(panditName: '${pandit.firstName} ${pandit.lastName}'),
+                      );
+                    }
+                    context.push('/home-summary');
+                  },
+                ),
+              ),
+            );
+          }),
         );
-      }),
+      },
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.saffron)),
+      error: (e, __) => Center(child: Text('Error: $e')),
+    );
+  }
+}
+
+class _EmptyPanditState extends StatelessWidget {
+  final AnimationController animController;
+  const _EmptyPanditState({required this.animController});
+
+  @override
+  Widget build(BuildContext context) {
+    return _StaggeredFade(
+      controller: animController,
+      delay: 400,
+      child: Center(
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.saffron.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.people_outline_rounded, size: 64, color: AppColors.saffron),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No Pandits Available',
+              style: AppTextStyles.title.copyWith(fontSize: 20, color: AppColors.darkCharcoal),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                'We currently don\'t have verified Pandits for this ritual in your area. Be the first to join us!',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGrey),
+              ),
+            ),
+            const SizedBox(height: 32),
+            PrimaryButton(
+              label: 'Register as a Pandit',
+              onTap: () => context.push('/pandit-onboarding'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -118,11 +186,13 @@ class _PanditList extends StatelessWidget {
 class _PanditCard extends StatelessWidget {
   final String name;
   final String experience;
+  final String? profileImageUrl;
   final VoidCallback onTap;
 
   const _PanditCard({
     required this.name,
     required this.experience,
+    this.profileImageUrl,
     required this.onTap,
   });
 
@@ -135,12 +205,19 @@ class _PanditCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: AppColors.saffron.withOpacity(0.08),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.saffron.withOpacity(0.2), width: 2),
               ),
-              child: const Icon(Icons.person, color: AppColors.saffron, size: 32),
+              child: CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.saffron.withOpacity(0.08),
+                backgroundImage: profileImageUrl != null ? NetworkImage(profileImageUrl!) : null,
+                child: profileImageUrl == null 
+                  ? const Icon(Icons.person, color: AppColors.saffron, size: 28)
+                  : null,
+              ),
             ),
             const SizedBox(width: 18),
             Expanded(

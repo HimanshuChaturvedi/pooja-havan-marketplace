@@ -72,6 +72,8 @@ class LandingEnhancedPage extends ConsumerWidget {
             }),
 
             const SizedBox(height: 32),
+            const _PanditRegistrationBanner(),
+            const SizedBox(height: 32),
             const BannerCarousel(),
             const SizedBox(height: 32),
 
@@ -335,6 +337,91 @@ class _RecommendedTile extends StatelessWidget {
           ),
         ),
         trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.saffron),
+      ),
+    );
+  }
+}
+
+class _PanditRegistrationBanner extends StatelessWidget {
+  const _PanditRegistrationBanner({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.saffron.withOpacity(0.9),
+            AppColors.saffron,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.saffron.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.handshake_rounded, color: AppColors.saffron, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Are you a Pandit?',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Join our divine community and grow your reach across the city.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: Colors.white.withOpacity(0.95),
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => context.push('/pandit-onboarding'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.saffron,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: Text(
+                'Register Now',
+                style: AppTextStyles.button.copyWith(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
