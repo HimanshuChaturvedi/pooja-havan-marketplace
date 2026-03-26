@@ -121,11 +121,41 @@ class PanditRepository {
     }
   }
 
-  Future<List<PanditProfile>> getPanditsByRitual(String ritualSlug, String city) async {
-    debugPrint('PanditRepository: Requesting $ritualSlug in $city');
+  Future<List<PanditProfile>> getRecommendedPandits(String city) async {
     try {
-      // 1. Get pandit IDs that match BOTH ritual and city
-      // We do this via inner join to ensure the pandit has both.
+      final response = await _supabase
+          .from('pandit_profiles')
+          .select('''
+            *,
+            pandit_service_areas!inner(city),
+            pandit_specializations(ritual_slug)
+          ''')
+          .eq('verification_status', 'VERIFIED')
+          .ilike('pandit_service_areas.city', city.trim())
+          .limit(10);
+
+      return (response as List).map((data) {
+        final cities = (data['pandit_service_areas'] as List?)
+                ?.map((e) => e['city'] as String)
+                .toList() ?? [];
+        
+        final rituals = (data['pandit_specializations'] as List?)
+                ?.map((e) => e['ritual_slug'] as String)
+                .toList() ?? [];
+
+        return PanditProfile.fromJson(data).copyWith(
+          serviceCities: cities,
+          ritualSlugs: rituals,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('PanditRepository Recommended ERROR: $e');
+      return [];
+    }
+  }
+
+  Future<List<PanditProfile>> getPanditsByRitual(String ritualSlug, String city) async {
+    try {
       final response = await _supabase
           .from('pandit_profiles')
           .select('''
@@ -139,21 +169,9 @@ class PanditRepository {
             pandit_service_areas!inner(city)
           ''')
           .eq('verification_status', 'VERIFIED')
-          // TEMPORARY: Relax specialization filter for testing so all poojas show a pandit
-          // .eq('pandit_specializations.ritual_slug', ritualSlug.trim())
           .ilike('pandit_service_areas.city', city.trim());
 
-      debugPrint('PanditRepository: DB Response count: ${response.length}');
-
-      if (response.isEmpty) {
-        // Log what we FOUND in those tables for debugging
-        debugPrint('PanditRepository: No matches found. Checking if any verified pandits exist at all...');
-        final totalVerified = await _supabase.from('pandit_profiles').select('id').eq('verification_status', 'VERIFIED');
-        debugPrint('PanditRepository: Total VERIFIED pandits in DB: ${totalVerified.length}');
-      }
-
       return (response as List).map((data) {
-        // Map the Supabase joins to the PanditProfile structure
         final cities = (data['pandit_service_areas'] as List?)
                 ?.map((e) => e['city'] as String)
                 .toList() ?? [];
@@ -169,9 +187,6 @@ class PanditRepository {
       }).toList();
     } catch (e) {
       debugPrint('PanditRepository ERROR: $e');
-      if (e is PostgrestException) {
-        debugPrint('Details: ${e.message}, Code: ${e.code}, Hint: ${e.hint}');
-      }
       return [];
     }
   }

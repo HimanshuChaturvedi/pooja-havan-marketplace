@@ -10,17 +10,22 @@ import 'package:app/src/features/main/presentation/state/main_navigation_provide
 import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
+import 'package:app/src/features/location/state/location_provider.dart';
+import 'package:app/src/features/landing/state/recommendations_provider.dart';
+import 'package:app/src/features/pandit_onboarding/domain/pandit_profile.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
 
 const String kRouteLanding = '/landing';
 
-final selectedLocationProvider = StateProvider<String?>((ref) => null);
+// REMOVED: selectedLocationProvider (Moved to features/location/state/location_provider.dart)
 
 class LandingEnhancedPage extends ConsumerWidget {
   const LandingEnhancedPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedLocation = ref.watch(selectedLocationProvider);
+    final locationState = ref.watch(currentLocationProvider);
+    final recommendationsAsync = ref.watch(recommendationsProvider);
 
     return AppScaffold(
       showAppBar: true,
@@ -38,7 +43,7 @@ class LandingEnhancedPage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildLocationBar(context, ref, selectedLocation),
+            _buildLocationBar(context, ref, locationState),
             const SizedBox(height: 32),
             Text(
               'How can we help today?',
@@ -118,12 +123,49 @@ class LandingEnhancedPage extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 3,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _RecommendedTile(onTap: () => context.push('/services')),
+            recommendationsAsync.when(
+              data: (pandits) => pandits.isEmpty 
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'No verified pandits found in ${locationState.city} yet.',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGrey),
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: pandits.length > 5 ? 5 : pandits.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final pandit = pandits[index];
+                      return _RecommendedTile(
+                        pandit: pandit,
+                        onTap: () {
+                          // 1. Pre-populate booking session with this Pandit
+                          final currentDraft = ref.read(bookingSessionProvider).current ?? BookingDraft(
+                            bookingType: BookingType.home,
+                            ritualName: '',
+                            city: locationState.city,
+                          );
+                          
+                          final updatedDraft = currentDraft.copyWith(
+                            panditId: pandit.id,
+                            panditName: '${pandit.firstName} ${pandit.lastName}',
+                            city: locationState.city,
+                            area: locationState.area,
+                          );
+                          
+                          ref.read(bookingSessionProvider.notifier).updateBookingDraft(updatedDraft);
+                          
+                          // 2. Navigate to services to pick a ritual
+                          context.push('/services');
+                        },
+                      );
+                    },
+                  ),
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.saffron)),
+              error: (err, stack) => Text('Error loading recommendations: $err'),
             ),
             const SizedBox(height: 40),
           ],
@@ -132,7 +174,7 @@ class LandingEnhancedPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildLocationBar(BuildContext context, WidgetRef ref, String? selectedLocation) {
+  Widget _buildLocationBar(BuildContext context, WidgetRef ref, LocationState locationState) {
     return PrimaryCard(
       padding: EdgeInsets.zero,
       child: InkWell(
@@ -156,7 +198,7 @@ class LandingEnhancedPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      selectedLocation ?? 'Select Location', 
+                      locationState.city, 
                       style: AppTextStyles.bodyLarge.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AppColors.darkCharcoal,
@@ -164,7 +206,7 @@ class LandingEnhancedPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Choose city or detect location', 
+                      locationState.area ?? 'Choose city or detect location', 
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.softGrey,
                         fontWeight: FontWeight.w600,
@@ -304,8 +346,9 @@ class _RitualCard extends StatelessWidget {
 }
 
 class _RecommendedTile extends StatelessWidget {
+  final PanditProfile pandit;
   final VoidCallback onTap;
-  const _RecommendedTile({Key? key, required this.onTap}) : super(key: key);
+  const _RecommendedTile({Key? key, required this.pandit, required this.onTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -315,22 +358,31 @@ class _RecommendedTile extends StatelessWidget {
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
-          padding: const EdgeInsets.all(10),
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             color: AppColors.saffron.withOpacity(0.08),
             shape: BoxShape.circle,
+            image: pandit.profileImageUrl != null
+                ? DecorationImage(
+                    image: NetworkImage(pandit.profileImageUrl!),
+                    fit: BoxFit.cover,
+                  )
+                : null,
           ),
-          child: const Icon(Icons.person, color: AppColors.saffron),
+          child: pandit.profileImageUrl == null
+              ? const Icon(Icons.person, color: AppColors.saffron)
+              : null,
         ),
         title: Text(
-          'Pandit — Vishal Sharma',
+          'Pandit — ${pandit.firstName} ${pandit.lastName}',
           style: AppTextStyles.bodyLarge.copyWith(
             fontWeight: FontWeight.w800,
             color: AppColors.darkCharcoal,
           ),
         ),
         subtitle: Text(
-          'Grih Pooja • 8 years experience',
+          '${pandit.ritualSlugs.isNotEmpty ? pandit.ritualSlugs.join(" • ") : "Certified Pandit"} • ${pandit.experienceYears} years experience',
           style: AppTextStyles.bodySmall.copyWith(
             color: AppColors.softGrey,
             fontWeight: FontWeight.w600,

@@ -5,6 +5,9 @@ import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'package:app/src/core/services/location_service.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'dart:async';
 
 class HomeAddressPage extends ConsumerStatefulWidget {
   final String city;
@@ -23,10 +26,16 @@ class HomeAddressPage extends ConsumerStatefulWidget {
 class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   String _selectedCity = 'Ghaziabad';
   bool _showManualForm = false;
+  bool _isDetecting = false;
+  bool _isSearching = false;
+  UserLocation? _selectedLocation;
+  List<UserLocation> _suggestions = [];
+  Timer? _debounce;
 
-  static const List<String> _serviceCities = [
+  List<String> _serviceCities = [
     'Ghaziabad',
     'Noida',
     'Delhi NCR',
@@ -40,6 +49,12 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
   void initState() {
     super.initState();
     _selectedCity = widget.city.isNotEmpty ? widget.city : 'Ghaziabad';
+    
+    // Ensure the incoming city is in the dropdown list to prevent crash
+    if (!_serviceCities.contains(_selectedCity)) {
+      _serviceCities.add(_selectedCity);
+    }
+    
     _addressController.addListener(() => setState(() {}));
   }
 
@@ -47,7 +62,47 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
   void dispose() {
     _addressController.dispose();
     _pincodeController.dispose();
+    _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _detectLocation() async {
+    setState(() => _isDetecting = true);
+    try {
+      final loc = await LocationService.getCurrentLocation();
+      setState(() {
+        _selectedLocation = loc;
+        _selectedCity = loc.city ?? 'Ghaziabad';
+        _addressController.text = loc.area ?? "";
+        _showManualForm = true;
+      });
+    } catch (e) {
+      final errorMsg = e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $errorMsg'),
+          action: errorMsg.contains('permanently denied') 
+            ? SnackBarAction(
+                label: 'Settings', 
+                onPressed: LocationService.openSettings,
+                textColor: AppColors.saffron,
+              )
+            : null,
+        ),
+      );
+    } finally {
+      setState(() => _isDetecting = false);
+    }
+  }
+
+  void _onLocationSelected(UserLocation loc) {
+    setState(() {
+      _selectedLocation = loc;
+      _selectedCity = loc.city ?? 'Ghaziabad';
+      _addressController.text = loc.area ?? "";
+      _suggestions = [];
+    });
   }
 
   @override
@@ -82,12 +137,7 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
             // 📍 USE CURRENT LOCATION
             if (!_showManualForm) ...[
               GestureDetector(
-                onTap: () {
-                  // Placeholder — will integrate GPS later
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Location feature coming soon')),
-                  );
-                },
+                onTap: _isDetecting ? null : _detectLocation,
                 child: PrimaryCard(
                   padding: const EdgeInsets.all(20),
                   child: Row(
@@ -98,7 +148,9 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
                           color: AppColors.saffron.withOpacity(0.08),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.my_location_rounded, color: AppColors.saffron, size: 24),
+                        child: _isDetecting 
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.saffron))
+                          : const Icon(Icons.my_location_rounded, color: AppColors.saffron, size: 24),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -202,19 +254,78 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
 
               const SizedBox(height: 24),
 
-              // Address Field
-              const SectionHeader(title: 'Full Address'),
+              // Address Field (Searchable)
+              const SectionHeader(title: 'Search Landmark/Society'),
+              const SizedBox(height: 12),
+              PrimaryCard(
+                padding: const EdgeInsets.all(4),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                    _debounce = Timer(const Duration(milliseconds: 500), () async {
+                      if (value.length >= 3) {
+                        setState(() => _isSearching = true);
+                        final res = await LocationService.searchLocations(value, cityContext: _selectedCity);
+                        setState(() {
+                          _suggestions = res;
+                          _isSearching = false;
+                        });
+                      } else {
+                        setState(() => _suggestions = []);
+                      }
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search for colony, building or area...',
+                    prefixIcon: const Icon(Icons.search, color: AppColors.saffron),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ),
+
+              if (_isSearching)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.saffron)),
+                ),
+
+              if (_suggestions.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _suggestions.length,
+                    itemBuilder: (context, index) {
+                      final loc = _suggestions[index];
+                      return ListTile(
+                        leading: const Icon(Icons.location_on_outlined, color: AppColors.saffron, size: 20),
+                        title: Text(loc.area ?? ""),
+                        subtitle: Text("${loc.city}, ${loc.state}"),
+                        onTap: () => _onLocationSelected(loc),
+                      );
+                    },
+                  ),
+                ),
+
+              const SizedBox(height: 24),
+
+              const SectionHeader(title: 'Detailed Address'),
               const SizedBox(height: 12),
               PrimaryCard(
                 padding: const EdgeInsets.all(4),
                 child: TextField(
                   controller: _addressController,
-                  maxLines: 3,
+                  maxLines: 2,
                   decoration: InputDecoration(
-                    hintText: 'House No, Area, Society, Landmark...',
-                    hintStyle: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.softGrey.withOpacity(0.5),
-                    ),
+                    hintText: 'House No, Flat No, Landmark details...',
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.all(16),
                   ),
@@ -281,6 +392,9 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
                             final updated = current.copyWith(
                               address: address,
                               city: _selectedCity,
+                              latitude: _selectedLocation?.latitude,
+                              longitude: _selectedLocation?.longitude,
+                              area: _selectedLocation?.area,
                             );
                             ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
                           }
