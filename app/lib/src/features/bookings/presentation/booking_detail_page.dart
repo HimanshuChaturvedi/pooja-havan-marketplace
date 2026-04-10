@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
+import 'package:app/src/core/supabase/supabase_client.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class BookingDetailPage extends StatelessWidget {
+class BookingDetailPage extends ConsumerWidget {
   final BookingDraft booking;
   const BookingDetailPage({super.key, required this.booking});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(isAdminProvider);
+    // Identification check: If current user is the one assigned as pandit_id, then treat as Pandit view
+    final currentUserId = supabase.auth.currentUser?.id;
+    final isPanditView = currentUserId == booking.panditId;
     return AppScaffold(
       title: 'Booking Details',
       body: SingleChildScrollView(
@@ -98,18 +105,18 @@ class BookingDetailPage extends StatelessWidget {
                   const Divider(height: 32, color: Colors.black12),
                   if (booking.poojaDakshina > 0)
                     _DetailRow(label: 'Pooja Dakshina', value: '₹${booking.poojaDakshina}'),
-                  if (booking.samagriCharges > 0)
+                  if (!isPanditView && booking.samagriCharges > 0)
                     _DetailRow(label: 'Samagri Charges', value: '₹${booking.samagriCharges}'),
-                  if (booking.deliveryFee > 0)
+                  if (!isPanditView && booking.deliveryFee > 0)
                     _DetailRow(label: 'Delivery Fee', value: '₹${booking.deliveryFee}'),
-                  if (booking.platformFee > 0)
+                  if (!isPanditView && booking.platformFee > 0)
                     _DetailRow(label: 'Platform Fee', value: '₹${booking.platformFee}'),
                   const Divider(height: 24, color: Colors.black12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total Paid',
+                        isPanditView ? 'Earning' : 'Total Paid',
                         style: AppTextStyles.title.copyWith(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
@@ -117,7 +124,7 @@ class BookingDetailPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '₹${booking.totalAmount}',
+                        '₹${isPanditView ? booking.poojaDakshina.toInt() : booking.totalAmount.toInt()}',
                         style: AppTextStyles.title.copyWith(
                           fontSize: 24,
                           fontWeight: FontWeight.w900,

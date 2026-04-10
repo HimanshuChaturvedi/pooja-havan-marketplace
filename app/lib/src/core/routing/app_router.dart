@@ -56,6 +56,9 @@ import '../../features/pandit_onboarding/presentation/pandit_onboarding_page.dar
 import '../../features/pandit_onboarding/presentation/pandit_pending_approval_page.dart'; // [NEW]
 import '../../features/pandit_dashboard/presentation/pandit_dashboard_page.dart'; // [NEW]
 import '../../features/admin/presentation/admin_verification_page.dart'; // [NEW]
+import '../../features/samagri_vendor/presentation/vendor_dashboard_page.dart'; // [NEW]
+import '../../features/samagri_vendor/presentation/vendor_registration_page.dart'; // [NEW]
+import '../../features/samagri_vendor/presentation/vendor_pending_page.dart'; // [NEW]
 import '../../features/auth/presentation/state/auth_provider_impl.dart'; // [NEW]
 import '../../features/landing/presentation/landing_enhanced_page.dart';
 import '../../features/main/presentation/pages/main_page.dart';
@@ -76,6 +79,23 @@ Future<String?> _panditGuard(BuildContext context, GoRouterState state, Provider
               if (state.uri.path != '/pandit-dashboard') {
                 return '/pandit-dashboard';
               }
+          }
+      }
+  }
+  return null;
+}
+
+Future<String?> _vendorGuard(BuildContext context, GoRouterState state, ProviderRef ref) async {
+  final user = supabase.auth.currentUser;
+  if (user != null) {
+      // Check if user has a shop in samagri_vendors
+      final shop = await supabase.from('samagri_vendors').select('verification_status').eq('owner_id', user.id).maybeSingle();
+      if (shop != null) {
+          final status = (shop['verification_status'] as String).toUpperCase();
+          if (status == 'PENDING') {
+              if (state.uri.path != '/vendor-pending') return '/vendor-pending';
+          } else if (status == 'VERIFIED') {
+              if (state.uri.path != '/vendor-dashboard') return '/vendor-dashboard';
           }
       }
   }
@@ -147,7 +167,45 @@ final routerProvider = Provider<GoRouter>((ref) {
     GoRoute(
       path: '/pandit-dashboard',
       name: 'panditDashboard',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous) return '/login';
+        return null;
+      },
       builder: (context, state) => const PanditDashboardPage(),
+    ),
+    
+    GoRoute(
+      path: '/vendor-dashboard',
+      name: 'vendorDashboard',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous) return '/login';
+        return null;
+      },
+      builder: (context, state) => const VendorDashboardPage(),
+    ),
+
+    GoRoute(
+      path: '/vendor-registration',
+      name: 'vendorRegistration',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous) return '/login?redirectTo=/vendor-registration';
+        return null;
+      },
+      builder: (context, state) => const VendorRegistrationPage(),
+    ),
+
+    GoRoute(
+      path: '/vendor-pending',
+      name: 'vendorPending',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous) return '/login';
+        return null;
+      },
+      builder: (context, state) => const VendorPendingPage(),
     ),
 
     GoRoute(

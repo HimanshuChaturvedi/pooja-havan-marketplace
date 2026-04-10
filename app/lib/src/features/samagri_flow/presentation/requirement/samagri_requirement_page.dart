@@ -5,6 +5,7 @@ import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import '../../data/samagri_repository_provider.dart';
 
 class SamagriRequirementPage extends ConsumerStatefulWidget {
   const SamagriRequirementPage({super.key});
@@ -15,6 +16,8 @@ class SamagriRequirementPage extends ConsumerStatefulWidget {
 
 class _SamagriRequirementPageState extends ConsumerState<SamagriRequirementPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
+  bool? _isAvailable;
+  bool _checkingAvailability = true;
 
   @override
   void initState() {
@@ -23,6 +26,35 @@ class _SamagriRequirementPageState extends ConsumerState<SamagriRequirementPage>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..forward();
+    
+    _checkVendorAvailability();
+  }
+
+  Future<void> _checkVendorAvailability() async {
+    final booking = ref.read(bookingSessionProvider).current;
+    if (booking?.latitude == null || booking?.longitude == null) {
+      setState(() {
+        _isAvailable = false;
+        _checkingAvailability = false;
+      });
+      return;
+    }
+
+    try {
+      final vendorId = await ref.read(samagriRepositoryProvider).findNearestVendor(
+        booking!.latitude!, 
+        booking.longitude!,
+      );
+      setState(() {
+        _isAvailable = vendorId != null;
+        _checkingAvailability = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isAvailable = false;
+        _checkingAvailability = false;
+      });
+    }
   }
 
   @override
@@ -60,8 +92,13 @@ class _SamagriRequirementPageState extends ConsumerState<SamagriRequirementPage>
               delay: 300,
               child: _optionCard(
                 title: 'Yes, arrange samagri',
-                subtitle: 'Select from our curated list of authentic ritual items',
+                subtitle: _checkingAvailability 
+                    ? 'Checking availability near you...' 
+                    : (_isAvailable == true 
+                        ? 'Select from our curated list of authentic ritual items'
+                        : 'Currently unavailable for your ceremony address'),
                 icon: Icons.auto_awesome,
+                isEnabled: !_checkingAvailability && _isAvailable == true,
                 onTap: () {
                   ref.read(bookingSessionProvider.notifier).setSamagriDecision(true);
                   context.push('/samagri-list');
@@ -96,48 +133,52 @@ class _SamagriRequirementPageState extends ConsumerState<SamagriRequirementPage>
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
+    bool isEnabled = true,
   }) {
     return GestureDetector(
-      onTap: onTap,
-      child: PrimaryCard(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.saffron.withOpacity(0.08),
-                shape: BoxShape.circle,
+      onTap: isEnabled ? onTap : null,
+      child: Opacity(
+        opacity: isEnabled ? 1.0 : 0.5,
+        child: PrimaryCard(
+          padding: const EdgeInsets.all(24),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.saffron.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.saffron, size: 28),
               ),
-              child: Icon(icon, color: AppColors.saffron, size: 28),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTextStyles.title.copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.darkCharcoal,
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.title.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.darkCharcoal,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.softGrey,
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.softGrey,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: AppColors.saffron, size: 14),
-          ],
+              const Icon(Icons.arrow_forward_ios, color: AppColors.saffron, size: 14),
+            ],
+          ),
         ),
       ),
     );

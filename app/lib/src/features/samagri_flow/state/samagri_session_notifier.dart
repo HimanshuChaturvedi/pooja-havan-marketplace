@@ -11,6 +11,8 @@ class SamagriSessionState {
   final String vendorLabel;
   final String? addressText;
   final String? addressId;
+  final double? latitude;
+  final double? longitude;
   final bool isPartOfBooking;
   final SamagriOrderStatus status;
   final DateTime? createdAt;
@@ -24,6 +26,8 @@ class SamagriSessionState {
     this.vendorLabel = 'Trusted Samagri Store',
     this.addressText,
     this.addressId,
+    this.latitude,
+    this.longitude,
     this.isPartOfBooking = false,
     this.status = SamagriOrderStatus.draft,
     this.createdAt,
@@ -40,6 +44,8 @@ class SamagriSessionState {
     String? vendorLabel,
     String? addressText,
     String? addressId,
+    double? latitude,
+    double? longitude,
     bool? isPartOfBooking,
     SamagriOrderStatus? status,
     DateTime? createdAt,
@@ -53,6 +59,8 @@ class SamagriSessionState {
       vendorLabel: vendorLabel ?? this.vendorLabel,
       addressText: addressText ?? this.addressText,
       addressId: addressId ?? this.addressId,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       isPartOfBooking: isPartOfBooking ?? this.isPartOfBooking,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
@@ -82,10 +90,12 @@ class SamagriSessionNotifier extends StateNotifier<SamagriSessionState> {
     );
   }
 
-  void attachAddress(String addressText, {String? addressId}) {
+  void attachAddress(String addressText, {String? addressId, double? latitude, double? longitude}) {
     state = state.copyWith(
       addressText: addressText,
       addressId: addressId,
+      latitude: latitude,
+      longitude: longitude,
     );
   }
 

@@ -19,8 +19,13 @@ class SamagriAddressPage extends ConsumerWidget {
     if (addresses.isEmpty) {
       return HomeAddressPage(
         city: 'Delivery Location',
-        onAddressSaved: (addressText) {
-          SamagriSession.attachAddress(addressText);
+        onAddressSaved: (address) {
+          SamagriSession.attachAddress(
+            '${address.line1}, ${address.city}',
+            addressId: address.id,
+            latitude: address.latitude,
+            longitude: address.longitude,
+          );
           context.go('/payment');
         },
       );
@@ -40,6 +45,8 @@ class SamagriAddressPage extends ConsumerWidget {
                 SamagriSession.attachAddress(
                   '${address.line1}, ${address.city}',
                   addressId: address.id,
+                  latitude: address.latitude,
+                  longitude: address.longitude,
                 );
                 context.go('/payment');
               },

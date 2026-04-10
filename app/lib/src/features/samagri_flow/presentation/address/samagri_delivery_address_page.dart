@@ -15,15 +15,24 @@ class SamagriDeliveryAddressPage extends StatefulWidget {
 class _SamagriDeliveryAddressPageState extends State<SamagriDeliveryAddressPage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
-  String _selectedCity = 'Ghaziabad';
+  String _selectedCity = 'Varanasi';
   bool _showManualForm = false;
 
   static const List<String> _serviceCities = [
+    'Varanasi',
     'Ghaziabad',
     'Noida',
     'Delhi NCR',
     'Greater Noida',
   ];
+
+  static const Map<String, (double, double)> _cityCoords = {
+    'Varanasi': (25.3176, 82.9739),
+    'Ghaziabad': (28.6692, 77.4538),
+    'Noida': (28.5355, 77.3910),
+    'Delhi NCR': (28.6139, 77.2090),
+    'Greater Noida': (28.4744, 77.5040),
+  };
 
   bool get _isFormValid =>
       _addressController.text.trim().isNotEmpty && _selectedCity.isNotEmpty;
@@ -246,7 +255,14 @@ class _SamagriDeliveryAddressPageState extends State<SamagriDeliveryAddressPage>
                         final address = '${_addressController.text.trim()}, $_selectedCity';
                         final pincode = _pincodeController.text.trim();
                         final fullAddress = pincode.isNotEmpty ? '$address - $pincode' : address;
-                        SamagriSession.attachAddress(fullAddress);
+                        
+                        final coords = _cityCoords[_selectedCity];
+                        SamagriSession.attachAddress(
+                          fullAddress, 
+                          latitude: coords?.$1, 
+                          longitude: coords?.$2,
+                        );
+                        
                         context.push('/payment');
                       }
                     : null,

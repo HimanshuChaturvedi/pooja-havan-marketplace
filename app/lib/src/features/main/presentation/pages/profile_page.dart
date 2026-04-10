@@ -8,6 +8,7 @@ import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
 import 'package:app/src/features/pandit_onboarding/data/pandit_repository_provider.dart';
+import 'package:app/src/features/samagri_vendor/data/vendor_repository.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -135,7 +136,7 @@ class ProfilePage extends ConsumerWidget {
                       padding: const EdgeInsets.only(bottom: 16),
                       child: _ProfileOption(
                         icon: Icons.hourglass_top_rounded,
-                        label: 'Registration Pending',
+                        label: 'Pandit Approval Pending',
                         onTap: () => context.push('/pandit-pending'),
                       ),
                     );
@@ -148,6 +149,59 @@ class ProfilePage extends ConsumerWidget {
                         icon: Icons.dashboard_outlined,
                         label: 'Pandit Dashboard',
                         onTap: () => context.push('/pandit-dashboard'),
+                      ),
+                    );
+                  }
+                  
+                  return const SizedBox.shrink();
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: AppShimmer(width: double.infinity, height: 60),
+                ),
+                error: (e, __) => const SizedBox.shrink(),
+              ),
+
+              // Vendor Status Logic 
+              ref.watch(vendorProfileFutureProvider).when(
+                data: (profile) {
+                  if (profile == null) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.saffron.withOpacity(0.5), width: 1.5),
+                        ),
+                        child: _ProfileOption(
+                          icon: Icons.store_rounded,
+                          label: 'Sell Samagri (Register Shop)',
+                          onTap: () => context.push('/vendor-registration'),
+                        ),
+                      ),
+                    );
+                  }
+                  
+                  final String status = (profile['verification_status'] as String).toUpperCase();
+                  
+                  if (status == 'PENDING') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _ProfileOption(
+                        icon: Icons.hourglass_top_rounded,
+                        label: 'Shop Approval Pending',
+                        onTap: () => context.push('/vendor-pending'),
+                      ),
+                    );
+                  }
+                  
+                  if (status == 'VERIFIED') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _ProfileOption(
+                        icon: Icons.dashboard_customize_outlined,
+                        label: 'Vendor Dashboard',
+                        onTap: () => context.push('/vendor-dashboard'),
                       ),
                     );
                   }

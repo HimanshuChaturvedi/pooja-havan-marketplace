@@ -6,6 +6,8 @@ class Address {
   final String city;
   final String state;
   final String pincode;
+  final double? latitude;
+  final double? longitude;
   final bool isDefault;
 
   const Address({
@@ -16,6 +18,8 @@ class Address {
     required this.city,
     required this.state,
     required this.pincode,
+    this.latitude,
+    this.longitude,
     this.isDefault = false,
   });
 
@@ -27,6 +31,8 @@ class Address {
     String? city,
     String? state,
     String? pincode,
+    double? latitude,
+    double? longitude,
     bool? isDefault,
   }) {
     return Address(
@@ -37,6 +43,8 @@ class Address {
       city: city ?? this.city,
       state: state ?? this.state,
       pincode: pincode ?? this.pincode,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       isDefault: isDefault ?? this.isDefault,
     );
   }

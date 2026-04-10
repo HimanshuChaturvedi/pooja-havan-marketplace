@@ -4,6 +4,8 @@ import '../domain/booking_draft.dart';
 import 'booking_repository.dart';
 import '../../samagri_flow/application/samagri_session.dart' as session;
 import '../../../core/utils/logger.dart';
+import '../../samagri_flow/data/samagri_repository.dart';
+import '../../samagri_flow/data/samagri_repository_provider.dart';
 
 class BookingRepositoryImpl implements BookingRepository {
   @override
@@ -51,6 +53,12 @@ class BookingRepositoryImpl implements BookingRepository {
       'status': 'CREATED',
       'reference_id': _generateReferenceId(),
       'total_amount': booking.totalAmount, 
+      'pooja_dakshina': booking.poojaDakshina,
+      'samagri_charges': booking.samagriCharges,
+      'delivery_fee': booking.deliveryFee,
+      'platform_fee': booking.platformFee,
+      'latitude': booking.latitude,
+      'longitude': booking.longitude,
       'pandit_id': pId,
     }).select('id, reference_id').single();
 
@@ -66,12 +74,31 @@ class BookingRepositoryImpl implements BookingRepository {
     if (samagriItems != null && samagriItems.isNotEmpty) {
       try {
         final samagriItemsTotal = samagriItems.fold<double>(0, (sum, i) => sum + (i.unitPrice * i.quantity));
+        
+        // FIND NEAREST VENDOR FOR LINKED ORDER
+        String? matchedVendorId;
+        if (booking.latitude != null && booking.longitude != null) {
+          try {
+            // Re-using the logic from SamagriRepository
+            final samagriRepo = SupabaseSamagriRepository(); 
+            matchedVendorId = await samagriRepo.findNearestVendor(booking.latitude!, booking.longitude!);
+          } catch (e) {
+            AppLogger.error('Failed to match vendor for linked order', e);
+          }
+        }
+
         final orderResponse = await supabase.from('samagri_orders').insert({
-          'user_id': supabase.auth.currentUser?.id,
+          'user_id': userId,
           'booking_id': bookingId,
-          'total_amount': samagriItemsTotal,  // actual items total from cart
+          'vendor_id': matchedVendorId,
+          'total_amount': samagriItemsTotal + 50.0,
+          'delivery_fee': 50.0,
+          'platform_fee': 0.0,
           'delivery_address': booking.address,
+          'latitude': booking.latitude,
+          'longitude': booking.longitude,
           'status': 'pending',
+          'reference_id': '$refId-S',
         }).select('id').single();
 
         final orderId = orderResponse['id'];
@@ -186,13 +213,13 @@ class BookingRepositoryImpl implements BookingRepository {
         panditName: data['pandit_name'],
         selectedDate: data['selected_date'] != null ? DateTime.parse(data['selected_date']) : null,
         selectedTime: data['selected_time'],
-        poojaDakshina: (data['total_amount'] ?? 0.0) > 0 
-           ? ((data['total_amount'] as num).toDouble() - samagriTotal - (hasSamagri ? 70.0 : 20.0)).clamp(0.0, double.infinity)
-           : poojaDakshina,
-        samagriCharges: samagriTotal,
+        latitude: (data['latitude'] as num?)?.toDouble(),
+        longitude: (data['longitude'] as num?)?.toDouble(),
+        poojaDakshina: (data['pooja_dakshina'] ?? 0.0).toDouble(),
+        samagriCharges: (data['samagri_charges'] ?? 0.0).toDouble(),
+        deliveryFee: (data['delivery_fee'] ?? 0.0).toDouble(),
+        platformFee: (data['platform_fee'] ?? 20.0).toDouble(), // Default 20 for legacy
         samagriRequired: (data['samagri_required'] == true) || hasSamagri,
-        deliveryFee: hasSamagri ? 50.0 : 0.0,
-        platformFee: 20.0,
       ));
     }
 
@@ -213,13 +240,13 @@ class BookingRepositoryImpl implements BookingRepository {
              id: s['id'].toString(),
              bookingType: BookingType.shop,
              ritualName: 'Samagri Order',
-             address: s['delivery_address'],
-             city: 'Varanasi',
-             samagriCharges: ((s['total_amount'] ?? 0.0).toDouble() - 70.0).clamp(0.0, double.infinity),
+             address: s['delivery_address'] ?? 'No Address',
+             city: s['delivery_address']?.toString().split(',').last.trim() ?? 'Unknown City',
+             samagriCharges: ((s['total_amount'] ?? 0.0).toDouble() - (s['delivery_fee'] ?? 50.0) - (s['platform_fee'] ?? 20.0)).toDouble().clamp(0.0, double.infinity),
              samagriRequired: true,
              poojaDakshina: 0.0,
-             deliveryFee: 50.0, 
-             platformFee: 20.0,
+             deliveryFee: (s['delivery_fee'] ?? 50.0).toDouble(),
+             platformFee: (s['platform_fee'] ?? 20.0).toDouble(),
              referenceId: s['reference_id']?.toString() ?? 'PHM-PENDING',
              selectedDate: createdAt,
              selectedTime: timeString,
@@ -252,7 +279,13 @@ class BookingRepositoryImpl implements BookingRepository {
  
   String _generateReferenceId() {
     final year = DateTime.now().year;
-    final random = (DateTime.now().millisecondsSinceEpoch % 1000).toString().padLeft(3, '0');
+    final random = (DateTime.now().millisecondsSinceEpoch % 1000000).toString().padLeft(6, '0');
     return 'PHM-$year-$random';
+  }
+
+  String _generateSamagriReferenceId() {
+    final year = DateTime.now().year;
+    final random = (DateTime.now().millisecondsSinceEpoch % 1000).toString().padLeft(3, '0');
+    return 'PHM-SMG-$year-$random';
   }
 }

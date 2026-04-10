@@ -62,38 +62,47 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
     }
   }
 
-  void _confirmAndProceed() {
-    // Logic: Use selected manual location if present, otherwise detected
-    final city = _selectedManualLocation?.city ?? _detectedLocation?.city ?? 'Ghaziabad';
-    final lat = _selectedManualLocation?.latitude ?? _detectedLocation?.latitude;
-    final lon = _selectedManualLocation?.longitude ?? _detectedLocation?.longitude;
-    final area = _selectedManualLocation?.area ?? _detectedLocation?.area;
+    void _confirmAndProceed() {
+      final city = _selectedManualLocation?.city ?? _detectedLocation?.city ?? 'Ghaziabad';
+      final lat = _selectedManualLocation?.latitude ?? _detectedLocation?.latitude;
+      final lon = _selectedManualLocation?.longitude ?? _detectedLocation?.longitude;
+      final area = _selectedManualLocation?.area ?? _detectedLocation?.area;
 
-    final draft = BookingDraft(
-      bookingType: widget.mode == 'temple' ? BookingType.temple : BookingType.home,
-      ritualName: '', 
-      city: city,
-      latitude: lat,
-      longitude: lon,
-      area: area,
-    );
+      // Special handling for Vendor Onboarding
+      if (widget.mode == 'vendor') {
+        context.pop({
+          'latitude': lat,
+          'longitude': lon,
+          'address': area != null ? '$area, $city' : city,
+        });
+        return;
+      }
 
-    ref.read(bookingSessionProvider.notifier).updateBookingDraft(draft);
-    
-    // Sync with global location state
-    ref.read(currentLocationProvider.notifier).state = LocationState(
-      city: city,
-      area: _detectedLocation?.area,
-      latitude: _detectedLocation?.latitude,
-      longitude: _detectedLocation?.longitude,
-    );
+      final draft = BookingDraft(
+        bookingType: widget.mode == 'temple' ? BookingType.temple : BookingType.home,
+        ritualName: '', 
+        city: city,
+        latitude: lat,
+        longitude: lon,
+        area: area,
+      );
 
-    if (widget.mode == 'temple') {
-      context.push('/temples/${Uri.encodeComponent(city)}');
-    } else {
-      context.push('/services');
+      ref.read(bookingSessionProvider.notifier).updateBookingDraft(draft);
+      
+      // Sync with global location state
+      ref.read(currentLocationProvider.notifier).state = LocationState(
+        city: city,
+        area: area,
+        latitude: lat,
+        longitude: lon,
+      );
+
+      if (widget.mode == 'temple') {
+        context.push('/temples/${Uri.encodeComponent(city)}');
+      } else {
+        context.push('/services');
+      }
     }
-  }
 
   void _manuallySelectLocation(UserLocation loc) {
     setState(() {
@@ -131,7 +140,9 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
             ),
             const SizedBox(height: 32),
             Text(
-              _isDetecting ? "Detecting Sacred Space" : "Sacred Space Selection",
+              _isDetecting 
+                ? "Detecting Sacred Space" 
+                : (widget.mode == 'vendor' ? "Select Shop Location" : "Sacred Space Selection"),
               style: AppTextStyles.title.copyWith(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
@@ -221,7 +232,10 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
                         const Icon(Icons.check_circle, color: AppColors.softGreen, size: 24),
                         const SizedBox(width: 12),
                         Text(
-                          _detectedLocation!.city ?? "Location Found",
+                          _detectedLocation!.area != null 
+                              ? "${_detectedLocation!.area}, ${_detectedLocation!.city}" 
+                              : (_detectedLocation!.city ?? "Location Found"),
+                          textAlign: TextAlign.center,
                           style: AppTextStyles.bodyLarge.copyWith(
                             fontWeight: FontWeight.w900,
                             color: AppColors.darkCharcoal,
@@ -230,7 +244,15 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
                         ),
                       ],
                     ),
-                    if (_detectedLocation!.area != null)
+                    if (widget.mode == 'vendor' && _detectedLocation!.latitude != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Precise coordinates captured for shop',
+                          style: AppTextStyles.bodySmall.copyWith(color: Colors.green, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    if (_detectedLocation!.area != null && widget.mode != 'vendor')
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
@@ -273,7 +295,7 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
               ),
             const SizedBox(height: 48),
             Text(
-              "Or Type City Manually",
+              widget.mode == 'vendor' ? "Or Search Shop Address/Landmark" : "Or Type City Manually",
               style: AppTextStyles.bodyLarge.copyWith(
                 fontWeight: FontWeight.w800,
                 color: AppColors.darkCharcoal,
@@ -283,7 +305,7 @@ class _LocationSelectionPageState extends ConsumerState<LocationSelectionPage> {
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Enter city name (e.g. Noida)',
+                hintText: widget.mode == 'vendor' ? 'Enter shop building, colony or landmark' : 'Enter city name (e.g. Noida)',
                 prefixIcon: const Icon(Icons.search, color: AppColors.saffron),
                 filled: true,
                 fillColor: AppColors.warmIvory,

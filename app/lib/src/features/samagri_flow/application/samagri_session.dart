@@ -35,6 +35,8 @@ class SamagriSession {
   /// ✅ RAW ADDRESS TEXT
   final String? addressText;
   final String? addressId;
+  final double? latitude;
+  final double? longitude;
 
   /// ✅ VERY IMPORTANT FLAG
   /// true = booking ke saath samagri
@@ -58,6 +60,8 @@ class SamagriSession {
     required this.isPartOfBooking,
     this.addressText,
     this.addressId,
+    this.latitude,
+    this.longitude,
   });
 
   static void createFromCart({
@@ -78,13 +82,15 @@ class SamagriSession {
       vendorLabel: 'Trusted Samagri Store',
       addressText: null,
       addressId: null,
+      latitude: null,
+      longitude: null,
       status: SamagriOrderStatus.summary,
       createdAt: DateTime.now(),
       isPartOfBooking: isPartOfBooking,
     );
   }
 
-  static void attachAddress(String addressText, {String? addressId}) {
+  static void attachAddress(String addressText, {String? addressId, double? latitude, double? longitude}) {
     if (current == null) return;
 
     current = SamagriSession._internal(
@@ -96,6 +102,8 @@ class SamagriSession {
       vendorLabel: current!.vendorLabel,
       addressText: addressText,
       addressId: addressId,
+      latitude: latitude,
+      longitude: longitude,
       status: current!.status,
       createdAt: current!.createdAt,
       isPartOfBooking: current!.isPartOfBooking,
@@ -114,6 +122,8 @@ class SamagriSession {
       vendorLabel: current!.vendorLabel,
       addressText: current!.addressText,
       addressId: current!.addressId,
+      latitude: current!.latitude,
+      longitude: current!.longitude,
       status: SamagriOrderStatus.paid,
       createdAt: current!.createdAt,
       isPartOfBooking: current!.isPartOfBooking,

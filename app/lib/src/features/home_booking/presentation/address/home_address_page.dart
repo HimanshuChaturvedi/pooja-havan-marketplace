@@ -6,12 +6,15 @@ import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import 'package:app/src/core/services/location_service.dart';
+import 'package:app/src/features/home_booking/presentation/address/state/address_provider.dart';
 import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'dart:async';
 
+import 'package:app/src/features/home_booking/presentation/address/domain/address.dart';
+
 class HomeAddressPage extends ConsumerStatefulWidget {
   final String city;
-  final void Function(String address)? onAddressSaved;
+  final void Function(Address address)? onAddressSaved;
 
   const HomeAddressPage({
     super.key,
@@ -34,6 +37,8 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
   UserLocation? _selectedLocation;
   List<UserLocation> _suggestions = [];
   Timer? _debounce;
+  final FocusNode _searchFocus = FocusNode();
+  final FocusNode _addressFocus = FocusNode();
 
   List<String> _serviceCities = [
     'Ghaziabad',
@@ -54,8 +59,6 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
     if (!_serviceCities.contains(_selectedCity)) {
       _serviceCities.add(_selectedCity);
     }
-    
-    _addressController.addListener(() => setState(() {}));
   }
 
   @override
@@ -63,6 +66,8 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
     _addressController.dispose();
     _pincodeController.dispose();
     _searchController.dispose();
+    _searchFocus.dispose();
+    _addressFocus.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -258,9 +263,14 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
               const SectionHeader(title: 'Search Landmark/Society'),
               const SizedBox(height: 12),
               PrimaryCard(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: TextField(
                   controller: _searchController,
+                  focusNode: _searchFocus,
+                  onTap: () {
+                    // Ensure focus and prevent "select all" if it's being triggered externally
+                    _searchFocus.requestFocus();
+                  },
                   onChanged: (value) {
                     if (_debounce?.isActive ?? false) _debounce!.cancel();
                     _debounce = Timer(const Duration(milliseconds: 500), () async {
@@ -280,7 +290,7 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
                     hintText: 'Search for colony, building or area...',
                     prefixIcon: const Icon(Icons.search, color: AppColors.saffron),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
                 ),
               ),
@@ -318,12 +328,35 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
               const SizedBox(height: 24),
 
               const SectionHeader(title: 'Detailed Address'),
+              if (_selectedLocation != null) ...[
+                const SizedBox(height: 4),
+                  Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Icon(Icons.location_on, color: Colors.green, size: 14),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Pinned to: ${_selectedLocation?.area ?? ""}${_selectedLocation?.area != null ? ", " : ""}${_selectedLocation?.city ?? ""}',
+                        style: AppTextStyles.bodySmall.copyWith(color: Colors.green, fontWeight: FontWeight.w700),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               PrimaryCard(
                 padding: const EdgeInsets.all(4),
                 child: TextField(
                   controller: _addressController,
+                  focusNode: _addressFocus,
                   maxLines: 2,
+                  onTap: () => _addressFocus.requestFocus(),
                   decoration: InputDecoration(
                     hintText: 'House No, Flat No, Landmark details...',
                     border: InputBorder.none,
@@ -381,16 +414,43 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
                   label: 'Continue to Pandit Selection →',
                   onTap: _isFormValid
                       ? () {
-                          final address = '${_addressController.text.trim()}, $_selectedCity';
+                          // 🚨 CRITICAL: Ensure we have coordinates for matching
+                          if (_selectedLocation == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please use "Auto-detect" or "Search" to pin your location first.'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+
+                          final addressText = '${_addressController.text.trim()}, $_selectedCity';
+                          final newAddress = Address(
+                            id: DateTime.now().millisecondsSinceEpoch.toString(),
+                            phone: '', // Needs refinement
+                            line1: _addressController.text.trim(),
+                            city: _selectedCity,
+                            state: _selectedLocation?.state ?? '',
+                            pincode: _pincodeController.text,
+                            latitude: _selectedLocation?.latitude,
+                            longitude: _selectedLocation?.longitude,
+                          );
+
                           if (widget.onAddressSaved != null) {
-                            widget.onAddressSaved!(address);
+                            // 🚀 AUTO-SAVE TO DB
+                            ref.read(addressBookProvider.notifier).addAddress(newAddress);
+                            widget.onAddressSaved!(newAddress);
                             return;
                           }
                           
                           final current = ref.read(bookingSessionProvider).current;
                           if (current != null) {
+                            // 🚀 AUTO-SAVE TO DB
+                            ref.read(addressBookProvider.notifier).addAddress(newAddress);
+                            
                             final updated = current.copyWith(
-                              address: address,
+                              address: addressText,
                               city: _selectedCity,
                               latitude: _selectedLocation?.latitude,
                               longitude: _selectedLocation?.longitude,

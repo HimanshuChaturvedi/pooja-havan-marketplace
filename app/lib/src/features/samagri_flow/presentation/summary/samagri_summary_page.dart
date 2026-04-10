@@ -24,6 +24,8 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
   bool _initialized = false;
   bool _isBookingFlow = false;
   bool _isSubmitting = false;
+  bool _isMatched = false; // 🚀 v2: START FALSE to force location check
+  bool _isCheckingServiceability = false;
 
   @override
   void didChangeDependencies() {
@@ -38,6 +40,11 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
           unitPrice: i.unitPrice,
           quantity: i.quantity,
         )).toList();
+        
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final session = ref.read(samagriSessionProvider);
+          _checkServiceability(session.latitude, session.longitude);
+        });
       } else {
         _items = [];
       }
@@ -127,9 +134,27 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
       
       final deliveryAddr = _isBookingFlow
           ? currentBooking?.address
-          : currentSamagri?.addressText;
+          : currentSamagri.addressText;
+
+      final deliveryLat = _isBookingFlow
+          ? currentBooking?.latitude
+          : currentSamagri.latitude;
+
+      final deliveryLon = _isBookingFlow
+          ? currentBooking?.longitude
+          : currentSamagri.longitude;
 
       _syncSession();
+      
+      // 🚀 FINAL SAFETY CHECK
+      if (!_isMatched && !_isBookingFlow) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sorry, we do not deliver to this location yet.')),
+          );
+        }
+        return;
+      }
       
       final bookingState = ref.read(bookingSessionProvider);
  
@@ -138,9 +163,13 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
         // Linked orders are handled by BookingRepository.createBooking().
         await ref.read(samagriRepositoryProvider).createOrder(
           items: _items,
-          totalAmount: bookingState.totalAmount,
+          totalAmount: _itemsTotal.toDouble() + currentSamagri.deliveryFee + currentSamagri.platformFee,
           bookingId: null,
           deliveryAddress: deliveryAddr,
+          latitude: deliveryLat,
+          longitude: deliveryLon,
+          deliveryFee: currentSamagri.deliveryFee.toDouble(),
+          platformFee: currentSamagri.platformFee.toDouble(),
         );
       }
       
@@ -163,6 +192,21 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _checkServiceability(double? lat, double? lon) async {
+    setState(() => _isCheckingServiceability = true);
+    try {
+      final vendorId = await ref.read(samagriRepositoryProvider).findNearestVendor(lat, lon);
+      if (mounted) {
+        setState(() {
+          _isMatched = vendorId != null;
+          _isCheckingServiceability = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isCheckingServiceability = false);
     }
   }
 
@@ -200,7 +244,11 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
 
     final bookingState = ref.watch(bookingSessionProvider);
     final samagriState = ref.watch(samagriSessionProvider);
-    final localTotal = _itemsTotal + bookingState.deliveryFee.toInt() + bookingState.platformFee.toInt();
+    
+    final int localTotal = _itemsTotal.toInt() + 
+        (_isBookingFlow 
+            ? (bookingState.deliveryFee.toInt() + bookingState.platformFee.toInt()) 
+            : (samagriState.deliveryFee.toInt() + samagriState.platformFee.toInt()));
 
     return AppScaffold(
       title: 'Order Summary',
@@ -345,8 +393,16 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
                                 MaterialPageRoute(
                                   builder: (_) => HomeAddressPage(
                                     city: 'Ghaziabad', 
-                                    onAddressSaved: (addr) {
-                                      ref.read(samagriSessionProvider.notifier).attachAddress(addr);
+                                    onAddressSaved: (address) {
+                                      ref.read(samagriSessionProvider.notifier).attachAddress(
+                                        '${address.line1}, ${address.city}',
+                                        addressId: address.id,
+                                        latitude: address.latitude,
+                                        longitude: address.longitude,
+                                      );
+                                      if (address.latitude != null) {
+                                        _checkServiceability(address.latitude!, address.longitude!);
+                                      }
                                       Navigator.of(context).pop();
                                     },
                                   ),
@@ -377,6 +433,30 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                    
+                    if (!_isMatched && !_isCheckingServiceability && samagriState.addressText != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Sorry, no Samagri vendors deliver within 3km of this location.',
+                                style: AppTextStyles.bodySmall.copyWith(color: Colors.red, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -387,14 +467,22 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         child: PrimaryButton(
-          label: (ref.watch(isAuthenticatedProvider)) 
-              ? (_isBookingFlow 
-                  ? 'Next: Review Pooja'
-                  : 'Confirm Order • ₹$localTotal')
-              : 'Sign In to Order • ₹$localTotal',
-          onTap: (_isSubmitting || (!_isBookingFlow && samagriState.addressText == null)) 
-              ? null 
-              : _handleConfirm,
+          label: _isCheckingServiceability 
+              ? 'Checking Delivery Area...'
+              : (ref.watch(isAuthenticatedProvider)) 
+                  ? (_isBookingFlow 
+                      ? (!_isMatched ? 'Proceed w/o Samagri' : 'Next: Review Pooja')
+                      : 'Confirm Order • ₹$localTotal')
+                  : 'Sign In to Order • ₹$localTotal',
+          onTap: (_isSubmitting || _isCheckingServiceability) 
+              ? null
+              : (!ref.watch(isAuthenticatedProvider))
+                  ? _handleConfirm 
+                  : (_isBookingFlow)
+                      ? _handleConfirm // Always allow proceeding to Pooja
+                      : (_isMatched && samagriState.addressText != null)
+                          ? _handleConfirm
+                          : null,
           loading: _isSubmitting,
         ),
       ),
