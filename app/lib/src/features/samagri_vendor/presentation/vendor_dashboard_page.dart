@@ -312,6 +312,13 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
           if (widget.order.status == 'pending') ...[
             const SizedBox(height: 20),
             PrimaryButton(
+              label: 'Accept Order',
+              loading: _isUpdating,
+              onTap: () => _updateStatus('accepted'),
+            ),
+          ] else if (widget.order.status == 'accepted') ...[
+            const SizedBox(height: 20),
+            PrimaryButton(
               label: 'Mark as Out for Delivery',
               loading: _isUpdating,
               onTap: () => _updateStatus('out_for_delivery'),
@@ -344,6 +351,10 @@ class _StatusBadge extends StatelessWidget {
       case 'pending':
         color = Colors.orange;
         label = 'NEW';
+        break;
+      case 'accepted':
+        color = Colors.indigo;
+        label = 'ACCEPTED';
         break;
       case 'out_for_delivery':
         color = Colors.blue;

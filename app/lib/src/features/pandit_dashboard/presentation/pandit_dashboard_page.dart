@@ -159,7 +159,10 @@ class PanditDashboardPage extends ConsumerWidget {
                         else
                           ...bookings.map((booking) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: _PanditBookingCard(booking: booking),
+                            child: _PanditBookingCard(
+                              booking: booking,
+                              onRefresh: () => ref.refresh(assignedBookingsProvider),
+                            ),
                           )),
                       ],
                     );
@@ -192,12 +195,38 @@ class PanditDashboardPage extends ConsumerWidget {
   }
 }
 
-class _PanditBookingCard extends StatelessWidget {
+class _PanditBookingCard extends ConsumerStatefulWidget {
   final BookingDraft booking;
-  const _PanditBookingCard({required this.booking});
+  final VoidCallback onRefresh;
+  const _PanditBookingCard({required this.booking, required this.onRefresh});
+
+  @override
+  ConsumerState<_PanditBookingCard> createState() => _PanditBookingCardState();
+}
+
+class _PanditBookingCardState extends ConsumerState<_PanditBookingCard> {
+  bool _isUpdating = false;
+
+  Future<void> _updateStatus(BookingStatusDetailed status) async {
+    setState(() => _isUpdating = true);
+    try {
+      await ref.read(bookingRepositoryProvider).updateBookingStatus(widget.booking.id!, status);
+      widget.onRefresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final booking = widget.booking;
+    
     return PrimaryCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -211,17 +240,7 @@ class _PanditBookingCard extends StatelessWidget {
                   booking.ritualName,
                   style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.saffron.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    booking.status.name.toUpperCase(),
-                    style: const TextStyle(color: AppColors.saffron, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
+                _StatusBadge(status: booking.status),
               ],
             ),
             const Divider(height: 24),
@@ -263,8 +282,70 @@ class _PanditBookingCard extends StatelessWidget {
                 Text('₹${booking.poojaDakshina.toInt()}', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold, color: Colors.green)),
               ],
             ),
+            
+            // Lifecycle Buttons
+            if (booking.status == BookingStatusDetailed.assigned) ...[
+              const SizedBox(height: 16),
+              PrimaryButton(
+                label: 'Start Trip',
+                loading: _isUpdating,
+                onTap: () => _updateStatus(BookingStatusDetailed.onWay),
+              ),
+            ] else if (booking.status == BookingStatusDetailed.onWay) ...[
+              const SizedBox(height: 16),
+              PrimaryButton(
+                label: 'Arrived / Start Pooja',
+                loading: _isUpdating,
+                onTap: () => _updateStatus(BookingStatusDetailed.inProgress),
+              ),
+            ] else if (booking.status == BookingStatusDetailed.inProgress) ...[
+              const SizedBox(height: 16),
+              PrimaryButton(
+                label: 'Mark as Completed',
+                loading: _isUpdating,
+                onTap: () => _updateStatus(BookingStatusDetailed.completed),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final BookingStatusDetailed status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    switch (status) {
+      case BookingStatusDetailed.created:
+      case BookingStatusDetailed.assigned:
+        color = AppColors.saffron;
+        break;
+      case BookingStatusDetailed.onWay:
+      case BookingStatusDetailed.inProgress:
+        color = Colors.blue;
+        break;
+      case BookingStatusDetailed.completed:
+        color = Colors.green;
+        break;
+      case BookingStatusDetailed.cancelled:
+        color = Colors.red;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        status.name.toUpperCase(),
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }

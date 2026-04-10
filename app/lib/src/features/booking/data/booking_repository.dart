@@ -5,4 +5,5 @@ abstract class BookingRepository {
   Future<String> createBooking(BookingDraft booking, {List<SamagriItem>? samagriItems});
   Future<List<BookingDraft>> getBookings();
   Future<List<BookingDraft>> getAssignedBookings();
+  Future<void> updateBookingStatus(String bookingId, BookingStatusDetailed status);
 }

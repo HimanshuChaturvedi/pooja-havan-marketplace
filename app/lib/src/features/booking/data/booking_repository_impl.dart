@@ -177,6 +177,28 @@ class BookingRepositoryImpl implements BookingRepository {
     return _mapBookings(rawBookings, rawSamagri, isAssignedView: true);
   }
 
+  @override
+  Future<void> updateBookingStatus(String bookingId, BookingStatusDetailed status) async {
+    try {
+      // Convert camelCase enum name to snake_case for DB if needed
+      // Actually, looking at _parseBookingStatus, it seems it handles both.
+      // We will use the simple name but can add mapping if needed.
+      String statusStr = status.name;
+      
+      // Handle known mismatches (e.g. onWay -> on_way)
+      if (status == BookingStatusDetailed.onWay) statusStr = 'on_way';
+      if (status == BookingStatusDetailed.inProgress) statusStr = 'in_progress';
+
+      await supabase
+          .from('bookings')
+          .update({'status': statusStr})
+          .eq('id', bookingId);
+    } catch (e) {
+      AppLogger.error('Error updating booking status', e);
+      rethrow;
+    }
+  }
+
   List<BookingDraft> _mapBookings(
     List<Map<String, dynamic>> rawBookings, 
     List<Map<String, dynamic>> rawSamagri,
