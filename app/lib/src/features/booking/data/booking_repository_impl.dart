@@ -122,12 +122,13 @@ class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<List<BookingDraft>> getBookings() async {
     final String? userId = supabase.auth.currentUser?.id;
+    if (userId == null) return [];
 
-    // 1. Fetch all bookings
+    // 1. Fetch all bookings for this user
     final bookingsResponse = await supabase
         .from('bookings')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userId!)
         .order('created_at', ascending: false);
 
     final List<Map<String, dynamic>> rawBookings = bookingsResponse != null 
@@ -137,7 +138,7 @@ class BookingRepositoryImpl implements BookingRepository {
     final samagriResponse = await supabase
         .from('samagri_orders')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userId!)
         .order('created_at', ascending: false);
     
     final List<Map<String, dynamic>> rawSamagri = samagriResponse != null
