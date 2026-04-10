@@ -127,6 +127,7 @@ class BookingRepositoryImpl implements BookingRepository {
     final bookingsResponse = await supabase
         .from('bookings')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', ascending: false);
 
     final List<Map<String, dynamic>> rawBookings = bookingsResponse != null 
@@ -136,6 +137,7 @@ class BookingRepositoryImpl implements BookingRepository {
     final samagriResponse = await supabase
         .from('samagri_orders')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', ascending: false);
     
     final List<Map<String, dynamic>> rawSamagri = samagriResponse != null
