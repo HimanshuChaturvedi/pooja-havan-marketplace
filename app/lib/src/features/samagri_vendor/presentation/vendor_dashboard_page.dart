@@ -78,8 +78,9 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> with 
           Expanded(
             child: ordersAsync.when(
               data: (orders) {
-                final pending = orders.where((o) => o.status.toLowerCase() == 'pending').toList();
-                final history = orders.where((o) => o.status.toLowerCase() != 'pending').toList();
+                final activeStates = ['pending', 'accepted', 'out_for_delivery'];
+                final pending = orders.where((o) => activeStates.contains(o.status.toLowerCase())).toList();
+                final history = orders.where((o) => !activeStates.contains(o.status.toLowerCase())).toList();
                 
                 return ref.watch(unassignedOrdersProvider).when(
                   data: (unassigned) {
@@ -96,7 +97,7 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> with 
                             indicatorWeight: 3,
                             labelStyle: AppTextStyles.button.copyWith(fontWeight: FontWeight.w800),
                             tabs: [
-                              Tab(text: 'Pending (${pending.length})'),
+                              Tab(text: 'Active (${pending.length})'),
                               Tab(text: 'History (${history.length})'),
                               Tab(text: 'Debug ($unassignedCount)'),
                             ],

@@ -64,7 +64,8 @@ class PanditDashboardPage extends ConsumerWidget {
                   data: (bookings) {
                     // Calculate Stats
                     final total = bookings.length;
-                    final pending = bookings.where((b) => b.status == BookingStatusDetailed.created || b.status == BookingStatusDetailed.assigned).length;
+                    final pendingStatuses = [BookingStatusDetailed.created, BookingStatusDetailed.assigned, BookingStatusDetailed.onWay, BookingStatusDetailed.inProgress];
+                    final pending = bookings.where((b) => pendingStatuses.contains(b.status)).length;
                     final completed = bookings.where((b) => b.status == BookingStatusDetailed.completed).length;
                     final earnings = bookings
                         .where((b) => b.status == BookingStatusDetailed.completed)
