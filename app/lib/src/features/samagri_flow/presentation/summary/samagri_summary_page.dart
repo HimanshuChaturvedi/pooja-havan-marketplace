@@ -156,33 +156,9 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
         return;
       }
       
-      final bookingState = ref.read(bookingSessionProvider);
- 
-      if (!_isBookingFlow) {
-        // 🚀 ONLY create a standalone order if NOT in a Pooja flow.
-        // Linked orders are handled by BookingRepository.createBooking().
-        await ref.read(samagriRepositoryProvider).createOrder(
-          items: _items,
-          totalAmount: _itemsTotal.toDouble() + currentSamagri.deliveryFee + currentSamagri.platformFee,
-          bookingId: null,
-          deliveryAddress: deliveryAddr,
-          latitude: deliveryLat,
-          longitude: deliveryLon,
-          deliveryFee: currentSamagri.deliveryFee.toDouble(),
-          platformFee: currentSamagri.platformFee.toDouble(),
-        );
-      }
-      
       if (mounted) {
-        // 🚀 REFRESH HISTORY
-        ref.invalidate(bookingsProvider);
-        
-        if (_isBookingFlow) {
-          context.push('/home-summary');
-        } else {
-          // 🚀 SUCCESS REDIRECT: Go to dedicated success page
-          context.push('/samagri-success'); 
-        }
+        // 🚀 REDIRECT TO PAYMENT: Standalone orders now go to Payment page first.
+        context.push('/payment');
       }
     } catch (e) {
       if (mounted) {

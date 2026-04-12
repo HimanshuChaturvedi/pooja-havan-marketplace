@@ -11,6 +11,12 @@ import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart
 import 'package:app/src/core/supabase/supabase_client.dart';
 import '../../booking/data/booking_providers.dart';
 import '../../samagri_flow/data/samagri_repository_provider.dart';
+import '../../../core/payment/razorpay_provider.dart';
+import '../../../core/payment/razorpay_service.dart';
+import '../data/payment_provider.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../../samagri_vendor/data/vendor_repository.dart';
+import '../../booking/domain/booking_draft.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   const PaymentPage({super.key});
@@ -30,6 +36,99 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..forward();
+
+    // Initialize Razorpay listeners
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final razorpay = ref.read(razorpayServiceProvider);
+      razorpay.onSuccess = _onPaymentSuccess;
+      razorpay.onFailure = _onPaymentError;
+    });
+  }
+
+  void _onPaymentSuccess(PaymentSuccessResponse response) async {
+    final bookingSession = ref.read(bookingSessionProvider);
+    final booking = bookingSession.current;
+    final samagri = ref.read(samagriSessionProvider);
+
+    try {
+      // 1. Create the booking/order in Supabase
+      String? bookingId;
+      if (booking != null) {
+        final items = samagri.items.isNotEmpty ? samagri.items : null;
+        bookingId = await ref.read(bookingRepositoryProvider).createBooking(
+          booking,
+          samagriItems: items,
+        );
+      } else if (samagri.sessionId != null) {
+        // Handle standalone samagri order
+        final orderId = await ref.read(samagriRepositoryProvider).createOrder(
+          items: samagri.items,
+          totalAmount: samagri.finalTotal.toDouble(),
+          deliveryAddress: samagri.addressText,
+          latitude: samagri.latitude,
+          longitude: samagri.longitude,
+          deliveryFee: samagri.deliveryFee.toDouble(),
+          platformFee: samagri.platformFee.toDouble(),
+        );
+        // Link to payment record
+        bookingId = orderId; 
+      }
+
+      // 2. Record payment in Supabase
+      await ref.read(paymentRepositoryProvider).recordPayment(
+        razorpayPaymentId: response.paymentId!,
+        amount: bookingSession.totalAmount,
+        bookingId: booking != null ? bookingId : null,
+        samagriOrderId: booking == null ? bookingId : null,
+        status: 'captured',
+      );
+
+      // 3. Update Status to PAID
+      if (bookingId != null) {
+        if (booking != null) {
+           await ref.read(bookingRepositoryProvider).updateBookingStatus(bookingId, BookingStatusDetailed.paid);
+        } else {
+           await ref.read(samagriVendorRepositoryProvider).updateOrderStatus(bookingId, 'paid');
+        }
+      }
+
+      // 4. Update UI State & Navigate
+      if (booking != null) {
+        ref.read(bookingSessionProvider.notifier).updateStatus(BookingStatus.confirmed);
+        ref.read(bookingSessionProvider.notifier).setTransactionId(response.paymentId!);
+        if (mounted) {
+          ref.invalidate(bookingsProvider);
+          context.go('/booking-success');
+        }
+      } else {
+        ref.read(samagriSessionProvider.notifier).markPaid();
+        ref.read(samagriCartProvider.notifier).clearCart();
+        if (mounted) {
+          ref.invalidate(bookingsProvider);
+          context.go('/samagri-success');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error finalizing booking: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _onPaymentError(PaymentFailureResponse response) {
+    if (mounted) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment Failed: ${response.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -38,12 +137,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
     super.dispose();
   }
 
-  bool canPayNow() {
-    final bookingSession = ref.read(bookingSessionProvider);
+  bool canPayNow(BookingSessionState bookingSession, SamagriSessionState samagri) {
     if (bookingSession.current != null) {
       return bookingSession.status == BookingStatus.paymentPending;
     }
-    final samagri = ref.read(samagriSessionProvider);
     if (samagri.sessionId == null) return false;
     if (samagri.addressText == null || samagri.addressText!.trim().isEmpty) {
       return false;
@@ -63,65 +160,42 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       return;
     }
 
+    debugPrint('PaymentPage: Starting payment flow...');
     setState(() => _isLoading = true);
 
     final bookingSession = ref.read(bookingSessionProvider);
-    final booking = bookingSession.current;
-    final samagri = ref.read(samagriSessionProvider);
+    final samagriSession = ref.read(samagriSessionProvider);
+    final user = currentUser!;
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    final double amountToPay = bookingSession.current != null 
+        ? bookingSession.totalAmount 
+        : samagriSession.finalTotal.toDouble();
 
-    if (!mounted) return;
+    debugPrint('PaymentPage: amount=$amountToPay, sessionId=${bookingSession.current?.referenceId ?? samagriSession.sessionId}');
 
-    if (booking != null) {
-      try {
-        final items = samagri.items.isNotEmpty ? samagri.items : null;
-        final String bookingId = await ref.read(bookingRepositoryProvider).createBooking(
-          booking,
-          samagriItems: items,
-        );
-        
-        ref.read(bookingSessionProvider.notifier).updateStatus(BookingStatus.confirmed);
-        ref.read(bookingSessionProvider.notifier).setTransactionId(booking.referenceId ?? bookingId);
-        
-        if (mounted) {
-          ref.invalidate(bookingsProvider);
-          context.go('/booking-success');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Booking failed: $e')),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-      }
-      return;
-    }
+    final String orderDescription = bookingSession.current != null 
+        ? 'Ritual Booking: ${bookingSession.current?.ritualName}'
+        : 'Samagri Order: ${samagriSession.sessionId}';
 
-    if (samagri.sessionId != null) {
-      try {
-        await ref.read(samagriRepositoryProvider).createOrder(
-          items: samagri.items,
-          totalAmount: samagri.totalAmount.toDouble(),
-          deliveryAddress: samagri.addressText,
-        );
-        ref.read(samagriSessionProvider.notifier).markPaid();
-        ref.read(samagriCartProvider.notifier).clearCart();
-        if (mounted) {
-          ref.invalidate(bookingsProvider);
-          context.go('/samagri-success');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Order failed: $e')),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-      }
+    try {
+      debugPrint('PaymentPage: Opening Razorpay SDK...');
+      ref.read(razorpayServiceProvider).openCheckout(
+        amount: amountToPay,
+        contact: user.phone ?? '', 
+        email: user.email ?? '',
+        description: orderDescription,
+        notes: {
+          'session_id': bookingSession.current?.referenceId ?? samagriSession.sessionId ?? 'N/A',
+          'user_id': user.id,
+          'type': bookingSession.current != null ? 'ritual' : 'samagri',
+        },
+      );
+    } catch (e) {
+      debugPrint('PaymentPage ERROR: $e');
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open payment gateway: $e')),
+      );
     }
   }
 
@@ -188,9 +262,21 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
 
     // ── LOGGED IN: Show normal payment ──
     final bookingSession = ref.watch(bookingSessionProvider);
+    final samagriSession = ref.watch(samagriSessionProvider);
+    
     final booking = bookingSession.current;
-    final double amount = bookingSession.totalAmount;
-    final bool payEnabled = canPayNow();
+    final bool isDirectSamagri = booking == null && samagriSession.sessionId != null;
+    
+    final double amount = booking != null 
+        ? bookingSession.totalAmount 
+        : samagriSession.finalTotal.toDouble();
+        
+    final bool payEnabled = canPayNow(bookingSession, samagriSession);
+    
+    debugPrint('PaymentPage: amount=$amount, payEnabled=$payEnabled');
+    if (!payEnabled) {
+      debugPrint('PaymentPage: Disabled because - booking: ${booking != null}, samagriSession: ${samagriSession.sessionId != null}, address: ${samagriSession.addressText}');
+    }
 
     return AppScaffold(
       title: 'Payment',

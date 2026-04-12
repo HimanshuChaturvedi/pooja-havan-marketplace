@@ -45,13 +45,14 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
 
     final rawUserId = await AppIdentity.userId;
     final displayUserId = _shortUserId(rawUserId);
+    final isBookingFlow = bookingState.current != null;
 
     TransactionLogService.append(
       TransactionLogEntry(
         id: samagri.sessionId ?? 'UNKNOWN',
         type: TransactionType.samagri,
         title: 'Samagri Order Request',
-        amount: bookingState.samagriTotal.toInt(),
+        amount: isBookingFlow ? bookingState.samagriTotal.toInt() : samagri.finalTotal,
         status: TransactionStatus.completed,
         createdAt: DateTime.now(),
         userLabel: displayUserId,
@@ -187,7 +188,7 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                               const Divider(height: 24, color: Colors.black12),
                                _InfoRow(
                                 label: 'Total Amount', 
-                                value: '₹${bookingState.samagriTotal.toInt()}',
+                                value: '₹${isBookingFlow ? bookingState.samagriTotal.toInt() : samagri.finalTotal}',
                                 isHighlight: true,
                               ),
                               const Divider(height: 24, color: Colors.black12),
@@ -207,7 +208,7 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                             final String orderId = samagri.isPartOfBooking == true 
                                 ? (booking?.referenceId ?? 'PHM-PENDING')
                                 : 'SMG-${(samagri.sessionId ?? "0000000000").substring((samagri.sessionId ?? "0000000000").length - 6).toUpperCase()}';
-                            final String total = '₹${bookingState.samagriTotal.toInt()}';
+                            final String total = '₹${isBookingFlow ? bookingState.samagriTotal.toInt() : samagri.finalTotal}';
                             
                             WhatsAppHelper.openChat(
                               message: 'Namaste 🙏\n\n'
