@@ -212,6 +212,10 @@ Color _statusColor(BookingStatusDetailed status) {
       return Colors.orange;
     case BookingStatusDetailed.inProgress:
       return Colors.purple;
+    case BookingStatusDetailed.paid:
+      return Colors.teal;
+    case BookingStatusDetailed.confirmed:
+      return Colors.blue;
     case BookingStatusDetailed.completed:
       return Colors.green;
     case BookingStatusDetailed.cancelled:
@@ -229,6 +233,10 @@ IconData _statusIcon(BookingStatusDetailed status) {
       return Icons.directions_bike;
     case BookingStatusDetailed.inProgress:
       return Icons.sync;
+    case BookingStatusDetailed.paid:
+      return Icons.payments_outlined;
+    case BookingStatusDetailed.confirmed:
+      return Icons.verified_outlined;
     case BookingStatusDetailed.completed:
       return Icons.check_circle_outline;
     case BookingStatusDetailed.cancelled:

@@ -19,7 +19,7 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -99,7 +99,6 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> with 
                             tabs: [
                               Tab(text: 'Active (${pending.length})'),
                               Tab(text: 'History (${history.length})'),
-                              Tab(text: 'Debug ($unassignedCount)'),
                             ],
                           ),
                         ),
@@ -109,11 +108,6 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> with 
                             children: [
                               _OrderList(orders: pending, onRefresh: () => ref.refresh(vendorOrdersProvider)),
                               _OrderList(orders: history, onRefresh: () => ref.refresh(vendorOrdersProvider)),
-                              _OrderList(
-                                orders: unassigned, 
-                                onRefresh: () => ref.refresh(unassignedOrdersProvider),
-                                emptyMessage: 'No unassigned orders found.\n\nAll bookings were successfully matched to vendors!',
-                              ),
                             ],
                           ),
                         ),

@@ -7,8 +7,10 @@ enum BookingType {
  
 enum BookingStatusDetailed {
   created,
-  assigned,
-  onWay,
+  paid,      // New DB state
+  confirmed, // New DB state
+  assigned, 
+  onWay,    
   inProgress,
   completed,
   cancelled,

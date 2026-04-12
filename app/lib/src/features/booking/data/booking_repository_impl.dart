@@ -180,18 +180,29 @@ class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<void> updateBookingStatus(String bookingId, BookingStatusDetailed status) async {
     try {
-      // Convert camelCase enum name to snake_case for DB if needed
-      // Actually, looking at _parseBookingStatus, it seems it handles both.
-      // We will use the simple name but can add mapping if needed.
-      String statusStr = status.name;
-      
-      // Handle known mismatches (e.g. onWay -> on_way)
-      if (status == BookingStatusDetailed.onWay) statusStr = 'on_way';
-      if (status == BookingStatusDetailed.inProgress) statusStr = 'in_progress';
+      // PROVEN DB LABELS: CREATED, PAID, CONFIRMED, COMPLETED, CANCELLED
+      String dbStatus;
+      switch (status) {
+        case BookingStatusDetailed.completed:
+          dbStatus = 'COMPLETED';
+          break;
+        case BookingStatusDetailed.cancelled:
+          dbStatus = 'CANCELLED';
+          break;
+        case BookingStatusDetailed.paid:
+          dbStatus = 'PAID';
+          break;
+        case BookingStatusDetailed.created:
+          dbStatus = 'CREATED';
+          break;
+        default:
+          // Map all intermediate "active" states (assigned, onWay, inProgress) to CONFIRMED
+          dbStatus = 'CONFIRMED';
+      }
 
       await supabase
           .from('bookings')
-          .update({'status': statusStr})
+          .update({'status': dbStatus})
           .eq('id', bookingId);
     } catch (e) {
       AppLogger.error('Error updating booking status', e);

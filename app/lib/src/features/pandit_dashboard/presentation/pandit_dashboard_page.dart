@@ -284,22 +284,19 @@ class _PanditBookingCardState extends ConsumerState<_PanditBookingCard> {
               ],
             ),
             
-            // Lifecycle Buttons
-            if (booking.status == BookingStatusDetailed.assigned) ...[
+            // Simplified 2-Click Lifecycle Buttons: Start -> Complete
+            if (booking.status == BookingStatusDetailed.created || 
+                booking.status == BookingStatusDetailed.assigned ||
+                booking.status == BookingStatusDetailed.paid) ...[
               const SizedBox(height: 16),
               PrimaryButton(
                 label: 'Start Trip',
                 loading: _isUpdating,
                 onTap: () => _updateStatus(BookingStatusDetailed.onWay),
               ),
-            ] else if (booking.status == BookingStatusDetailed.onWay) ...[
-              const SizedBox(height: 16),
-              PrimaryButton(
-                label: 'Arrived / Start Pooja',
-                loading: _isUpdating,
-                onTap: () => _updateStatus(BookingStatusDetailed.inProgress),
-              ),
-            ] else if (booking.status == BookingStatusDetailed.inProgress) ...[
+            ] else if (booking.status == BookingStatusDetailed.onWay || 
+                       booking.status == BookingStatusDetailed.confirmed ||
+                       booking.status == BookingStatusDetailed.inProgress) ...[
               const SizedBox(height: 16),
               PrimaryButton(
                 label: 'Mark as Completed',
@@ -328,6 +325,12 @@ class _StatusBadge extends StatelessWidget {
         break;
       case BookingStatusDetailed.onWay:
       case BookingStatusDetailed.inProgress:
+        color = Colors.blue;
+        break;
+      case BookingStatusDetailed.paid:
+        color = Colors.teal;
+        break;
+      case BookingStatusDetailed.confirmed:
         color = Colors.blue;
         break;
       case BookingStatusDetailed.completed:

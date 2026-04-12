@@ -264,6 +264,10 @@ Color _statusColor(BookingStatusDetailed status) {
       return Colors.orange;
     case BookingStatusDetailed.inProgress:
       return Colors.purple;
+    case BookingStatusDetailed.paid:
+      return Colors.teal;
+    case BookingStatusDetailed.confirmed:
+      return Colors.blue;
     case BookingStatusDetailed.completed:
       return Colors.green;
     case BookingStatusDetailed.cancelled:
