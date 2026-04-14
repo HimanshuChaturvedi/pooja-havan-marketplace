@@ -184,6 +184,7 @@ class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with Si
                                ref.read(bookingSessionProvider.notifier).updatePricing(
                                   ritualDakshina: poojaCost,
                                   samagriTotal: samagriTotalCost,
+                                  deliveryFee: samagriRequired ? samagriState.deliveryFee.toDouble() : 0.0,
                                 );
                             });
 
@@ -194,8 +195,8 @@ class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with Si
                                   const SizedBox(height: 16),
                                   _PriceRow(label: 'Samagri Charges', amount: bookingState.samagriTotal.toInt()),
                                 ],
-                                _PriceRow(label: 'Delivery Fee', amount: bookingState.deliveryFee.toInt()),
-                                _PriceRow(label: 'Platform Fee', amount: bookingState.platformFee.toInt()),
+                                _PriceRow(label: 'Vendor Service Charge', amount: bookingState.deliveryFee.toInt()),
+                                _PriceRow(label: 'Platform & Service Fee', amount: bookingState.platformFee.toInt()),
                                 
                                 const Padding(
                                   padding: EdgeInsets.symmetric(vertical: 20),
@@ -226,13 +227,31 @@ class _BookingSummaryPageState extends ConsumerState<BookingSummaryPage> with Si
         ),
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-          child: PrimaryButton(
-            label: 'Proceed to Payment →',
-            onTap: () {
-              ref.read(bookingSessionProvider.notifier).updateBookingStatus(BookingStatus.paymentPending);
-              context.push('/payment');
-            },
-          ),
+          child: ritualPricingAsync == null 
+            ? PrimaryButton(
+                label: 'Proceed to Payment →',
+                onTap: () {
+                  ref.read(bookingSessionProvider.notifier).updateBookingStatus(BookingStatus.paymentPending);
+                  context.push('/payment');
+                },
+              )
+            : ritualPricingAsync.when(
+                data: (pricing) => PrimaryButton(
+                  label: 'Proceed to Payment →',
+                  onTap: () {
+                    ref.read(bookingSessionProvider.notifier).updateBookingStatus(BookingStatus.paymentPending);
+                    context.push('/payment');
+                  },
+                ),
+                loading: () => const PrimaryButton(
+                  label: 'Calculating Prices...',
+                  onTap: null,
+                ),
+                error: (err, _) => PrimaryButton(
+                  label: 'Pricing Error',
+                  onTap: null,
+                ),
+              ),
         ),
       ),
     );
@@ -322,7 +341,7 @@ class _SamagriSummaryCard extends StatelessWidget {
             ],
           ),
           const Divider(height: 32, color: Colors.black12),
-          ...session.items.map((item) {
+          ...session.items.map((dynamic item) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(

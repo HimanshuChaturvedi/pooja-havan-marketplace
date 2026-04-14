@@ -188,7 +188,7 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                               const Divider(height: 24, color: Colors.black12),
                                _InfoRow(
                                 label: 'Total Amount', 
-                                value: '₹${isBookingFlow ? bookingState.samagriTotal.toInt() : samagri.finalTotal}',
+                                value: '₹${samagri.isPartOfBooking ? bookingState.samagriTotal.toInt() : samagri.finalTotal}',
                                 isHighlight: true,
                               ),
                               const Divider(height: 24, color: Colors.black12),
@@ -208,7 +208,7 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                             final String orderId = samagri.isPartOfBooking == true 
                                 ? (booking?.referenceId ?? 'PHM-PENDING')
                                 : 'SMG-${(samagri.sessionId ?? "0000000000").substring((samagri.sessionId ?? "0000000000").length - 6).toUpperCase()}';
-                            final String total = '₹${isBookingFlow ? bookingState.samagriTotal.toInt() : samagri.finalTotal}';
+                            final String total = '₹${samagri.isPartOfBooking ? bookingState.samagriTotal.toInt() : samagri.finalTotal}';
                             
                             WhatsAppHelper.openChat(
                               message: 'Namaste 🙏\n\n'
@@ -218,7 +218,7 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                                   '📍 Delivery to: $city\n'
                                   'Address: $deliveryAddress\n\n'
                                   'Items:\n'
-                                  '${samagri.items.map((e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
+                                  '${samagri.items.map((dynamic e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
                                   '— Bharat Pooja Setu',
                             );
                           },

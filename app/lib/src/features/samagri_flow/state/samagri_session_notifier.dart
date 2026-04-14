@@ -1,13 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math';
-import '../application/samagri_session.dart' show SamagriItem, SamagriOrderStatus;
+import 'package:app/src/features/samagri_flow/application/samagri_session.dart' show SamagriItem, SamagriOrderStatus;
+import 'package:app/src/core/pricing/pricing_service.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
 
 class SamagriSessionState {
   final String? sessionId;
   final List<SamagriItem> items;
   final int totalAmount;
   final int deliveryFee;
-  final int platformFee;
+  // Removed hardcoded platformFee field
   final String vendorLabel;
   final String? addressText;
   final String? addressId;
@@ -22,7 +24,6 @@ class SamagriSessionState {
     this.items = const [],
     this.totalAmount = 0,
     this.deliveryFee = 50,
-    this.platformFee = 20,
     this.vendorLabel = 'Trusted Samagri Store',
     this.addressText,
     this.addressId,
@@ -33,6 +34,11 @@ class SamagriSessionState {
     this.createdAt,
   });
 
+  int get platformFee => PricingService.calculatePlatformFee(
+        ritualDakshina: 0,
+        samagriTotal: totalAmount.toDouble(),
+      ).toInt();
+
   int get finalTotal => totalAmount + deliveryFee + platformFee;
 
   SamagriSessionState copyWith({
@@ -40,7 +46,6 @@ class SamagriSessionState {
     List<SamagriItem>? items,
     int? totalAmount,
     int? deliveryFee,
-    int? platformFee,
     String? vendorLabel,
     String? addressText,
     String? addressId,
@@ -55,7 +60,6 @@ class SamagriSessionState {
       items: items ?? this.items,
       totalAmount: totalAmount ?? this.totalAmount,
       deliveryFee: deliveryFee ?? this.deliveryFee,
-      platformFee: platformFee ?? this.platformFee,
       vendorLabel: vendorLabel ?? this.vendorLabel,
       addressText: addressText ?? this.addressText,
       addressId: addressId ?? this.addressId,
@@ -77,7 +81,7 @@ class SamagriSessionNotifier extends StateNotifier<SamagriSessionState> {
   }) {
     final total = items.fold<int>(
       0,
-      (sum, item) => sum + (item.unitPrice * item.quantity),
+      (int sum, SamagriItem item) => sum + item.lineTotal,
     );
 
     state = SamagriSessionState(

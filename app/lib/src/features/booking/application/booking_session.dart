@@ -1,5 +1,5 @@
-import '../../../core/pricing/pricing_service.dart';
-import '../domain/booking_draft.dart';
+import 'package:app/src/core/pricing/pricing_service.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
 
 enum BookingStatus {
   draft,
@@ -28,7 +28,10 @@ class BookingSession {
   static double ritualDakshina = 0;
   static double samagriTotal = 0;
   static double deliveryFee = 0; // Default to 0, sets to 50 if samagri used
-  static double platformFee = 20; // Standard Service Fee
+  static double get platformFee => PricingService.calculatePlatformFee(
+        ritualDakshina: ritualDakshina,
+        samagriTotal: samagriTotal,
+      );
 
   static double get totalAmount => PricingService.calculateTotal(
         ritualDakshina: ritualDakshina,
@@ -49,7 +52,7 @@ class BookingSession {
     ritualDakshina = 0;
     samagriTotal = 0;
     deliveryFee = 0;
-    platformFee = 20;
+    // platformFee is a getter, no reset needed
   }
 
   /// ✅ SAFE AUTO-CLEAR (BOOKING FLOW ONLY)

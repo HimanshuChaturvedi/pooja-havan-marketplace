@@ -64,10 +64,7 @@ class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> with Ti
     final transactionId = bookingSession.transactionId ?? 'BKG-${DateTime.now().millisecondsSinceEpoch}';
     final uniqueLogId = '$transactionId-${DateTime.now().millisecondsSinceEpoch}';
 
-    final samagri = ref.read(samagriSessionProvider);
-    final int poojaDakshina = 2100;
-    final int samagriCharges = (samagri.items.isNotEmpty && samagri.isPartOfBooking) ? samagri.totalAmount : 0;
-    final int computedTotal = poojaDakshina + samagriCharges;
+    final int computedTotal = bookingSession.totalAmount.toInt();
 
     TransactionLogService.append(
       TransactionLogEntry(
@@ -211,7 +208,7 @@ class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> with Ti
                       padding: const EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          _detailItem('Booking ID', booking?.referenceId ?? bookingSession.transactionId ?? '---'),
+                          _detailItem('Booking ID', bookingSession.referenceId ?? bookingSession.bookingId ?? booking?.referenceId ?? bookingSession.transactionId ?? '---'),
                           const Divider(height: 32, color: Colors.black12),
                           _detailItem('Account', supabase.auth.currentUser?.email ?? 'Sacred Guest'),
                           const Divider(height: 32, color: Colors.black12),
@@ -240,22 +237,18 @@ class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> with Ti
                                   final samagri = ref.read(samagriSessionProvider);
                                   String msg = 'Namaste Pandit ji,\n\n'
                                       'A pooja has been booked via Bharat Pooja Setu.\n\n'
-                                      'User ID: $displayUserId\n'
-                                      'Transaction ID: ${bookingSession.transactionId}\n\n'
-                                      'Ritual: ${booking.ritualName}\n'
-                                      'Address: ${booking.address ?? 'NA'}\n'
-                                      'Date: ${booking.selectedDate?.day}/${booking.selectedDate?.month}/${booking.selectedDate?.year}\n'
-                                      'Time: ${booking.selectedTime}\n\n';
-
+                                      'User ID: $displayUserId\n';
+                                  msg += 'Price Details:\n'
+                                      '- Ritual Dakshina: ₹${bookingSession.ritualDakshina.toInt()}\n';
+                                  
                                   if (samagri.items.isNotEmpty) {
-                                    msg += '📦 Samagri Included:\n';
-                                    for (var item in samagri.items) {
-                                      msg += '- ${item.name} × ${item.quantity}\n';
-                                    }
-                                    msg += '\n';
+                                    msg += '- Samagri Charges: ₹${bookingSession.samagriTotal.toInt()}\n';
                                   }
-
-                                  msg += 'Please confirm availability.\n\n'
+                                  
+                                  msg += '- Vendor Service Charge: ₹${bookingSession.deliveryFee.toInt()}\n'
+                                      '- Platform & Service Fee: ₹${bookingSession.platformFee.toInt()}\n'
+                                      '💰 Total Paid: ₹${bookingSession.totalAmount.toInt()}\n\n'
+                                      'Please confirm availability. Fulfillment & Delivery details will follow.\n\n'
                                       '— Bharat Pooja Setu';
 
                                   WhatsAppHelper.openChat(message: msg);

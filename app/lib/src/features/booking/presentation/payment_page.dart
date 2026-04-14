@@ -53,12 +53,15 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
     try {
       // 1. Create the booking/order in Supabase
       String? bookingId;
+      String? referenceId;
       if (booking != null) {
         final items = samagri.items.isNotEmpty ? samagri.items : null;
-        bookingId = await ref.read(bookingRepositoryProvider).createBooking(
+        final result = await ref.read(bookingRepositoryProvider).createBooking(
           booking,
           samagriItems: items,
         );
+        bookingId = result['bookingId'];
+        referenceId = result['referenceId'];
       } else if (samagri.sessionId != null) {
         // Handle standalone samagri order
         final orderId = await ref.read(samagriRepositoryProvider).createOrder(
@@ -96,6 +99,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       if (booking != null) {
         ref.read(bookingSessionProvider.notifier).updateStatus(BookingStatus.confirmed);
         ref.read(bookingSessionProvider.notifier).setTransactionId(response.paymentId!);
+        if (bookingId != null) ref.read(bookingSessionProvider.notifier).setBookingId(bookingId);
+        if (referenceId != null) ref.read(bookingSessionProvider.notifier).setReferenceId(referenceId);
         if (mounted) {
           ref.invalidate(bookingsProvider);
           context.go('/booking-success');
@@ -139,7 +144,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
 
   bool canPayNow(BookingSessionState bookingSession, SamagriSessionState samagri) {
     if (bookingSession.current != null) {
-      return bookingSession.status == BookingStatus.paymentPending;
+      // Allow if status is either draft or paymentPending (robustness fix)
+      return bookingSession.status != BookingStatus.confirmed;
     }
     if (samagri.sessionId == null) return false;
     if (samagri.addressText == null || samagri.addressText!.trim().isEmpty) {
@@ -294,19 +300,44 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
             _StaggeredFade(
               controller: _animController,
               delay: 200,
-              child: Text('Confirming as ${currentUser.email}', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGreen, fontWeight: FontWeight.w700)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Confirming as ${currentUser.email}', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGreen, fontWeight: FontWeight.w700)),
+                  if (booking != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                         const Icon(Icons.auto_awesome_rounded, color: AppColors.saffron, size: 20),
+                         const SizedBox(width: 8),
+                         Text(booking.ritualName ?? 'Ritual Order', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w800, color: AppColors.darkCharcoal)),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             ),
             const SizedBox(height: 40),
             _StaggeredFade(
               controller: _animController,
-              delay: 400,
+              delay: 300,
               child: PrimaryCard(
                 padding: const EdgeInsets.all(24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    Text('Total Payable', style: AppTextStyles.title.copyWith(fontSize: 18, fontWeight: FontWeight.w800)),
-                    Text('₹$amount', style: AppTextStyles.title.copyWith(color: AppColors.saffron, fontSize: 28, fontWeight: FontWeight.w900)),
+                    if (isDirectSamagri) ...[
+                      _priceItem('Samagri Charges', '₹${samagriSession.totalAmount}'),
+                      _priceItem('Vendor Service Charge', '₹${samagriSession.deliveryFee}'),
+                      _priceItem('Platform & Service Fee', '₹${samagriSession.platformFee}'),
+                      const Divider(height: 32, color: Colors.black12),
+                    ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total Payable', style: AppTextStyles.title.copyWith(fontSize: 18, fontWeight: FontWeight.w800)),
+                        Text('₹$amount', style: AppTextStyles.title.copyWith(color: AppColors.saffron, fontSize: 24, fontWeight: FontWeight.w900)),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -326,29 +357,42 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
                     Expanded(
                       child: Text(
                         booking != null
-                            ? 'Pay directly to the Pandit after the sacred ritual.'
-                            : 'Pay directly to the Vendor upon delivery of samagri.',
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.darkCharcoal.withOpacity(0.8), fontWeight: FontWeight.bold),
+                            ? 'Dakshina & Service Fee secured via Razorpay. Pandit will be assigned soon.'
+                            : 'Fulfillment & Delivery by Vendor. Payment secured via Razorpay.',
+                                style: AppTextStyles.bodySmall.copyWith(color: AppColors.darkCharcoal.withOpacity(0.8), fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-        child: PrimaryButton(
-          label: 'Confirm Booking ₹$amount',
-          onTap: payEnabled ? _handlePayment : null,
-          loading: _isLoading,
-        ),
-      ),
-    );
-  }
-}
+              bottomNavigationBar: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                child: PrimaryButton(
+                  label: 'Confirm Booking ₹$amount',
+                  onTap: payEnabled ? _handlePayment : null,
+                  loading: _isLoading,
+                ),
+              ),
+            );
+          }
+        
+          Widget _priceItem(String label, String value) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                   Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGrey, fontWeight: FontWeight.w600)),
+                   Text(value, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.darkCharcoal, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            );
+          }
+        }
 
 class _StaggeredFade extends StatelessWidget {
   final AnimationController controller;

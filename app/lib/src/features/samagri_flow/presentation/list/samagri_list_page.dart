@@ -223,7 +223,11 @@ class _SamagriListPageState extends ConsumerState<SamagriListPage> {
                 isPartOfBooking: inBookingFlow, 
               );
               
-              context.push('/samagri-summary');
+              if (inBookingFlow) {
+                context.push('/home-summary');
+              } else {
+                context.push('/samagri-summary');
+              }
             } : null,
             loading: false,
           ),

@@ -34,7 +34,7 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
       final samagri = ref.read(samagriSessionProvider);
       if (samagri.sessionId != null) {
         _isBookingFlow = samagri.isPartOfBooking; // ✅ SYNC FLOW TYPE
-        _items = samagri.items.map((i) => SamagriItem(
+        _items = samagri.items.map((dynamic i) => SamagriItem(
           itemId: i.itemId,
           name: i.name,
           unitPrice: i.unitPrice,
@@ -108,7 +108,6 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
     ref.read(bookingSessionProvider.notifier).updatePricing(
           samagriTotal: _itemsTotal.toDouble(),
           deliveryFee: deliveryFee,
-          platformFee: platformFee,
         );
   }
 
@@ -221,10 +220,9 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
     final bookingState = ref.watch(bookingSessionProvider);
     final samagriState = ref.watch(samagriSessionProvider);
     
-    final int localTotal = _itemsTotal.toInt() + 
-        (_isBookingFlow 
-            ? (bookingState.deliveryFee.toInt() + bookingState.platformFee.toInt()) 
-            : (samagriState.deliveryFee.toInt() + samagriState.platformFee.toInt()));
+    final int localTotal = _isBookingFlow 
+        ? _itemsTotal
+        : samagriState.finalTotal;
 
     return AppScaffold(
       title: 'Order Summary',
@@ -318,8 +316,10 @@ class _SamagriSummaryPageState extends ConsumerState<SamagriSummaryPage> {
                   }),
                   const Divider(height: 32, color: Colors.black12),
                   _priceLine('Items Total', _itemsTotal),
-                  _priceLine('Delivery Fee', bookingState.deliveryFee.toInt()),
-                  _priceLine('Platform Fee', bookingState.platformFee.toInt()),
+                  if (!_isBookingFlow) ...[
+                    _priceLine('Vendor Service Charge', samagriState.deliveryFee.toInt()),
+                    _priceLine('Platform & Service Fee', samagriState.platformFee.toInt()),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

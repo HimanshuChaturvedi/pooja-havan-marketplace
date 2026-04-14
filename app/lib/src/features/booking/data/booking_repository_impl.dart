@@ -9,7 +9,7 @@ import '../../samagri_flow/data/samagri_repository_provider.dart';
 
 class BookingRepositoryImpl implements BookingRepository {
   @override
-  Future<String> createBooking(BookingDraft booking, {List<session.SamagriItem>? samagriItems}) async {
+  Future<Map<String, String>> createBooking(BookingDraft booking, {List<session.SamagriItem>? samagriItems}) async {
     final user = supabase.auth.currentUser;
     final String? userId = user?.id;
     final String? email = user?.email;
@@ -117,7 +117,10 @@ class BookingRepositoryImpl implements BookingRepository {
       }
     }
 
-    return bookingId;
+    return {
+      'bookingId': bookingId,
+      'referenceId': refId ?? 'PHM-PENDING',
+    };
   }
   @override
   Future<List<BookingDraft>> getBookings() async {

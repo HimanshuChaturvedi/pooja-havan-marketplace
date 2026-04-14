@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/booking_draft.dart';
-import '../../../core/pricing/pricing_service.dart';
+import 'package:app/src/features/booking/domain/booking_draft.dart';
+import 'package:app/src/core/pricing/pricing_service.dart';
 
 enum BookingStatus {
   draft,
@@ -19,10 +19,12 @@ class BookingSessionState {
   final bool samagriDecisionTaken;
   final ActiveFlow? activeFlow;
   final String? transactionId;
+  final String? bookingId;
+  final String? referenceId;
   final double ritualDakshina;
   final double samagriTotal;
   final double deliveryFee;
-  final double platformFee;
+  // platformFee is now a getter
 
   BookingSessionState({
     this.current,
@@ -30,11 +32,17 @@ class BookingSessionState {
     this.samagriDecisionTaken = false,
     this.activeFlow,
     this.transactionId,
+    this.bookingId,
+    this.referenceId,
     this.ritualDakshina = 0,
     this.samagriTotal = 0,
     this.deliveryFee = 0,
-    this.platformFee = 20,
   });
+
+  double get platformFee => PricingService.calculatePlatformFee(
+        ritualDakshina: ritualDakshina,
+        samagriTotal: samagriTotal,
+      );
 
   double get totalAmount => PricingService.calculateTotal(
         ritualDakshina: ritualDakshina,
@@ -49,10 +57,11 @@ class BookingSessionState {
     bool? samagriDecisionTaken,
     ActiveFlow? activeFlow,
     String? transactionId,
+    String? bookingId,
+    String? referenceId,
     double? ritualDakshina,
     double? samagriTotal,
     double? deliveryFee,
-    double? platformFee,
   }) {
     return BookingSessionState(
       current: current ?? this.current,
@@ -60,10 +69,11 @@ class BookingSessionState {
       samagriDecisionTaken: samagriDecisionTaken ?? this.samagriDecisionTaken,
       activeFlow: activeFlow ?? this.activeFlow,
       transactionId: transactionId ?? this.transactionId,
+      bookingId: bookingId ?? this.bookingId,
+      referenceId: referenceId ?? this.referenceId,
       ritualDakshina: ritualDakshina ?? this.ritualDakshina,
       samagriTotal: samagriTotal ?? this.samagriTotal,
       deliveryFee: deliveryFee ?? this.deliveryFee,
-      platformFee: platformFee ?? this.platformFee,
     );
   }
 }
@@ -93,25 +103,38 @@ class BookingSessionNotifier extends StateNotifier<BookingSessionState> {
     state = state.copyWith(transactionId: id);
   }
 
+  void setBookingId(String id) {
+    state = state.copyWith(bookingId: id);
+  }
+
+  void setReferenceId(String id) {
+    state = state.copyWith(referenceId: id);
+  }
+
   void updatePricing({
     double? ritualDakshina,
     double? samagriTotal,
     double? deliveryFee,
-    double? platformFee,
   }) {
+    final newDakshina = ritualDakshina ?? state.ritualDakshina;
+    final newSamagriTotal = samagriTotal ?? state.samagriTotal;
+    final newPlatformFee = PricingService.calculatePlatformFee(
+      ritualDakshina: newDakshina,
+      samagriTotal: newSamagriTotal,
+    );
+
     final updatedDraft = state.current?.copyWith(
-      poojaDakshina: ritualDakshina ?? state.ritualDakshina,
-      samagriCharges: samagriTotal ?? state.samagriTotal,
+      poojaDakshina: newDakshina,
+      samagriCharges: newSamagriTotal,
       deliveryFee: deliveryFee ?? state.deliveryFee,
-      platformFee: platformFee ?? state.platformFee,
+      platformFee: newPlatformFee,
     );
 
     state = state.copyWith(
       current: updatedDraft,
-      ritualDakshina: ritualDakshina,
-      samagriTotal: samagriTotal,
-      deliveryFee: deliveryFee,
-      platformFee: platformFee,
+      ritualDakshina: newDakshina,
+      samagriTotal: newSamagriTotal,
+      deliveryFee: deliveryFee ?? state.deliveryFee,
     );
   }
 
