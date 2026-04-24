@@ -1,4 +1,7 @@
 import '../../../core/supabase/supabase_client.dart';
+import '../../../core/config/whatsapp_config.dart';
+import '../../../core/services/whatsapp_service.dart';
+import '../../booking/domain/booking_draft.dart';
 import '../application/samagri_session.dart' as session;
 import '../state/samagri_item.dart';
 import '../../../core/utils/logger.dart';
@@ -20,6 +23,9 @@ abstract class SamagriRepository {
 }
 
 class SupabaseSamagriRepository implements SamagriRepository {
+  final WhatsAppService _whatsApp;
+  SupabaseSamagriRepository(this._whatsApp);
+
   @override
   Future<List<SamagriItem>> getItems() async {
     try {
@@ -108,10 +114,64 @@ class SupabaseSamagriRepository implements SamagriRepository {
       await supabase.from('samagri_order_items').insert(itemsToInsert);
       AppLogger.debug('Successfully inserted items.');
 
+      // 3. Trigger Notifications (Async)
+      _sendSamagriNotifications(userId, orderId.toString(), referenceId ?? 'PHM-SMG-TBD', totalAmount, matchedVendorId);
+
       return orderId.toString();
     } catch (e) {
       AppLogger.error('Error creating samagri order', e);
       rethrow;
+    }
+  }
+
+  /// 🚀 INTERNAL HELPER: ORCHESTRATE SAMAGRI NOTIFICATIONS
+  Future<void> _sendSamagriNotifications(
+    String userId, 
+    String orderId, 
+    String refId, 
+    double amount, 
+    String? vendorId
+  ) async {
+    try {
+      AppLogger.debug('ORCHESTRATING Samagri Notifs: User=$userId, Vendor=$vendorId');
+
+      // A. Alert the Customer
+      String? customerPhone = supabase.auth.currentUser?.phone;
+      if (customerPhone == null) {
+        try {
+          final userResponse = await supabase.from('profiles').select('phone').eq('id', userId).maybeSingle();
+          customerPhone = userResponse?['phone'];
+        } catch (e) {
+          AppLogger.debug('Note: Profile lookup failed for Samagri order. Using mock fallback.');
+        }
+      }
+
+      if (customerPhone == null && WhatsAppConfig.useMockApi) {
+        customerPhone = '+910000000000';
+      }
+
+      if (customerPhone != null) {
+        AppLogger.debug('Triggering Samagri Confirmation: $customerPhone');
+        await _whatsApp.sendSamagriOrderConfirmation(customerPhone, refId, amount);
+        // Sequential Delay
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+
+      // B. Alert the Vendor
+      if (vendorId != null) {
+        try {
+          final vendorResponse = await supabase.from('samagri_vendors').select('phone_number').eq('id', vendorId).maybeSingle();
+          final vendorPhone = vendorResponse?['phone_number'];
+          if (vendorPhone != null) {
+            AppLogger.debug('Triggering Vendor Notification (Samagri): $vendorPhone');
+            await _whatsApp.sendVendorNewOrder(vendorPhone, 'Standalone Samagri Order', 'See Order Details', amount);
+          }
+        } catch (e) {
+          AppLogger.error('Vendor Notification Error (Samagri)', e);
+        }
+      }
+    } catch (e) {
+      AppLogger.error('FAILED to complete Samagri notifications', e);
     }
   }
  

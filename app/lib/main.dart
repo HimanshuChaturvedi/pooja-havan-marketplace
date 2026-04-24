@@ -5,6 +5,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/core/routing/app_router.dart';
 import 'src/theme/components/app_theme.dart';
 import 'src/logs/transaction_log.dart';
+import 'src/core/services/whatsapp_service.dart';
+import 'src/theme/components/app_colors.dart';
+import 'src/core/utils/logger.dart';
+
+/// 🔑 Global key for SnackBar alerts across the whole app
+final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,8 +65,39 @@ class PoojaHavanApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 📣 Listen for mock WhatsApp messages GLOBALLY
+    ref.listen(lastMockMessageProvider, (previous, next) async {
+      if (next != null) {
+        AppLogger.debug('Global WhatsApp Listener triggered! Message: $next');
+        
+        // Wait 200ms for current transitions to settle
+        await Future.delayed(const Duration(milliseconds: 200));
+        
+        final state = scaffoldMessengerKey.currentState;
+        if (state != null) {
+          // REMOVED hideCurrentSnackBar() to allow queueing
+          state.showSnackBar(
+            SnackBar(
+              content: Text(next),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppColors.saffron,
+              duration: const Duration(seconds: 10), // Long enough to read
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () => state.hideCurrentSnackBar(),
+              ),
+            ),
+          );
+        } else {
+          AppLogger.error('SCM-KEY: ScaffoldMessengerState was NULL! Could not show alert.');
+        }
+      }
+    });
+
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Pooja Havan App',
       routerConfig: router,

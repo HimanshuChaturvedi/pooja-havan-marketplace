@@ -3,8 +3,11 @@ import 'booking_repository.dart';
 import 'booking_repository_impl.dart';
 import '../domain/booking_draft.dart';
 
+import '../../../core/services/whatsapp_service.dart';
+
 final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
-  return BookingRepositoryImpl();
+  final whatsApp = ref.read(whatsappServiceProvider);
+  return BookingRepositoryImpl(whatsApp);
 });
 
 // autoDispose: cache clears when MyBookingsPage is unmounted

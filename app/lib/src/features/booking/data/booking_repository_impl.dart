@@ -6,8 +6,14 @@ import '../../samagri_flow/application/samagri_session.dart' as session;
 import '../../../core/utils/logger.dart';
 import '../../samagri_flow/data/samagri_repository.dart';
 import '../../samagri_flow/data/samagri_repository_provider.dart';
+import '../../../core/services/whatsapp_service.dart';
+import '../../../core/config/whatsapp_config.dart';
 
 class BookingRepositoryImpl implements BookingRepository {
+  final WhatsAppService _whatsApp;
+  
+  BookingRepositoryImpl(this._whatsApp);
+
   @override
   Future<Map<String, String>> createBooking(BookingDraft booking, {List<session.SamagriItem>? samagriItems}) async {
     final user = supabase.auth.currentUser;
@@ -38,6 +44,7 @@ class BookingRepositoryImpl implements BookingRepository {
     final rId = toUuid(booking.ritualId);
     final cId = toUuid(booking.cityId);
     final pId = toUuid(booking.panditId);
+    String? matchedVendorId;
 
     // 1. Insert the main booking (Matching User Schema exactly)
     final response = await supabase.from('bookings').insert({
@@ -76,11 +83,10 @@ class BookingRepositoryImpl implements BookingRepository {
         final samagriItemsTotal = samagriItems.fold<double>(0, (sum, i) => sum + (i.unitPrice * i.quantity));
         
         // FIND NEAREST VENDOR FOR LINKED ORDER
-        String? matchedVendorId;
         if (booking.latitude != null && booking.longitude != null) {
           try {
             // Re-using the logic from SamagriRepository
-            final samagriRepo = SupabaseSamagriRepository(); 
+            final samagriRepo = SupabaseSamagriRepository(_whatsApp); 
             matchedVendorId = await samagriRepo.findNearestVendor(booking.latitude!, booking.longitude!);
           } catch (e) {
             AppLogger.error('Failed to match vendor for linked order', e);
@@ -117,11 +123,101 @@ class BookingRepositoryImpl implements BookingRepository {
       }
     }
 
+    // 3. SEND WHATSAPP NOTIFICATIONS (ASYNCHRONOUSLY)
+    _sendBookingNotifications(userId, refId, booking, pId, matchedVendorId);
+
     return {
       'bookingId': bookingId,
       'referenceId': refId ?? 'PHM-PENDING',
     };
   }
+
+  /// 🚀 INTERNAL HELPER: ORCHESTRATE NOTIFICATIONS
+  Future<void> _sendBookingNotifications(
+    String userId, 
+    String? refId, 
+    BookingDraft booking, 
+    String? panditId,
+    String? vendorId,
+  ) async {
+    AppLogger.debug('🔴 NOTIF-ORCHESTRATOR START');
+    AppLogger.debug('Params: User=$userId, Pandit=$panditId, Vendor=$vendorId');
+    AppLogger.debug('Ritual: ${booking.ritualName}');
+    
+    // Safety check: is userId null? (Shouldn't be)
+    if (userId == null || userId.isEmpty) {
+      AppLogger.error('NOTIF-ERROR: userId is NULL! Cannot proceed with notifications.');
+      return;
+    }
+
+    final dateStr = booking.selectedDate != null 
+        ? "${booking.selectedDate!.day}/${booking.selectedDate!.month}/${booking.selectedDate!.year} ${booking.selectedTime ?? ''}"
+        : "TBD";
+
+    // A. Alert the Customer
+    try {
+      String? customerPhone = supabase.auth.currentUser?.phone;
+      
+      if (customerPhone == null) {
+        try {
+          final userResponse = await supabase.from('profiles').select('phone').eq('id', userId).maybeSingle();
+          customerPhone = userResponse?['phone'];
+        } catch (e) {
+          AppLogger.debug('Note: Profile lookup failed (Table likely missing). Continuing...');
+        }
+      }
+      
+      if (customerPhone == null && WhatsAppConfig.useMockApi) {
+        AppLogger.debug('Customer phone is NULL. Using DEV_TEST fallback for mock alerts.');
+        customerPhone = '+910000000000'; 
+      }
+
+      if (customerPhone != null) {
+        AppLogger.debug('✅ TRIGGERING Customer Conf for: $customerPhone');
+        await _whatsApp.sendBookingConfirmation(customerPhone, booking.ritualName, dateStr);
+        // ⏱️ Delay to allow SnackBar to be seen before next one
+        await Future.delayed(const Duration(milliseconds: 1500));
+      } else {
+        AppLogger.warn('❌ SKIPPING customer notification: No phone number available.');
+      }
+    } catch (e) {
+      AppLogger.error('Customer Notification Logic Error', e);
+    }
+
+    // B. Alert the Pandit (if assigned)
+    if (panditId != null) {
+      try {
+        final panditResponse = await supabase.from('pandit_profiles').select('phone_number').eq('id', panditId).maybeSingle();
+        final panditPhone = panditResponse?['phone_number'];
+        if (panditPhone != null) {
+          AppLogger.debug('Triggering Pandit Assignment: $panditPhone');
+          await _whatsApp.sendPanditAssignment(panditPhone, booking.ritualName, booking.address ?? 'Client Location', dateStr);
+          await Future.delayed(const Duration(milliseconds: 1500));
+        } else {
+          AppLogger.warn('Skipping pandit notification: Pandit phone number not found.');
+        }
+      } catch (e) {
+        AppLogger.error('Pandit Notification Logic Error', e);
+      }
+    }
+
+    // C. Alert the Vendor (if assigned)
+    if (vendorId != null) {
+      try {
+        final vendorResponse = await supabase.from('samagri_vendors').select('phone_number').eq('id', vendorId).maybeSingle();
+        final vendorPhone = vendorResponse?['phone_number'];
+        if (vendorPhone != null) {
+          AppLogger.debug('Triggering Vendor Notification: $vendorPhone');
+          await _whatsApp.sendVendorNewOrder(vendorPhone, booking.ritualName, booking.address ?? 'Client Location', booking.samagriCharges);
+        } else {
+          AppLogger.warn('Skipping vendor notification: Vendor phone number not found.');
+        }
+      } catch (e) {
+        AppLogger.error('Vendor Notification Logic Error', e);
+      }
+    }
+  }
+
   @override
   Future<List<BookingDraft>> getBookings() async {
     final String? userId = supabase.auth.currentUser?.id;

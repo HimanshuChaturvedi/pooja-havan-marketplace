@@ -10,8 +10,10 @@ import '../state/pandit_onboarding_provider.dart';
 import '../../../core/supabase/supabase_client.dart'; // To get current user id
 import 'package:supabase_flutter/supabase_flutter.dart'; 
 import '../../services/domain/explore_service.dart';
-import 'package:image_picker/image_picker.dart'; // [NEW]
-import 'dart:io'; // [NEW]
+import 'package:image_picker/image_picker.dart'; 
+import 'dart:io';
+import 'dart:math'; // [NEW] for OTP generation
+import '../../../core/services/whatsapp_service.dart'; // [NEW]
 
 class PanditOnboardingPage extends ConsumerStatefulWidget {
   const PanditOnboardingPage({super.key});
@@ -153,48 +155,33 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) return;
 
-    // Developer Mock Bypass
-    if (phone == '1234567890' || phone == '0000000000') {
-      setState(() {
-        _isPhoneOtpSent = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('TEST MODE: Code 123456 sent to WhatsApp')),
-      );
-      return;
-    }
-
     if (phone.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid 10-digit number.')));
       return;
     }
 
-    // Format phone number with country code if not present (assuming +91 for India)
+    // Format phone number with country code
     final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
 
+    // Generate 6-digit OTP
+    final random = Random();
+    final otp = (100000 + random.nextInt(900000)).toString();
+
     try {
-      // In Supabase, to link/verify a new phone for an existing user, we use:
-      await supabase.auth.updateUser(UserAttributes(phone: formattedPhone));
-      setState(() => _isPhoneOtpSent = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('OTP sent to your WhatsApp.')));
+      final success = await ref.read(whatsappServiceProvider).sendOtp(formattedPhone, otp);
+      if (success) {
+        setState(() => _isPhoneOtpSent = true);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification code sent to your WhatsApp.')));
+      } else {
+        throw 'Failed to send WhatsApp message';
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error sending OTP: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
   Future<void> _verifyPhoneOtp() async {
     final otp = _otpController.text.trim();
-    
-    // Developer Mock Bypass
-    if ((_phoneController.text == '1234567890' || _phoneController.text == '0000000000') && otp == '123456') {
-      setState(() {
-        _isPhoneVerified = true;
-        _isPhoneOtpSent = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp number verified successfully!'), backgroundColor: Colors.green));
-      return;
-    }
-
     final phone = _phoneController.text.trim();
     final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
 
@@ -204,18 +191,19 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
     }
 
     try {
-      await supabase.auth.verifyOTP(
-        type: OtpType.phoneChange,
-        phone: formattedPhone,
-        token: otp,
-      );
-      setState(() {
-         _isPhoneVerified = true;
-         _isPhoneOtpSent = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp number verified successfully!'), backgroundColor: Colors.green));
+      final isVerified = await ref.read(whatsappServiceProvider).verifyOtp(formattedPhone, otp);
+      
+      if (isVerified) {
+        setState(() {
+          _isPhoneVerified = true;
+          _isPhoneOtpSent = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp number verified successfully!'), backgroundColor: Colors.green));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid or expired OTP. Please try again.'), backgroundColor: Colors.red));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid OTP: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     }
   }
 

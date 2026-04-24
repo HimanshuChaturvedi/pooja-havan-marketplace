@@ -10,6 +10,7 @@ import 'package:app/src/core/utils/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:app/src/core/services/whatsapp_service.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   final String? redirectTo;
@@ -358,6 +359,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     loading: _isLoading,
                     onTap: _isOtpSent ? _handleVerifyOtp : _handleSendOtp,
                   ),
+                  const SizedBox(height: 16),
                   
                   Center(
                     child: Text(

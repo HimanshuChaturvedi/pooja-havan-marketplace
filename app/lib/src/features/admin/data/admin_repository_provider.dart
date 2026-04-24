@@ -10,6 +10,10 @@ final pendingPanditsProvider = FutureProvider<List<dynamic>>((ref) {
   return ref.watch(adminRepositoryProvider).fetchPendingPandits();
 });
 
+final allPanditsProvider = FutureProvider<List<dynamic>>((ref) {
+  return ref.watch(adminRepositoryProvider).fetchAllPandits();
+});
+
 final pendingVendorsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) {
   return ref.watch(adminRepositoryProvider).fetchPendingVendors();
 });

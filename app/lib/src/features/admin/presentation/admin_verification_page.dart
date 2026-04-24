@@ -59,31 +59,64 @@ class _AdminVerificationPageState extends ConsumerState<AdminVerificationPage> w
   }
 }
 
-class _PanditListTab extends ConsumerWidget {
+class _PanditListTab extends ConsumerStatefulWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final pendingAsync = ref.watch(pendingPanditsProvider);
-    return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(pendingPanditsProvider),
-      color: AppColors.saffron,
-      child: pendingAsync.when(
-        data: (pandits) => pandits.isEmpty
-            ? const Center(child: Text('No pending Pandits found.'))
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: pandits.length,
-                itemBuilder: (context, index) {
-                  final pandit = pandits[index] as PanditProfile;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _PanditVerificationCard(pandit: pandit),
-                  );
-                },
+  ConsumerState<_PanditListTab> createState() => _PanditListTabState();
+}
+
+class _PanditListTabState extends ConsumerState<_PanditListTab> {
+  bool _showAll = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = _showAll ? allPanditsProvider : pendingPanditsProvider;
+    final asyncValue = ref.watch(provider);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              FilterChip(
+                label: Text(_showAll ? 'Showing All' : 'Showing Pending'),
+                selected: _showAll,
+                onSelected: (v) => setState(() => _showAll = v),
+                selectedColor: AppColors.saffron.withOpacity(0.2),
+                checkmarkColor: AppColors.saffron,
               ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, __) => Center(child: Text('Error: $e')),
-      ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(pendingPanditsProvider);
+              ref.invalidate(allPanditsProvider);
+            },
+            color: AppColors.saffron,
+            child: asyncValue.when(
+              data: (pandits) => pandits.isEmpty
+                  ? Center(child: Text(_showAll ? 'No Pandits found.' : 'No pending Pandits found.'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: pandits.length,
+                      itemBuilder: (context, index) {
+                        final pandit = pandits[index] as PanditProfile;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _PanditVerificationCard(pandit: pandit),
+                        );
+                      },
+                    ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, __) => Center(child: Text('Error: $e')),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -186,15 +219,7 @@ class _PanditVerificationCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('PENDING',
-                      style: TextStyle(color: Colors.orange.shade700, fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
+                _buildStatusBadge(pandit.verificationStatus),
               ],
             ),
             const Divider(height: 32),
@@ -222,25 +247,38 @@ class _PanditVerificationCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _updateStatus(ref, pandit.id, PanditVerificationStatus.rejected),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                    child: const Text('Reject'),
+            if (pandit.verificationStatus == PanditVerificationStatus.pending)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _updateStatus(ref, pandit.id, PanditVerificationStatus.rejected),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Reject'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _updateStatus(ref, pandit.id, PanditVerificationStatus.verified),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                    child: const Text('Approve'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _updateStatus(ref, pandit.id, PanditVerificationStatus.verified),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                      child: const Text('Approve'),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _updateStatus(ref, pandit.id, PanditVerificationStatus.pending),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                      child: const Text('Move to Pending'),
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -301,10 +339,19 @@ class _PanditVerificationCard extends ConsumerWidget {
     );
   }
 
+  Widget _buildStatusBadge(PanditVerificationStatus status) {
+    Color color = Colors.orange;
+    if (status == PanditVerificationStatus.verified) color = Colors.green;
+    if (status == PanditVerificationStatus.rejected) color = Colors.red;
+
+    return _Badge(label: 'PANDIT ${status.name.toUpperCase()}', color: color);
+  }
+
   Future<void> _updateStatus(WidgetRef ref, String id, PanditVerificationStatus status) async {
     try {
       await ref.read(adminRepositoryProvider).updateStatus(id, status);
       ref.invalidate(pendingPanditsProvider);
+      ref.invalidate(allPanditsProvider);
       
       if (ref.context.mounted) {
         ScaffoldMessenger.of(ref.context).showSnackBar(
@@ -378,6 +425,18 @@ class _VendorVerificationCard extends ConsumerWidget {
                       onPressed: () => _updateVendorStatus(ref, vendor['id'], 'VERIFIED'),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                       child: const Text('Approve'),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _updateVendorStatus(ref, vendor['id'], 'PENDING'),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                      child: const Text('Move to Pending'),
                     ),
                   ),
                 ],

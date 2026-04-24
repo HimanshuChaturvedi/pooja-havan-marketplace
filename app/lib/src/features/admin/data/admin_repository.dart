@@ -16,6 +16,15 @@ class AdminRepository {
     return (response as List).map((json) => PanditProfile.fromJson(json)).toList();
   }
 
+  Future<List<PanditProfile>> fetchAllPandits() async {
+    final response = await _supabase
+        .from('pandit_profiles')
+        .select()
+        .order('created_at', ascending: false);
+
+    return (response as List).map((json) => PanditProfile.fromJson(json)).toList();
+  }
+
   Future<void> updateStatus(String id, PanditVerificationStatus status) async {
     final statusStr = status.name.toUpperCase();
     await _supabase

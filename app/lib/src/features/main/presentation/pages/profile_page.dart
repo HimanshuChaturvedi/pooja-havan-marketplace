@@ -231,7 +231,9 @@ class ProfilePage extends ConsumerWidget {
                 label: 'Sign Out',
                 onTap: () async {
                   await supabase.auth.signOut();
-                  // Stay on current tab (Profile) as a guest
+                  // 🔄 Invalidate profile providers so they fetch fresh data on next login
+                  ref.invalidate(panditProfileFutureProvider);
+                  ref.invalidate(vendorProfileFutureProvider);
                 },
               ),
             ],

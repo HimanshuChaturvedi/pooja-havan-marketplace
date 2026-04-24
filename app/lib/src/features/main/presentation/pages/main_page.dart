@@ -8,6 +8,7 @@ import 'package:app/src/features/main/presentation/pages/profile_page.dart';
 
 import 'package:app/src/features/main/presentation/state/main_navigation_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app/src/core/services/whatsapp_service.dart';
 
 class MainPage extends ConsumerWidget {
   const MainPage({super.key});
