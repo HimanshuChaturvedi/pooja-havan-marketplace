@@ -27,6 +27,7 @@ class PaymentPage extends ConsumerStatefulWidget {
 
 class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
+  String? _pendingOrderId;
   bool _isLoading = false;
 
   @override
@@ -51,56 +52,31 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
     final samagri = ref.read(samagriSessionProvider);
 
     try {
-      // 1. Create the booking/order in Supabase
-      String? bookingId;
-      String? referenceId;
-      if (booking != null) {
-        final items = samagri.items.isNotEmpty ? samagri.items : null;
-        final result = await ref.read(bookingRepositoryProvider).createBooking(
-          booking,
-          samagriItems: items,
-        );
-        bookingId = result['bookingId'];
-        referenceId = result['referenceId'];
-      } else if (samagri.sessionId != null) {
-        // Handle standalone samagri order
-        final orderId = await ref.read(samagriRepositoryProvider).createOrder(
-          items: samagri.items,
-          totalAmount: samagri.finalTotal.toDouble(),
-          deliveryAddress: samagri.addressText,
-          latitude: samagri.latitude,
-          longitude: samagri.longitude,
-          deliveryFee: samagri.deliveryFee.toDouble(),
-          platformFee: samagri.platformFee.toDouble(),
-        );
-        // Link to payment record
-        bookingId = orderId; 
-      }
+      final String? orderId = _pendingOrderId;
+      if (orderId == null) throw Exception('Pending order ID not found');
 
-      // 2. Record payment in Supabase
+      // 1. Record payment in Supabase
       await ref.read(paymentRepositoryProvider).recordPayment(
         razorpayPaymentId: response.paymentId!,
         amount: bookingSession.totalAmount,
-        bookingId: booking != null ? bookingId : null,
-        samagriOrderId: booking == null ? bookingId : null,
+        bookingId: booking != null ? orderId : null,
+        samagriOrderId: booking == null ? orderId : null,
         status: 'captured',
       );
 
-      // 3. Update Status to PAID
-      if (bookingId != null) {
-        if (booking != null) {
-           await ref.read(bookingRepositoryProvider).updateBookingStatus(bookingId, BookingStatusDetailed.paid);
-        } else {
-           await ref.read(samagriVendorRepositoryProvider).updateOrderStatus(bookingId, 'paid');
-        }
+      // 2. Update Status to PAID
+      if (booking != null) {
+         await ref.read(bookingRepositoryProvider).updateBookingStatus(orderId, BookingStatusDetailed.paid);
+      } else {
+         await ref.read(samagriVendorRepositoryProvider).updateOrderStatus(orderId, 'paid');
       }
 
-      // 4. Update UI State & Navigate
+      // 3. Update UI State & Navigate
       if (booking != null) {
         ref.read(bookingSessionProvider.notifier).updateStatus(BookingStatus.confirmed);
         ref.read(bookingSessionProvider.notifier).setTransactionId(response.paymentId!);
-        if (bookingId != null) ref.read(bookingSessionProvider.notifier).setBookingId(bookingId);
-        if (referenceId != null) ref.read(bookingSessionProvider.notifier).setReferenceId(referenceId);
+        ref.read(bookingSessionProvider.notifier).setBookingId(orderId);
+        // Note: Reference ID was already set during order creation
         if (mounted) {
           ref.invalidate(bookingsProvider);
           context.go('/booking-success');
@@ -153,7 +129,6 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
     }
     return true;
   }
-
   Future<void> _handlePayment() async {
     if (_isLoading) return;
     
@@ -177,21 +152,48 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
         ? bookingSession.totalAmount 
         : samagriSession.finalTotal.toDouble();
 
-    debugPrint('PaymentPage: amount=$amountToPay, sessionId=${bookingSession.current?.referenceId ?? samagriSession.sessionId}');
-
     final String orderDescription = bookingSession.current != null 
         ? 'Ritual Booking: ${bookingSession.current?.ritualName}'
         : 'Samagri Order: ${samagriSession.sessionId}';
 
     try {
-      debugPrint('PaymentPage: Opening Razorpay SDK...');
+      debugPrint('PaymentPage: Creating PENDING order in database...');
+      String? orderId;
+      String? referenceId;
+
+      if (bookingSession.current != null) {
+        final items = samagriSession.items.isNotEmpty ? samagriSession.items : null;
+        final result = await ref.read(bookingRepositoryProvider).createBooking(
+          bookingSession.current!,
+          samagriItems: items,
+        );
+        orderId = result['bookingId'];
+        referenceId = result['referenceId'];
+      } else if (samagriSession.sessionId != null) {
+        orderId = await ref.read(samagriRepositoryProvider).createOrder(
+          items: samagriSession.items,
+          totalAmount: samagriSession.finalTotal.toDouble(),
+          deliveryAddress: samagriSession.addressText,
+          latitude: samagriSession.latitude,
+          longitude: samagriSession.longitude,
+          deliveryFee: samagriSession.deliveryFee.toDouble(),
+          platformFee: samagriSession.platformFee.toDouble(),
+        );
+        // For samagri standalone, reference ID is handled inside createOrder
+      }
+
+      if (orderId == null) throw Exception('Failed to create pending order');
+      setState(() => _pendingOrderId = orderId);
+
+      debugPrint('PaymentPage: Opening Razorpay SDK for Order ID: $orderId');
       ref.read(razorpayServiceProvider).openCheckout(
         amount: amountToPay,
         contact: user.phone ?? '', 
         email: user.email ?? '',
         description: orderDescription,
         notes: {
-          'session_id': bookingSession.current?.referenceId ?? samagriSession.sessionId ?? 'N/A',
+          'order_id': orderId,
+          'reference_id': referenceId ?? 'N/A',
           'user_id': user.id,
           'type': bookingSession.current != null ? 'ritual' : 'samagri',
         },
@@ -200,7 +202,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       debugPrint('PaymentPage ERROR: $e');
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open payment gateway: $e')),
+        SnackBar(content: Text('Could not initiate payment: $e')),
       );
     }
   }
