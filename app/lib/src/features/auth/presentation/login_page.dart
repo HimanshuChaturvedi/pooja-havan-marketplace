@@ -221,12 +221,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  Future<void> _launchPrivacyPolicy() async {
-    final url = Uri.parse('https://himanshuchaturvedi.github.io/pooja-havan-marketplace/privacy-policy.html');
+  Future<void> _launchUrl(String urlString) async {
+    final url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open Privacy Policy link')),
+          SnackBar(content: Text('Could not open $urlString')),
         );
       }
     }
@@ -388,11 +388,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           'By continuing, you agree to our',
                           style: AppTextStyles.bodySmall.copyWith(color: AppColors.softGrey),
                         ),
-                        TextButton(
-                          onPressed: _launchPrivacyPolicy,
-                          child: const Text('Privacy Policy', 
-                            style: TextStyle(color: AppColors.saffron, fontWeight: FontWeight.w800, decoration: TextDecoration.underline),
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: () => _launchUrl('https://bharatpoojasetu.com/privacy'),
+                              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
+                              child: const Text('Privacy Policy', 
+                                style: TextStyle(color: AppColors.saffron, fontWeight: FontWeight.w800, decoration: TextDecoration.underline),
+                              ),
+                            ),
+                            Text('&', style: AppTextStyles.bodySmall.copyWith(color: AppColors.softGrey)),
+                            TextButton(
+                              onPressed: () => _launchUrl('https://bharatpoojasetu.com/terms-and-conditions'),
+                              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
+                              child: const Text('Terms and Conditions', 
+                                style: TextStyle(color: AppColors.saffron, fontWeight: FontWeight.w800, decoration: TextDecoration.underline),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 24),
                         const Divider(indent: 40, endIndent: 40, color: Colors.black12),
