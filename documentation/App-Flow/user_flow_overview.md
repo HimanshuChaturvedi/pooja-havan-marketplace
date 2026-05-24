@@ -127,6 +127,7 @@ These are planned and will integrate smoothly:
 - Push notifications  
 - Multi-language flow  
 - International service flow (for NRIs)
+- WhatsApp Automated Booking Confirmations (requires collecting phone number at checkout)
 
 ---
 

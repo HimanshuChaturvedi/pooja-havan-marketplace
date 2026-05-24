@@ -146,6 +146,8 @@ Multi-language support
 
 Referral system
 
+WhatsApp Automated Booking Confirmations (requires phone number collection)
+
 1.6 Free Tools & Cost Constraints
 
 Since the project must use free or very low-cost options:

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
+import 'dart:math';
 import '../../location/presentation/pages/location_page.dart';
 import '../data/vendor_repository.dart';
+import 'package:app/src/core/services/whatsapp_service.dart';
 
 class VendorRegistrationPage extends ConsumerStatefulWidget {
   const VendorRegistrationPage({super.key});
@@ -19,17 +21,73 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _otpController = TextEditingController();
   
   double? _lat;
   double? _lon;
   bool _isLoading = false;
+  bool _isPhoneVerified = false;
+  bool _isPhoneOtpSent = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _otpController.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendPhoneOtp() async {
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) return;
+
+    if (phone.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid 10-digit number.')));
+      return;
+    }
+
+    final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
+    final random = Random();
+    final otp = (100000 + random.nextInt(900000)).toString();
+
+    try {
+      final success = await ref.read(whatsappServiceProvider).sendOtp(formattedPhone, otp);
+      if (success) {
+        setState(() => _isPhoneOtpSent = true);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification code sent to your WhatsApp.')));
+      } else {
+        throw 'Failed to send WhatsApp message';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _verifyPhoneOtp() async {
+    final otp = _otpController.text.trim();
+    final phone = _phoneController.text.trim();
+    final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
+
+    if (otp.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid 6-digit OTP.')));
+      return;
+    }
+
+    try {
+      final isVerified = await ref.read(whatsappServiceProvider).verifyOtp(formattedPhone, otp);
+      if (isVerified) {
+        setState(() {
+          _isPhoneVerified = true;
+          _isPhoneOtpSent = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone number verified successfully!')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid OTP. Please try again.')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   Future<void> _pickLocation() async {
@@ -48,6 +106,10 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_isPhoneVerified) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please verify your phone number first')));
+      return;
+    }
     if (_lat == null || _lon == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select your shop location on map')),
@@ -109,11 +171,66 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
 
               Text('Contact Number', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: _designInputDecoration('10-digit mobile number'),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      readOnly: _isPhoneVerified,
+                      decoration: _designInputDecoration('10-digit mobile number').copyWith(
+                        prefixIcon: const Icon(Icons.phone, color: AppColors.saffron),
+                      ),
+                      onChanged: (val) {
+                        if (_isPhoneVerified) setState(() => _isPhoneVerified = false);
+                      },
+                    ),
+                  ),
+                  if (!_isPhoneVerified) ...[
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _sendPhoneOtp,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.saffron,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Send OTP', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ] else ...[
+                    const SizedBox(width: 12),
+                    const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                  ],
+                ],
               ),
+              if (_isPhoneOtpSent && !_isPhoneVerified) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _otpController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        decoration: _designInputDecoration('Enter 6-digit OTP').copyWith(counterText: ''),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _verifyPhoneOtp,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text('Verify', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 32),
 
               Row(

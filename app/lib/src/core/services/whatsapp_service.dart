@@ -27,56 +27,28 @@ class WhatsAppService {
       print('DEBUG: OTP DB Log error: $e');
       rethrow; // Throw the actual error (e.g. "Table not found")
     }
-    // 2. Send via WhatsApp API
-    if (WhatsAppConfig.useMockApi) {
-      final msg = 'Your Bharat Pooja Setu verification code is: $code';
-      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone');
-      AppLogger.debug('💬 Message: $msg');
-      
-      // Update provider to show in app UI
-      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
-      AppLogger.debug('Updating lastMockMessageProvider...');
-      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to $phone] ($timestamp)\n$msg';
-      
-      return true;
+    // 2. Send via WhatsApp Edge Function (Production Ready)
+    try {
+      final response = await supabase.functions.invoke(
+        'whatsapp-notify',
+        body: {
+          'phone': phone,
+          'template_name': 'otp_verification',
+          'parameters': [code], // Passing the OTP code as a parameter
+        },
+      );
+
+      if (response.status == 200 || response.status == 201) {
+        AppLogger.info('✅ OTP sent via Edge Function');
+        return true;
+      } else {
+        AppLogger.error('❌ Failed to send OTP: ${response.data}');
+        return false;
+      }
+    } catch (e) {
+      AppLogger.error('❌ Edge Function error: $e');
+      return false;
     }
-
-    final url = Uri.parse('https://graph.facebook.com/v17.0/${WhatsAppConfig.phoneNumberId}/messages');
-    
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer ${WhatsAppConfig.accessToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        "messaging_product": "whatsapp",
-        "to": phone,
-        "type": "template",
-        "template": {
-          "name": "authentication_otp", // Needs to match your Meta template name
-          "language": {"code": "en_US"},
-          "components": [
-            {
-              "type": "body",
-              "parameters": [
-                {"type": "text", "text": code}
-              ]
-            },
-            {
-              "type": "button",
-              "sub_type": "url",
-              "index": "0",
-              "parameters": [
-                {"type": "text", "text": code}
-              ]
-            }
-          ]
-        }
-      }),
-    );
-
-    return response.statusCode == 200;
   }
 
   /// ✅ VERIFIES OTP AGAINST DATABASE

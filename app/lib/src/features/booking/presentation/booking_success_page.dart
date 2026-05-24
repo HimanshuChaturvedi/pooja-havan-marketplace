@@ -230,25 +230,32 @@ class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> with Ti
                       children: [
                         PrimaryButton(
                           icon: Icons.share_outlined,
-                          label: 'Share Details with Pandit',
+                          label: 'Share Details on WhatsApp',
                           onTap: booking == null
                               ? () {}
                               : () {
                                   final samagri = ref.read(samagriSessionProvider);
-                                  String msg = 'Namaste Pandit ji,\n\n'
-                                      'A pooja has been booked via Bharat Pooja Setu.\n\n'
-                                      'User ID: $displayUserId\n';
-                                  msg += 'Price Details:\n'
+                                  final orderId = bookingSession.referenceId ?? bookingSession.bookingId ?? booking.referenceId ?? bookingSession.transactionId ?? '---';
+                                  final dateTime = '${booking.selectedDate?.toString().split(' ')[0] ?? "TBD"} at ${booking.selectedTime ?? "TBD"}';
+                                  
+                                  String msg = 'Namaste 🙏,\n\n'
+                                      'A new Pooja has been booked via Bharat Pooja Setu.\n\n'
+                                      '📝 *Order ID:* $orderId\n'
+                                      '📅 *Date & Time:* $dateTime\n'
+                                      '📍 *City:* ${booking.city}\n\n'
+                                      '*Price Details:*\n'
                                       '- Ritual Dakshina: ₹${bookingSession.ritualDakshina.toInt()}\n';
                                   
                                   if (samagri.items.isNotEmpty) {
                                     msg += '- Samagri Charges: ₹${bookingSession.samagriTotal.toInt()}\n';
+                                    msg += '\n*Samagri Items:*\n';
+                                    msg += samagri.items.map((e) => '• ${e.name} × ${e.quantity}').join('\n') + '\n';
                                   }
                                   
-                                  msg += '- Vendor Service Charge: ₹${bookingSession.deliveryFee.toInt()}\n'
+                                  msg += '\n- Vendor Service Charge: ₹${bookingSession.deliveryFee.toInt()}\n'
                                       '- Platform & Service Fee: ₹${bookingSession.platformFee.toInt()}\n'
-                                      '💰 Total Paid: ₹${bookingSession.totalAmount.toInt()}\n\n'
-                                      'Please confirm availability. Fulfillment & Delivery details will follow.\n\n'
+                                      '💰 *Total Paid:* ₹${bookingSession.totalAmount.toInt()}\n\n'
+                                      'Please confirm availability.\n\n'
                                       '— Bharat Pooja Setu';
 
                                   WhatsAppHelper.openChat(message: msg);

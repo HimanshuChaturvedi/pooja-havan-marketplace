@@ -186,7 +186,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       setState(() => _pendingOrderId = orderId);
 
       debugPrint('PaymentPage: Opening Razorpay SDK for Order ID: $orderId');
+      
+      // Fetch dynamic Razorpay API Key from Supabase
+      final configResponse = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'razorpay_key_id')
+          .maybeSingle();
+
+      final String razorpayKey = configResponse != null && configResponse['value'] != null
+          ? configResponse['value'] as String
+          : 'rzp_test_ScYLqSFPxxnfo5'; // Fallback to test key if missing
+
       ref.read(razorpayServiceProvider).openCheckout(
+        keyId: razorpayKey,
         amount: amountToPay,
         contact: user.phone ?? '', 
         email: user.email ?? '',

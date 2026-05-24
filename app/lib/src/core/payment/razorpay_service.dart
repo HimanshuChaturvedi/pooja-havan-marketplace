@@ -3,7 +3,6 @@ import '../utils/logger.dart';
 
 class RazorpayService {
   late Razorpay _razorpay;
-  final String _keyId = 'rzp_test_ScYLqSFPxxnfo5';
 
   void Function(PaymentSuccessResponse)? onSuccess;
   void Function(PaymentFailureResponse)? onFailure;
@@ -17,6 +16,7 @@ class RazorpayService {
   }
 
   void openCheckout({
+    required String keyId,
     required double amount,
     required String contact,
     required String email,
@@ -24,7 +24,7 @@ class RazorpayService {
     Map<String, dynamic>? notes,
   }) {
     var options = {
-      'key': _keyId,
+      'key': keyId,
       'amount': (amount * 100).toInt(), // Razorpay expects amount in paise
       'name': 'Pooja Havan Marketplace',
       'description': description,

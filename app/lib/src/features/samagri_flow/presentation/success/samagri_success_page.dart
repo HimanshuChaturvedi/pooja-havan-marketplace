@@ -203,7 +203,7 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                         delay: 1400,
                         child: PrimaryButton(
                           icon: Icons.chat_bubble_outline,
-                          label: 'Send to WhatsApp',
+                          label: 'Share Details on WhatsApp',
                           onTap: () {
                             final String orderId = samagri.isPartOfBooking == true 
                                 ? (booking?.referenceId ?? 'PHM-PENDING')
@@ -211,14 +211,15 @@ class _SamagriSuccessPageState extends ConsumerState<SamagriSuccessPage> with Si
                             final String total = '₹${samagri.isPartOfBooking ? bookingState.samagriTotal.toInt() : samagri.finalTotal}';
                             
                             WhatsAppHelper.openChat(
-                              message: 'Namaste 🙏\n\n'
-                                  'Your Bharat Pooja Setu samagri order has been confirmed.\n\n'
-                                  'Order ID: $orderId\n'
-                                  'Total Amount: $total\n\n'
-                                  '📍 Delivery to: $city\n'
-                                  'Address: $deliveryAddress\n\n'
-                                  'Items:\n'
-                                  '${samagri.items.map((dynamic e) => '- ${e.name} × ${e.quantity}').join('\n')}\n\n'
+                              message: 'Namaste 🙏,\n\n'
+                                  'A new Samagri order has been placed via Bharat Pooja Setu.\n\n'
+                                  '📝 *Order ID:* $orderId\n'
+                                  '💰 *Total Amount:* $total\n\n'
+                                  '📍 *Delivery to:* $city\n'
+                                  '🏠 *Address:* $deliveryAddress\n\n'
+                                  '*Samagri Items:*\n'
+                                  '${samagri.items.map((dynamic e) => '• ${e.name} × ${e.quantity}').join('\n')}\n\n'
+                                  'Please arrange for delivery.\n\n'
                                   '— Bharat Pooja Setu',
                             );
                           },
