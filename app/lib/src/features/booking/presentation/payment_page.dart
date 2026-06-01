@@ -17,6 +17,8 @@ import '../data/payment_provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../samagri_vendor/data/vendor_repository.dart';
 import '../../booking/domain/booking_draft.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app/src/core/services/whatsapp_service.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   const PaymentPage({super.key});
@@ -71,7 +73,27 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
          await ref.read(samagriVendorRepositoryProvider).updateOrderStatus(orderId, 'paid');
       }
 
-      // 3. Update UI State & Navigate
+      // 3. Trigger Automated WhatsApp Notifications (Only for Standalone Samagri; Ritual Bookings are orchestrated in Repository)
+      try {
+        final user = supabase.auth.currentUser;
+        final userPhone = user?.phone?.isNotEmpty == true 
+            ? user!.phone 
+            : user?.userMetadata?['whatsapp_number'] as String?;
+            
+        if (userPhone != null && userPhone.isNotEmpty) {
+          final waService = ref.read(whatsappServiceProvider);
+          
+          if (booking == null) {
+            // Standalone Samagri
+            await waService.sendBookingConfirmation(userPhone, "Samagri Order", "Express Delivery");
+          }
+        }
+      } catch (waError) {
+        debugPrint('PaymentPage: WhatsApp Trigger Error: $waError');
+        // Do not fail the booking if WhatsApp fails
+      }
+
+      // 4. Update UI State & Navigate
       if (booking != null) {
         ref.read(bookingSessionProvider.notifier).updateStatus(BookingStatus.confirmed);
         ref.read(bookingSessionProvider.notifier).setTransactionId(response.paymentId!);
@@ -142,11 +164,74 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
     }
 
     debugPrint('PaymentPage: Starting payment flow...');
+    
+    // WhatsApp Number Collection
+    String? userPhone = currentUser!.phone?.isNotEmpty == true 
+        ? currentUser.phone 
+        : currentUser.userMetadata?['whatsapp_number'] as String?;
+
+    if (userPhone == null || userPhone.isEmpty) {
+      final phoneController = TextEditingController();
+      final bool? phoneSubmitted = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          scrollable: true,
+          title: const Text('WhatsApp Number Required', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Please provide your WhatsApp number so we can send your booking confirmation and pandit details.'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'WhatsApp Number',
+                  prefixText: '+91 ',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (phoneController.text.trim().length >= 10) {
+                  try {
+                    await supabase.auth.updateUser(
+                      UserAttributes(
+                        data: {'whatsapp_number': '+91${phoneController.text.trim()}'},
+                      ),
+                    );
+                    if (context.mounted) Navigator.pop(context, true);
+                  } catch (e) {
+                    debugPrint('Error saving phone: $e');
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.saffron),
+              child: const Text('Save & Continue', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (phoneSubmitted != true) {
+        return; // User cancelled
+      }
+      userPhone = '+91${phoneController.text.trim()}';
+    }
+
     setState(() => _isLoading = true);
 
     final bookingSession = ref.read(bookingSessionProvider);
     final samagriSession = ref.read(samagriSessionProvider);
-    final user = currentUser!;
+    final user = currentUser;
 
     final double amountToPay = bookingSession.current != null 
         ? bookingSession.totalAmount 
@@ -201,7 +286,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       ref.read(razorpayServiceProvider).openCheckout(
         keyId: razorpayKey,
         amount: amountToPay,
-        contact: user.phone ?? '', 
+        contact: userPhone ?? '', 
         email: user.email ?? '',
         description: orderDescription,
         notes: {

@@ -28,21 +28,69 @@ class WhatsAppService {
       rethrow; // Throw the actual error (e.g. "Table not found")
     }
     // 2. Send via WhatsApp Edge Function (Production Ready)
+    return _sendTemplate(phone, 'otp_verification', [code], language: WhatsAppConfig.otpLanguage);
+  }
+
+  // For Automated Booking Notifications
+  Future<bool> sendBookingConfirmation(String phone, String ritualName, String dateStr) async {
+    if (WhatsAppConfig.useMockApi) {
+      final msg = 'Jai Shree Ganesh! Your $ritualName booking is confirmed for $dateStr. 🙏';
+      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone');
+      AppLogger.debug('💬 Message: $msg');
+      
+      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
+      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to $phone] ($timestamp)\n$msg';
+      return true;
+    }
+    // Parameters: {{1}} = Ritual Name, {{2}} = Date & Time
+    return _sendTemplate(phone, 'booking_confirmation', [ritualName, dateStr], language: WhatsAppConfig.bookingLanguage);
+  }
+
+  Future<bool> sendPanditAssignment(String phone, String ritualName, String address, String dateStr) async {
+    if (WhatsAppConfig.useMockApi) {
+      final msg = 'Jai Shree Ganesh! New Booking Assigned: $ritualName at $address on $dateStr. 🙏';
+      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone (Pandit)');
+      AppLogger.debug('💬 Message: $msg');
+      
+      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
+      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Pandit $phone] ($timestamp)\n$msg';
+      return true;
+    }
+    // Parameters: {{1}} = Ritual Name, {{2}} = Address, {{3}} = Date & Time
+    return _sendTemplate(phone, 'new_assignment_alert', [ritualName, address, dateStr], language: WhatsAppConfig.bookingLanguage);
+  }
+
+  Future<bool> sendVendorNewOrder(String phone, String ritualName, String address, double amount) async {
+    if (WhatsAppConfig.useMockApi) {
+      final msg = 'Jai Shree Ganesh! New Samagri Order for $ritualName. Delivery to $address. Total: ₹$amount. 🙏';
+      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone (Vendor)');
+      AppLogger.debug('💬 Message: $msg');
+      
+      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
+      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Vendor $phone] ($timestamp)\n$msg';
+      return true;
+    }
+    // Parameters: {{1}} = Ritual Name (or Order Type), {{2}} = Address, {{3}} = Amount
+    return _sendTemplate(phone, 'new_samagri_order', [ritualName, address, amount.toStringAsFixed(0)], language: WhatsAppConfig.bookingLanguage);
+  }
+
+  Future<bool> _sendTemplate(String phone, String templateName, List<String> parameters, {String? language}) async {
     try {
       final response = await supabase.functions.invoke(
         'whatsapp-notify',
         body: {
           'phone': phone,
-          'template_name': 'otp_verification',
-          'parameters': [code], // Passing the OTP code as a parameter
+          'template_name': templateName,
+          'parameters': parameters, 
+          if (language != null) 'language': language,
         },
       );
 
       if (response.status == 200 || response.status == 201) {
-        AppLogger.info('✅ OTP sent via Edge Function');
+        AppLogger.info('✅ Message sent via Edge Function: $templateName');
         return true;
       } else {
-        AppLogger.error('❌ Failed to send OTP: ${response.data}');
+        AppLogger.error('❌ Failed to send template $templateName: ${response.data}');
         return false;
       }
     } catch (e) {
@@ -78,52 +126,7 @@ class WhatsAppService {
     }
   }
 
-  /// 📦 SENDS TRANSACTIONAL UPDATE (BOOKING CONFIRMATION)
-  Future<bool> sendBookingConfirmation(String phone, String ritualName, String date) async {
-    if (WhatsAppConfig.useMockApi) {
-      final msg = 'Jai Shree Ganesh! Your $ritualName booking is confirmed for $date. 🙏';
-      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone');
-      AppLogger.debug('💬 Message: $msg');
-      
-      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
-      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to $phone] ($timestamp)\n$msg';
-      return true;
-    }
 
-    // Logic for Meta template "booking_confirmation" would go here
-    return true;
-  }
-
-  /// 🎓 SENDS ASSIGNMENT ALERT TO PANDIT
-  Future<bool> sendPanditAssignment(String phone, String ritualName, String address, String dateTime) async {
-    if (WhatsAppConfig.useMockApi) {
-      final msg = 'Jai Shree Ganesh! New Booking Assigned: $ritualName at $address on $dateTime. 🙏';
-      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone (Pandit)');
-      AppLogger.debug('💬 Message: $msg');
-      
-      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
-      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Pandit $phone] ($timestamp)\n$msg';
-      return true;
-    }
-
-    // Logic for Meta template "pandit_assignment" would go here
-    return true;
-  }
-  /// 🏪 SENDS ORDER ALERT TO VENDOR
-  Future<bool> sendVendorNewOrder(String phone, String ritualName, String address, double amount) async {
-    if (WhatsAppConfig.useMockApi) {
-      final msg = 'Jai Shree Ganesh! New Samagri Order for $ritualName. Delivery to $address. Total: ₹$amount. 🙏';
-      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone (Vendor)');
-      AppLogger.debug('💬 Message: $msg');
-      
-      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
-      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Vendor $phone] ($timestamp)\n$msg';
-      return true;
-    }
-
-    // Logic for Meta template "vendor_new_order" would go here
-    return true;
-  }
   /// 🛍️ SENDS SAMAGRI ORDER CONFIRMATION TO CUSTOMER
   Future<bool> sendSamagriOrderConfirmation(String phone, String refId, double amount) async {
     if (WhatsAppConfig.useMockApi) {

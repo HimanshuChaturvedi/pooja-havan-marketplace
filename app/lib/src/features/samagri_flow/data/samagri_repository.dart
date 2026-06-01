@@ -114,8 +114,8 @@ class SupabaseSamagriRepository implements SamagriRepository {
       await supabase.from('samagri_order_items').insert(itemsToInsert);
       AppLogger.debug('Successfully inserted items.');
 
-      // 3. Trigger Notifications (Async)
-      _sendSamagriNotifications(userId, orderId.toString(), referenceId ?? 'PHM-SMG-TBD', totalAmount, matchedVendorId);
+      // 3. WHATSAPP NOTIFICATIONS ARE NOW TRIGGERED AFTER PAYMENT SUCCESS
+      // Removed premature call to _sendSamagriNotifications
 
       return orderId.toString();
     } catch (e) {

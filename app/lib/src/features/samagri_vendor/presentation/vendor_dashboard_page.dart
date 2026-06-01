@@ -19,7 +19,7 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -97,6 +97,7 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> with 
                             indicatorWeight: 3,
                             labelStyle: AppTextStyles.button.copyWith(fontWeight: FontWeight.w800),
                             tabs: [
+                              Tab(text: 'Open ($unassignedCount)'),
                               Tab(text: 'Active (${pending.length})'),
                               Tab(text: 'History (${history.length})'),
                             ],
@@ -106,6 +107,10 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> with 
                           child: TabBarView(
                             controller: _tabController,
                             children: [
+                              _UnassignedOrderList(orders: unassigned, onRefresh: () {
+                                ref.refresh(unassignedOrdersProvider);
+                                ref.refresh(vendorOrdersProvider);
+                              }),
                               _OrderList(orders: pending, onRefresh: () => ref.refresh(vendorOrdersProvider)),
                               _OrderList(orders: history, onRefresh: () => ref.refresh(vendorOrdersProvider)),
                             ],
@@ -165,11 +170,62 @@ class _OrderList extends ConsumerWidget {
   }
 }
 
+class _UnassignedOrderList extends ConsumerWidget {
+  final List<VendorOrder> orders;
+  final VoidCallback onRefresh;
+  
+  const _UnassignedOrderList({required this.orders, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (orders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shopping_basket_outlined, size: 64, color: AppColors.softGrey.withOpacity(0.3)),
+            const SizedBox(height: 16),
+            Text(
+              'No Open Orders', 
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.softGrey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Orders without a nearby vendor will appear here.', 
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.softGrey.withOpacity(0.7)),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: orders.length,
+      itemBuilder: (context, index) {
+        final order = orders[index];
+        return _OrderCard(
+          order: order, 
+          onStatusUpdate: onRefresh,
+          isUnassigned: true,
+        );
+      },
+    );
+  }
+}
+
 class _OrderCard extends ConsumerStatefulWidget {
   final VendorOrder order;
   final VoidCallback onStatusUpdate;
+  final bool isUnassigned;
 
-  const _OrderCard({required this.order, required this.onStatusUpdate});
+  const _OrderCard({
+    required this.order, 
+    required this.onStatusUpdate,
+    this.isUnassigned = false,
+  });
 
   @override
   ConsumerState<_OrderCard> createState() => _OrderCardState();
@@ -181,7 +237,12 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
   Future<void> _updateStatus(String status) async {
     setState(() => _isUpdating = true);
     try {
-      await ref.read(samagriVendorRepositoryProvider).updateOrderStatus(widget.order.id, status);
+      if (widget.isUnassigned && status == 'accepted') {
+        // Claim the order
+        await ref.read(samagriVendorRepositoryProvider).claimOrder(widget.order.id);
+      } else {
+        await ref.read(samagriVendorRepositoryProvider).updateOrderStatus(widget.order.id, status);
+      }
       widget.onStatusUpdate();
     } finally {
       if (mounted) setState(() => _isUpdating = false);
@@ -307,7 +368,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
           if (widget.order.status == 'pending') ...[
             const SizedBox(height: 20),
             PrimaryButton(
-              label: 'Accept Order',
+              label: widget.isUnassigned ? 'Claim Order' : 'Accept Order',
               loading: _isUpdating,
               onTap: () => _updateStatus('accepted'),
             ),

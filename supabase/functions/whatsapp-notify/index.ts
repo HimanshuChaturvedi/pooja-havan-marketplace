@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     } });
   }
 
-  const { phone, template_name, parameters } = await req.json();
+  const { phone, template_name, parameters, language = 'en' } = await req.json();
 
   if (!phone || !template_name) {
     return new Response(JSON.stringify({ error: 'Missing phone or template_name' }), { 
@@ -33,20 +33,26 @@ Deno.serve(async (req) => {
       text: param
     })) : [];
 
-    const bodyComponents = templateParams.length > 0 ? [
-      {
+    const bodyComponents: any[] = [];
+    
+    if (templateParams.length > 0) {
+      bodyComponents.push({
         type: 'body',
         parameters: templateParams,
-      },
-      {
+      });
+    }
+
+    // Only add OTP button for otp_verification template
+    if (template_name === 'otp_verification' && parameters.length > 0) {
+      bodyComponents.push({
         type: 'button',
         sub_type: 'url',
         index: '0',
         parameters: [
-          { type: 'text', text: parameters[0] } // The OTP code
+          { type: 'text', text: parameters[0] }
         ]
-      }
-    ] : [];
+      });
+    }
 
     const response = await fetch(
       `https://graph.facebook.com/${FACEBOOK_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
@@ -62,7 +68,7 @@ Deno.serve(async (req) => {
           type: 'template',
           template: {
             name: template_name,
-            language: { code: 'en' },
+            language: { code: language },
             components: bodyComponents,
           },
         }),

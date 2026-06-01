@@ -18,6 +18,7 @@ abstract class SamagriVendorRepository {
   Future<void> updateVendorActiveStatus(bool isActive);
   Future<Map<String, dynamic>?> getVendorProfile();
   Future<List<VendorOrder>> getUnassignedOrders();
+  Future<void> claimOrder(String orderId);
 }
 
 class SupabaseSamagriVendorRepository implements SamagriVendorRepository {
@@ -192,6 +193,32 @@ class SupabaseSamagriVendorRepository implements SamagriVendorRepository {
     } catch (e) {
       AppLogger.error('Error fetching unassigned orders', e);
       return [];
+    }
+  }
+
+  @override
+  Future<void> claimOrder(String orderId) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not logged in');
+
+    try {
+      // 1. Get the vendor's ID for this user
+      final vendorProfile = await getVendorProfile();
+      if (vendorProfile == null) throw Exception('Vendor profile not found');
+      final vendorId = vendorProfile['id'];
+
+      // 2. Claim the order by setting vendor_id and status to 'accepted'
+      await supabase
+          .from('samagri_orders')
+          .update({
+            'vendor_id': vendorId,
+            'status': 'accepted'
+          })
+          .eq('id', orderId)
+          .filter('vendor_id', 'is', 'null'); // Safety check to ensure it's still unassigned
+    } catch (e) {
+      AppLogger.error('Error claiming order', e);
+      rethrow;
     }
   }
 }

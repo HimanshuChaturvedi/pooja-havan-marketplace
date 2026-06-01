@@ -46,6 +46,8 @@ class BookingRepositoryImpl implements BookingRepository {
     final pId = toUuid(booking.panditId);
     String? matchedVendorId;
 
+    final bool isSamagriRequired = booking.samagriRequired || (samagriItems != null && samagriItems.isNotEmpty);
+
     // 1. Insert the main booking (Matching User Schema exactly)
     final response = await supabase.from('bookings').insert({
       'user_id': userId, // Scoped to verified user
@@ -56,7 +58,7 @@ class BookingRepositoryImpl implements BookingRepository {
       'address': booking.address,
       'selected_date': booking.selectedDate?.toIso8601String(),
       'selected_time': booking.selectedTime,
-      'samagri_required': booking.samagriRequired,
+      'samagri_required': isSamagriRequired,
       'status': 'CREATED',
       'reference_id': _generateReferenceId(),
       'total_amount': booking.totalAmount, 
@@ -123,8 +125,8 @@ class BookingRepositoryImpl implements BookingRepository {
       }
     }
 
-    // 3. SEND WHATSAPP NOTIFICATIONS (ASYNCHRONOUSLY)
-    _sendBookingNotifications(userId, refId, booking, pId, matchedVendorId);
+    // 3. WHATSAPP NOTIFICATIONS ARE NOW TRIGGERED AFTER PAYMENT SUCCESS
+    // Removed premature call to _sendBookingNotifications
 
     return {
       'bookingId': bookingId,
@@ -158,7 +160,11 @@ class BookingRepositoryImpl implements BookingRepository {
     try {
       String? customerPhone = supabase.auth.currentUser?.phone;
       
-      if (customerPhone == null) {
+      if (customerPhone == null || customerPhone.isEmpty) {
+        customerPhone = supabase.auth.currentUser?.userMetadata?['whatsapp_number'] as String?;
+      }
+      
+      if (customerPhone == null || customerPhone.isEmpty) {
         try {
           final userResponse = await supabase.from('profiles').select('phone').eq('id', userId).maybeSingle();
           customerPhone = userResponse?['phone'];
@@ -173,8 +179,12 @@ class BookingRepositoryImpl implements BookingRepository {
       }
 
       if (customerPhone != null) {
+        final String displayName = booking.samagriRequired 
+            ? "${booking.ritualName} (with Samagri)" 
+            : booking.ritualName;
+            
         AppLogger.debug('✅ TRIGGERING Customer Conf for: $customerPhone');
-        await _whatsApp.sendBookingConfirmation(customerPhone, booking.ritualName, dateStr);
+        await _whatsApp.sendBookingConfirmation(customerPhone, displayName, dateStr);
         // ⏱️ Delay to allow SnackBar to be seen before next one
         await Future.delayed(const Duration(milliseconds: 1500));
       } else {
@@ -303,6 +313,35 @@ class BookingRepositoryImpl implements BookingRepository {
           .from('bookings')
           .update({'status': dbStatus})
           .eq('id', bookingId);
+          
+      // Trigger notifications if paid
+      if (dbStatus == 'PAID') {
+        try {
+          final bookingData = await supabase.from('bookings').select('*').eq('id', bookingId).single();
+          final samagriData = await supabase.from('samagri_orders').select('vendor_id').eq('booking_id', bookingId).maybeSingle();
+          
+          final dummyDraft = BookingDraft(
+            ritualName: bookingData['ritual_name'] ?? 'Pooja',
+            selectedDate: bookingData['selected_date'] != null ? DateTime.parse(bookingData['selected_date']) : null,
+            selectedTime: bookingData['selected_time'],
+            address: bookingData['address'],
+            city: bookingData['city'] ?? 'Delhi',
+            samagriCharges: (bookingData['samagri_charges'] ?? 0.0).toDouble(),
+            bookingType: BookingType.home,
+            samagriRequired: bookingData['samagri_required'] == true,
+          );
+
+          await _sendBookingNotifications(
+            bookingData['user_id'],
+            bookingData['reference_id'],
+            dummyDraft,
+            bookingData['pandit_id'],
+            samagriData?['vendor_id']
+          );
+        } catch (e) {
+          AppLogger.error('Error triggering notifications post-payment', e);
+        }
+      }
     } catch (e) {
       AppLogger.error('Error updating booking status', e);
       rethrow;
