@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:app/src/core/config/whatsapp_config.dart';
 import 'package:app/src/core/supabase/supabase_client.dart';
@@ -75,11 +74,16 @@ class WhatsAppService {
   }
 
   Future<bool> _sendTemplate(String phone, String templateName, List<String> parameters, {String? language}) async {
+    // 🔥 SANITIZE: Remove all non-digits
+    final sanitizedPhone = phone.replaceAll(RegExp(r'\D'), '');
+    // Prepend '91' if it is a 10-digit Indian phone number
+    final formattedPhone = sanitizedPhone.length == 10 ? '91$sanitizedPhone' : sanitizedPhone;
+
     try {
       final response = await supabase.functions.invoke(
         'whatsapp-notify',
         body: {
-          'phone': phone,
+          'phone': formattedPhone,
           'template_name': templateName,
           'parameters': parameters, 
           if (language != null) 'language': language,

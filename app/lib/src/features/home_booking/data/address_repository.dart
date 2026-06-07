@@ -76,6 +76,28 @@ class AddressRepository {
       rethrow;
     }
   }
+
+  Future<void> setDefaultAddress(String addressId) async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      // 1. Reset all addresses of this user to is_default = false
+      await supabase
+          .from('user_addresses')
+          .update({'is_default': false})
+          .eq('user_id', userId);
+
+      // 2. Set the chosen address to is_default = true
+      await supabase
+          .from('user_addresses')
+          .update({'is_default': true})
+          .eq('id', addressId);
+    } catch (e) {
+      AppLogger.error('Error setting default address in DB', e);
+      rethrow;
+    }
+  }
 }
 
 final addressRepositoryProvider = Provider<AddressRepository>((ref) {

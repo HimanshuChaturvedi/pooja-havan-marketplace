@@ -38,9 +38,29 @@ class AddressBookNotifier extends StateNotifier<List<Address>> {
     }
   }
 
-  void setDefault(String addressId) {
+  Future<void> deleteAddress(String addressId) async {
+    final repo = ref.read(addressRepositoryProvider);
+    try {
+      await repo.deleteAddress(addressId);
+      state = state.where((a) => a.id != addressId).toList();
+    } catch (e) {
+      // Logic for fallback or error handling
+    }
+  }
+
+  Future<void> setDefault(String addressId) async {
+    final repo = ref.read(addressRepositoryProvider);
     final controller = ref.read(addressControllerProvider);
+    
+    // Optimistic local state update
     state = controller.setDefault(state, addressId);
+    
+    try {
+      await repo.setDefaultAddress(addressId);
+    } catch (e) {
+      // Restores state from database on error
+      await loadAddresses();
+    }
   }
 
   void clear() {

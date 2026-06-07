@@ -89,25 +89,25 @@ class ProfilePage extends ConsumerWidget {
               _ProfileOption(
                 icon: Icons.person_outline_rounded,
                 label: 'Personal Details',
-                onTap: () {},
+                onTap: () => context.push('/personal-details'),
               ),
               const SizedBox(height: 16),
               _ProfileOption(
                 icon: Icons.location_on_outlined,
                 label: 'Saved Addresses',
-                onTap: () {},
+                onTap: () => context.push('/saved-addresses'),
               ),
               const SizedBox(height: 16),
               _ProfileOption(
                 icon: Icons.notifications_none_rounded,
                 label: 'Notifications',
-                onTap: () {},
+                onTap: () => context.push('/notifications'),
               ),
               const SizedBox(height: 16),
               _ProfileOption(
                 icon: Icons.help_outline_rounded,
                 label: 'Support & Help',
-                onTap: () {},
+                onTap: () => context.push('/support-help'),
               ),
               const SizedBox(height: 16),
 

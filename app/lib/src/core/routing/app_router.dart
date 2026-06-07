@@ -63,6 +63,10 @@ import '../../features/auth/presentation/state/auth_provider_impl.dart'; // [NEW
 import '../../features/landing/presentation/landing_enhanced_page.dart';
 import '../../features/main/presentation/pages/main_page.dart';
 import '../../features/pandit_onboarding/data/pandit_repository_provider.dart';
+import '../../features/main/presentation/pages/personal_details_page.dart';
+import '../../features/main/presentation/pages/saved_addresses_page.dart';
+import '../../features/main/presentation/pages/notifications_settings_page.dart';
+import '../../features/main/presentation/pages/support_help_page.dart';
 
 Future<String?> _panditGuard(BuildContext context, GoRouterState state, ProviderRef ref) async {
   final user = supabase.auth.currentUser;
@@ -217,6 +221,41 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (!isAdmin) return '/home';
         return null;
       },
+    ),
+
+    GoRoute(
+      path: '/personal-details',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous) return '/login?redirectTo=/personal-details';
+        return null;
+      },
+      builder: (context, state) => const PersonalDetailsPage(),
+    ),
+
+    GoRoute(
+      path: '/saved-addresses',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous) return '/login?redirectTo=/saved-addresses';
+        return null;
+      },
+      builder: (context, state) => const SavedAddressesPage(),
+    ),
+
+    GoRoute(
+      path: '/notifications',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous) return '/login?redirectTo=/notifications';
+        return null;
+      },
+      builder: (context, state) => const NotificationsSettingsPage(),
+    ),
+
+    GoRoute(
+      path: '/support-help',
+      builder: (context, state) => const SupportHelpPage(),
     ),
 
     // SHOP REDIRECT

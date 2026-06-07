@@ -7,7 +7,6 @@ import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import 'package:app/src/core/services/location_service.dart';
 import 'package:app/src/features/home_booking/presentation/address/state/address_provider.dart';
-import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'dart:async';
 
 import 'package:app/src/features/home_booking/presentation/address/domain/address.dart';
@@ -138,6 +137,131 @@ class _HomeAddressPageState extends ConsumerState<HomeAddressPage> {
               style: AppTextStyles.bodyMedium.copyWith(color: AppColors.softGrey),
             ),
             const SizedBox(height: 32),
+
+            // 🏠 SELECT FROM SAVED ADDRESSES
+            if (!_showManualForm) ...[
+              () {
+                final savedAddresses = ref.watch(addressBookProvider);
+                if (savedAddresses.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SectionHeader(title: 'Select Saved Address'),
+                    const SizedBox(height: 12),
+                    ...savedAddresses.map((addr) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: () {
+                          final addressText = '${addr.line1}, ${addr.city}';
+                          final current = ref.read(bookingSessionProvider).current;
+                          if (current != null) {
+                            final updated = current.copyWith(
+                              address: addressText,
+                              city: addr.city,
+                              latitude: addr.latitude,
+                              longitude: addr.longitude,
+                              area: addr.line1,
+                            );
+                            ref.read(bookingSessionProvider.notifier).updateBookingDraft(updated);
+                          }
+                          if (widget.onAddressSaved != null) {
+                            widget.onAddressSaved!(addr);
+                          } else {
+                            context.push('/pandit-selection');
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(22),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(
+                              color: addr.isDefault 
+                                ? AppColors.saffron.withOpacity(0.7) 
+                                : AppColors.saffron.withOpacity(0.08),
+                              width: addr.isDefault ? 1.5 : 1.0,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: addr.isDefault 
+                                  ? AppColors.saffron.withOpacity(0.04) 
+                                  : Colors.black.withOpacity(0.02),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: addr.isDefault 
+                                    ? AppColors.saffron.withOpacity(0.1) 
+                                    : Colors.grey.shade100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.location_on_rounded, 
+                                  color: addr.isDefault ? AppColors.saffron : AppColors.softGrey, 
+                                  size: 18
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          addr.city,
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                            color: AppColors.darkCharcoal,
+                                          ),
+                                        ),
+                                        if (addr.isDefault) ...[
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Default',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w900,
+                                              color: AppColors.saffron,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      addr.line1,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.softGrey,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.saffron, size: 12),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )),
+                    const SizedBox(height: 20),
+                    const SectionHeader(title: 'Or detect new location'),
+                    const SizedBox(height: 12),
+                  ],
+                );
+              }(),
+            ],
 
             // 📍 USE CURRENT LOCATION
             if (!_showManualForm) ...[

@@ -218,7 +218,8 @@ class BookingRepositoryImpl implements BookingRepository {
         final vendorPhone = vendorResponse?['phone_number'];
         if (vendorPhone != null) {
           AppLogger.debug('Triggering Vendor Notification: $vendorPhone');
-          await _whatsApp.sendVendorNewOrder(vendorPhone, booking.ritualName, booking.address ?? 'Client Location', booking.samagriCharges);
+          final addressWithDetails = "${booking.address ?? 'Client Location'} (Pooja Date: $dateStr - Deliver 1 day before)";
+          await _whatsApp.sendVendorNewOrder(vendorPhone, booking.ritualName, addressWithDetails, booking.samagriCharges);
         } else {
           AppLogger.warn('Skipping vendor notification: Vendor phone number not found.');
         }
