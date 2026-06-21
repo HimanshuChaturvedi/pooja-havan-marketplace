@@ -6,4 +6,5 @@ abstract class BookingRepository {
   Future<List<BookingDraft>> getBookings();
   Future<List<BookingDraft>> getAssignedBookings();
   Future<void> updateBookingStatus(String bookingId, BookingStatusDetailed status);
+  Future<void> rejectAndReassignBooking(String bookingId, String currentPanditId);
 }

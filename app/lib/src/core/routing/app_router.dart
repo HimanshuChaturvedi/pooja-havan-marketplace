@@ -159,6 +159,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     // PANDIT ONBOARDING (NEW)
     GoRoute(
       path: '/pandit-onboarding',
+      redirect: (context, state) {
+        final user = supabase.auth.currentUser;
+        if (user == null || user.isAnonymous) return '/login?redirectTo=/pandit-onboarding';
+        return null;
+      },
       builder: (context, state) => const PanditOnboardingPage(),
     ),
     

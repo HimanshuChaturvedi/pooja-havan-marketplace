@@ -299,9 +299,54 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
     } catch (e) {
       debugPrint('PaymentPage ERROR: $e');
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not initiate payment: $e')),
-      );
+      
+      final errorMsg = e.toString().replaceAll('Exception:', '').replaceAll('Exception', '').trim();
+      
+      if (errorMsg.contains('Time conflict!')) {
+        // Show a clean, user-friendly dialog for time slot conflict
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: AppColors.saffron),
+                  SizedBox(width: 8),
+                  Text('Slot Unavailable', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: const Text(
+                'This time slot is no longer available. Someone else just booked it. Please choose another time.',
+              ),
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.saffron,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    context.pop(); // Go back to Date & Time selection page
+                  },
+                  child: const Text('Select Another Slot', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not initiate payment: $errorMsg'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
     }
   }
 

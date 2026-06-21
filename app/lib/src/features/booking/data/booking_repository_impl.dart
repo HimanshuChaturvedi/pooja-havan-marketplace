@@ -8,6 +8,9 @@ import '../../samagri_flow/data/samagri_repository.dart';
 import '../../samagri_flow/data/samagri_repository_provider.dart';
 import '../../../core/services/whatsapp_service.dart';
 import '../../../core/config/whatsapp_config.dart';
+import '../../../core/utils/ritual_category_mapper.dart';
+import '../../../core/utils/ritual_slug_mapper.dart';
+import '../../pandit_dashboard/presentation/state/pandit_time_slots_provider.dart';
 
 class BookingRepositoryImpl implements BookingRepository {
   final WhatsAppService _whatsApp;
@@ -47,6 +50,75 @@ class BookingRepositoryImpl implements BookingRepository {
     String? matchedVendorId;
 
     final bool isSamagriRequired = booking.samagriRequired || (samagriItems != null && samagriItems.isNotEmpty);
+
+    // 🕐 TIME-SLOT CONFLICT CHECK: Prevent double booking
+    if (pId != null && booking.selectedDate != null && booking.selectedTime != null) {
+      try {
+        final dateStr = "${booking.selectedDate!.year}-${booking.selectedDate!.month.toString().padLeft(2, '0')}-${booking.selectedDate!.day.toString().padLeft(2, '0')}";
+        
+        final conflictResult = await supabase.rpc('check_pandit_time_conflict', params: {
+          'p_id': pId,
+          'p_date': dateStr,
+          'p_time': booking.selectedTime,
+        });
+        
+        if (conflictResult == true) {
+          // Fetch available slots for the error message
+          final bookedSlotsResponse = await supabase.rpc('get_pandit_booked_slots', params: {
+            'p_id': pId,
+            'p_date': dateStr,
+          });
+          
+          final bookedSlots = (bookedSlotsResponse as List? ?? [])
+              .map((r) => BookedSlot.fromJson(Map<String, dynamic>.from(r)))
+              .toList();
+          final availableSlots = TimeSlotConfig.getAvailableSlots(bookedSlots);
+          
+          final availableStr = availableSlots.isNotEmpty 
+              ? 'Available times: ${availableSlots.join(", ")}'
+              : 'Pandit ji is fully booked on this date.';
+          
+          throw Exception(
+            'Time conflict! Pandit ji already has a booking near ${booking.selectedTime} on $dateStr. $availableStr'
+          );
+        }
+      } catch (e) {
+        if (e.toString().contains('Time conflict!')) rethrow;
+        AppLogger.warn('Time conflict RPC check failed: $e. Running client-side fallback check...');
+        try {
+          final dateStr = "${booking.selectedDate!.year}-${booking.selectedDate!.month.toString().padLeft(2, '0')}-${booking.selectedDate!.day.toString().padLeft(2, '0')}";
+          
+          final response = await supabase
+              .from('bookings')
+              .select('selected_time, ritual_name, status')
+              .eq('pandit_id', pId)
+              .gte('selected_date', '${dateStr}T00:00:00')
+              .lte('selected_date', '${dateStr}T23:59:59')
+              .neq('status', 'CANCELLED');
+
+          final bookedSlots = (response as List? ?? []).map((row) => BookedSlot(
+            startTime: row['selected_time'] as String? ?? '',
+            endTime: '', // Calculated client-side
+            ritualName: row['ritual_name'] ?? 'Pooja',
+            status: row['status'] ?? 'PAID',
+          )).toList();
+
+          if (TimeSlotConfig.isSlotConflicting(booking.selectedTime!, bookedSlots)) {
+            final availableSlots = TimeSlotConfig.getAvailableSlots(bookedSlots);
+            final availableStr = availableSlots.isNotEmpty 
+                ? 'Available times: ${availableSlots.join(", ")}'
+                : 'Pandit ji is fully booked on this date.';
+            
+            throw Exception(
+              'Time conflict! Pandit ji already has a booking near ${booking.selectedTime} on $dateStr. $availableStr'
+            );
+          }
+        } catch (fallbackError) {
+          if (fallbackError.toString().contains('Time conflict!')) rethrow;
+          AppLogger.error('Client-side fallback conflict check also failed: $fallbackError');
+        }
+      }
+    }
 
     // 1. Insert the main booking (Matching User Schema exactly)
     final response = await supabase.from('bookings').insert({
@@ -263,11 +335,41 @@ class BookingRepositoryImpl implements BookingRepository {
     final String? userId = supabase.auth.currentUser?.id;
     if (userId == null) return [];
 
-    // 1. Fetch bookings assigned to this Pandit
+    // The pandit_id in bookings table is the pandit_profiles.id,
+    // which may differ from auth ID (anonymous → email re-auth case).
+    // So first resolve the actual profile ID.
+    String panditProfileId = userId;
+    try {
+      var profileRow = await supabase
+          .from('pandit_profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+
+      // Fallback: look up by email if id doesn't match
+      if (profileRow == null) {
+        final email = supabase.auth.currentUser?.email;
+        if (email != null && email.isNotEmpty) {
+          profileRow = await supabase
+              .from('pandit_profiles')
+              .select('id')
+              .eq('email_address', email)
+              .maybeSingle();
+        }
+      }
+
+      if (profileRow != null) {
+        panditProfileId = profileRow['id'] as String;
+      }
+    } catch (e) {
+      debugPrint('getAssignedBookings: profile lookup failed: $e');
+    }
+
+    // 1. Fetch bookings assigned to this Pandit using resolved profile ID
     final bookingsResponse = await supabase
         .from('bookings')
         .select('*')
-        .eq('pandit_id', userId)
+        .eq('pandit_id', panditProfileId)
         .order('created_at', ascending: false);
 
     final List<Map<String, dynamic>> rawBookings = bookingsResponse != null 
@@ -345,6 +447,102 @@ class BookingRepositoryImpl implements BookingRepository {
       }
     } catch (e) {
       AppLogger.error('Error updating booking status', e);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> rejectAndReassignBooking(String bookingId, String currentPanditId) async {
+    try {
+      AppLogger.debug('🚨 REJECT AND REASSIGN START for Booking: $bookingId, currentPandit: $currentPanditId');
+      
+      // 1. Fetch booking details
+      final bookingData = await supabase.from('bookings').select('*').eq('id', bookingId).single();
+      final String? cityId = bookingData['city_id'];
+      final String ritualName = bookingData['ritual_name'] ?? '';
+      final String? ritualId = bookingData['ritual_id'];
+      
+      // Get city name
+      String cityName = 'Delhi';
+      if (cityId != null) {
+        final cityResponse = await supabase.from('cities').select('name').eq('id', cityId).maybeSingle();
+        cityName = cityResponse?['name'] ?? 'Delhi';
+      }
+
+      // Map ritual to category
+      final ritualSlug = RitualSlugMapper.getSlug(id: ritualId, name: ritualName);
+      final mappedCategory = RitualCategoryMapper.getCategoryForSlug(ritualSlug);
+
+      AppLogger.debug('Searching fallback pandits in City: $cityName, Category: $mappedCategory');
+
+      // 2. Fetch all verified pandits in the city who specialize in the same category
+      final panditsResponse = await supabase
+          .from('pandit_profiles')
+          .select('''
+            id,
+            pandit_specializations!inner(ritual_slug),
+            pandit_service_areas!inner(city)
+          ''')
+          .eq('verification_status', 'VERIFIED')
+          .inFilter('pandit_specializations.ritual_slug', [ritualSlug, mappedCategory])
+          .ilike('pandit_service_areas.city', cityName.trim());
+
+      final List<dynamic> rawPandits = panditsResponse != null ? List<dynamic>.from(panditsResponse) : [];
+      
+      // Filter out the current rejecting pandit
+      final candidates = rawPandits
+          .map((row) => row['id'] as String)
+          .where((id) => id != currentPanditId)
+          .toList();
+
+      if (candidates.isNotEmpty) {
+        final nextPanditId = candidates.first;
+        AppLogger.debug('Reassigning to next Pandit: $nextPanditId');
+        
+        await supabase
+            .from('bookings')
+            .update({
+              'pandit_id': nextPanditId,
+              'status': 'PAID', // reset status so new pandit can accept
+            })
+            .eq('id', bookingId);
+            
+        // Trigger WABA notification to the new Pandit!
+        try {
+          final samagriData = await supabase.from('samagri_orders').select('vendor_id').eq('booking_id', bookingId).maybeSingle();
+          final dummyDraft = BookingDraft(
+            ritualName: bookingData['ritual_name'] ?? 'Pooja',
+            selectedDate: bookingData['selected_date'] != null ? DateTime.parse(bookingData['selected_date']) : null,
+            selectedTime: bookingData['selected_time'],
+            address: bookingData['address'],
+            city: cityName,
+            samagriCharges: (bookingData['samagri_charges'] ?? 0.0).toDouble(),
+            bookingType: BookingType.home,
+            samagriRequired: bookingData['samagri_required'] == true,
+          );
+
+          await _sendBookingNotifications(
+            bookingData['user_id'],
+            bookingData['reference_id'],
+            dummyDraft,
+            nextPanditId, // Alert new pandit
+            samagriData?['vendor_id']
+          );
+        } catch (e) {
+          AppLogger.error('Failed to notify reassigned pandit', e);
+        }
+      } else {
+        AppLogger.debug('No other pandits found. Releasing pandit assignment for admin manual dispatch.');
+        await supabase
+            .from('bookings')
+            .update({
+              'pandit_id': null,
+              'status': 'PAID',
+            })
+            .eq('id', bookingId);
+      }
+    } catch (e) {
+      AppLogger.error('Error in rejectAndReassignBooking', e);
       rethrow;
     }
   }

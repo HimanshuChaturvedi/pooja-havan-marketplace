@@ -415,7 +415,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         // 🚩 PROMINENT PANDIT REGISTRATION CARD
                         GestureDetector(
                           onTap: () {
-                            if (supabase.auth.currentUser != null) {
+                            final user = supabase.auth.currentUser;
+                            if (user != null && !user.isAnonymous) {
                               context.push('/pandit-onboarding');
                             } else {
                               context.pushReplacement('/login?redirectTo=/pandit-onboarding');

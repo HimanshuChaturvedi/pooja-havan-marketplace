@@ -10,6 +10,7 @@ import '../state/pandit_onboarding_provider.dart';
 import '../../../core/supabase/supabase_client.dart'; // To get current user id
 import 'package:supabase_flutter/supabase_flutter.dart'; 
 import '../../services/domain/explore_service.dart';
+import '../../../core/utils/ritual_category_mapper.dart';
 import 'package:image_picker/image_picker.dart'; 
 import 'dart:io';
 import 'dart:math'; // [NEW] for OTP generation
@@ -553,13 +554,13 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: exploreServices.map((ritual) {
-                    final isSelected = state.draft.ritualSlugs.contains(ritual.id);
+                  children: RitualCategoryMapper.getCategories().map((category) {
+                    final isSelected = state.draft.ritualSlugs.contains(category);
                     return FilterChip(
-                      label: Text(ritual.title),
+                      label: Text(category),
                       selectedColor: AppColors.saffron.withOpacity(0.2),
                       selected: isSelected,
-                      onSelected: (_) => ref.read(panditOnboardingProvider.notifier).toggleSpecialization(ritual.id),
+                      onSelected: (_) => ref.read(panditOnboardingProvider.notifier).toggleSpecialization(category),
                     );
                   }).toList(),
                 ),

@@ -251,6 +251,7 @@ class ProfilePage extends ConsumerWidget {
       ),
     );
   }
+
 }
 
 class _ProfileOption extends StatelessWidget {
