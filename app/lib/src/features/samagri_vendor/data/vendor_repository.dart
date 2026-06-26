@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../../core/utils/logger.dart';
 import '../state/vendor_order.dart';
+import '../../../core/utils/phone_helper.dart';
 
 abstract class SamagriVendorRepository {
   Future<List<VendorOrder>> getVendorOrders();
@@ -97,17 +99,33 @@ class SupabaseSamagriVendorRepository implements SamagriVendorRepository {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not logged in');
 
+    final String normalizedPhone;
+    try {
+      normalizedPhone = normalizePhoneNumber(phoneNumber);
+    } on FormatException catch (e) {
+      throw Exception(e.message);
+    }
+
     try {
       await supabase.from('samagri_vendors').upsert({
         'owner_id': userId,
         'shop_name': shopName,
-        'phone_number': phoneNumber,
+        'phone_number': normalizedPhone,
         'address': address,
         'latitude': latitude,
         'longitude': longitude,
         'delivery_radius_km': radius,
         'verification_status': 'PENDING',
       }, onConflict: 'owner_id');
+    } on PostgrestException catch (e) {
+      if (e.code == '23505' && (e.message.contains('phone_number') || e.details.toString().contains('phone_number'))) {
+        throw const PostgrestException(
+          message: 'This mobile number is already registered as a Vendor.',
+          code: '409',
+        );
+      }
+      AppLogger.error('Error registering vendor', e);
+      rethrow;
     } catch (e) {
       AppLogger.error('Error registering vendor', e);
       rethrow;

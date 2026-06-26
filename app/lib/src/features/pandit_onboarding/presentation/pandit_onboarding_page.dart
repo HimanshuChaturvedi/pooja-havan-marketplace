@@ -8,12 +8,10 @@ import '../../../theme/components/app_text_styles.dart';
 
 import '../state/pandit_onboarding_provider.dart';
 import '../../../core/supabase/supabase_client.dart'; // To get current user id
-import 'package:supabase_flutter/supabase_flutter.dart'; 
-import '../../services/domain/explore_service.dart';
 import '../../../core/utils/ritual_category_mapper.dart';
 import 'package:image_picker/image_picker.dart'; 
 import 'dart:io';
-import 'dart:math'; // [NEW] for OTP generation
+import 'dart:async';
 import '../../../core/services/whatsapp_service.dart'; // [NEW]
 
 class PanditOnboardingPage extends ConsumerStatefulWidget {
@@ -52,6 +50,9 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
   
   bool _isPhoneOtpSent = false;
   bool _isPhoneVerified = false;
+  bool _isOtpLoading = false;
+  Timer? _cooldownTimer;
+  int _cooldownSeconds = 0;
 
   final List<String> _availableCities = [
     'Ghaziabad',
@@ -78,6 +79,7 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _emailController.dispose();
     _aadharController.dispose();
     _panController.dispose();
@@ -152,6 +154,22 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
     }
   }
 
+  void _startCooldownTimer() {
+    _cooldownTimer?.cancel();
+    setState(() {
+      _cooldownSeconds = 30;
+    });
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_cooldownSeconds > 0) {
+        setState(() {
+          _cooldownSeconds--;
+        });
+      } else {
+        _cooldownTimer?.cancel();
+      }
+    });
+  }
+
   Future<void> _sendPhoneOtp() async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) return;
@@ -161,52 +179,61 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
       return;
     }
 
-    // Format phone number with country code
-    final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
+    if (_cooldownSeconds > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please wait $_cooldownSeconds seconds before requesting another code.')));
+      return;
+    }
 
-    // Generate 6-digit OTP
-    final random = Random();
-    final otp = (100000 + random.nextInt(900000)).toString();
-
+    setState(() => _isOtpLoading = true);
     try {
-      final success = await ref.read(whatsappServiceProvider).sendOtp(formattedPhone, otp);
-      if (success) {
+      final res = await ref.read(whatsappServiceProvider).sendOtp(phone, 'PANDIT_ONBOARDING');
+      if (res.success) {
         setState(() => _isPhoneOtpSent = true);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification code sent to your WhatsApp.')));
+        _startCooldownTimer();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification code sent to your WhatsApp.'), backgroundColor: Colors.green));
       } else {
-        throw 'Failed to send WhatsApp message';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.errorMessage ?? 'Failed to send WhatsApp message'), backgroundColor: Colors.red));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    } finally {
+      setState(() => _isOtpLoading = false);
     }
   }
 
   Future<void> _verifyPhoneOtp() async {
     final otp = _otpController.text.trim();
     final phone = _phoneController.text.trim();
-    final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
 
     if (otp.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid 6-digit OTP.')));
       return;
     }
 
+    setState(() => _isOtpLoading = true);
     try {
-      final isVerified = await ref.read(whatsappServiceProvider).verifyOtp(formattedPhone, otp);
+      final res = await ref.read(whatsappServiceProvider).verifyOtp(phone, otp, 'PANDIT_ONBOARDING');
       
-      if (isVerified) {
+      if (res.success) {
         setState(() {
           _isPhoneVerified = true;
           _isPhoneOtpSent = false;
         });
+        _cooldownTimer?.cancel();
+        setState(() {
+          _cooldownSeconds = 0;
+        });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp number verified successfully!'), backgroundColor: Colors.green));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid or expired OTP. Please try again.'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.errorMessage ?? 'Invalid OTP. Please try again.'), backgroundColor: Colors.red));
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    } finally {
+      setState(() => _isOtpLoading = false);
     }
   }
+
 
   void _savePersonalDetails() {
     if (_personalFormKey.currentState!.validate() && _isPhoneVerified) {
@@ -420,8 +447,9 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
                         SizedBox(
                           width: 100,
                           child: PrimaryButton(
-                            label: _isPhoneOtpSent ? 'Resend OTP' : 'Send OTP',
-                            onTap: _sendPhoneOtp,
+                            label: _cooldownSeconds > 0 ? 'Resend ${_cooldownSeconds}s' : (_isPhoneOtpSent ? 'Resend OTP' : 'Send OTP'),
+                            onTap: (_isOtpLoading || _cooldownSeconds > 0) ? null : _sendPhoneOtp,
+                            loading: _isOtpLoading,
                           ),
                         ),
                       ],
@@ -445,7 +473,8 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
                           width: 100,
                           child: PrimaryButton(
                             label: 'Verify',
-                            onTap: _verifyPhoneOtp,
+                            onTap: _isOtpLoading ? null : _verifyPhoneOtp,
+                            loading: _isOtpLoading,
                           ),
                         ),
                       ],

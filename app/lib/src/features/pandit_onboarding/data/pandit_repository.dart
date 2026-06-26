@@ -5,6 +5,7 @@ import '../domain/pandit_draft.dart';
 import '../domain/pandit_profile.dart';
 import '../../../core/utils/ritual_category_mapper.dart';
 import '../../pandit_dashboard/presentation/state/pandit_time_slots_provider.dart';
+import '../../../core/utils/phone_helper.dart';
 
 class PanditRepository {
   final SupabaseClient _supabase;
@@ -98,26 +99,58 @@ class PanditRepository {
     }
 
     // 4. Insert Core Profile
-    await _supabase.from('pandit_profiles').upsert({
-      'id': userId,
-      'first_name': draft.firstName,
-      'last_name': draft.lastName,
-      'phone_number': draft.phoneNumber,
-      'email_address': draft.emailAddress,
-      'aadhar_number': draft.aadharNumber,
-      'aadhar_front_url': aadharFrontUrl,
-      'aadhar_back_url': aadharBackUrl,
-      'pan_number': draft.panNumber.isEmpty ? null : draft.panNumber,
-      'address_line_1': draft.addressLine1,
-      'address_line_2': draft.addressLine2,
-      'city': draft.city,
-      'state': draft.state,
-      'pin_code': draft.pinCode,
-      'experience_years': draft.experienceYears,
-      'bio': draft.bio,
-      'profile_image_url': profileUrl,
-      'verification_status': 'PENDING',
-    });
+    final String normalizedPhone;
+    try {
+      normalizedPhone = normalizePhoneNumber(draft.phoneNumber);
+    } on FormatException catch (e) {
+      throw Exception(e.message);
+    }
+
+    try {
+      final existingProfile = await _supabase
+          .from('pandit_profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+
+      final profileData = {
+        'id': userId,
+        'first_name': draft.firstName,
+        'last_name': draft.lastName,
+        'phone_number': normalizedPhone,
+        'email_address': draft.emailAddress,
+        'aadhar_number': draft.aadharNumber,
+        'aadhar_front_url': aadharFrontUrl,
+        'aadhar_back_url': aadharBackUrl,
+        'pan_number': draft.panNumber.isEmpty ? null : draft.panNumber,
+        'address_line_1': draft.addressLine1,
+        'address_line_2': draft.addressLine2,
+        'city': draft.city,
+        'state': draft.state,
+        'pin_code': draft.pinCode,
+        'experience_years': draft.experienceYears,
+        'bio': draft.bio,
+        'profile_image_url': profileUrl,
+        'verification_status': 'PENDING',
+      };
+
+      if (existingProfile == null) {
+        await _supabase.from('pandit_profiles').insert(profileData);
+      } else {
+        await _supabase
+            .from('pandit_profiles')
+            .update(profileData)
+            .eq('id', userId);
+      }
+    } on PostgrestException catch (e) {
+      if (e.code == '23505' && (e.message.contains('phone_number') || e.details.toString().contains('phone_number'))) {
+        throw const PostgrestException(
+          message: 'This mobile number is already registered as a Pandit.',
+          code: '409',
+        );
+      }
+      rethrow;
+    }
 
     // 2. Insert Service Areas (Delete old ones first if any, or just insert new ones)
     if (draft.serviceCities.isNotEmpty) {

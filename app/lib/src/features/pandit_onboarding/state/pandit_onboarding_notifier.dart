@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/pandit_draft.dart';
 import '../data/pandit_repository_provider.dart';
 
@@ -122,7 +123,15 @@ class PanditOnboardingNotifier extends StateNotifier<PanditOnboardingState> {
       state = state.copyWith(isSubmitting: false);
       return true;
     } catch (e) {
-      state = state.copyWith(isSubmitting: false, error: e.toString());
+      String errMsg = 'Submission failed. Please try again.';
+      if (e is PostgrestException) {
+        errMsg = e.message;
+      } else if (e is Exception) {
+        errMsg = e.toString().replaceFirst('Exception: ', '');
+      } else {
+        errMsg = e.toString();
+      }
+      state = state.copyWith(isSubmitting: false, error: errMsg);
       return false;
     }
   }

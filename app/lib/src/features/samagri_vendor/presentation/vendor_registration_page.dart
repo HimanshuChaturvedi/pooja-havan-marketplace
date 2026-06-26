@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
-import 'dart:math';
-import '../../location/presentation/pages/location_page.dart';
 import '../data/vendor_repository.dart';
+import 'dart:async';
 import 'package:app/src/core/services/whatsapp_service.dart';
 
 class VendorRegistrationPage extends ConsumerStatefulWidget {
@@ -28,14 +28,34 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
   bool _isLoading = false;
   bool _isPhoneVerified = false;
   bool _isPhoneOtpSent = false;
+  bool _isOtpLoading = false;
+  Timer? _cooldownTimer;
+  int _cooldownSeconds = 0;
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  void _startCooldownTimer() {
+    _cooldownTimer?.cancel();
+    setState(() {
+      _cooldownSeconds = 30;
+    });
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_cooldownSeconds > 0) {
+        setState(() {
+          _cooldownSeconds--;
+        });
+      } else {
+        _cooldownTimer?.cancel();
+      }
+    });
   }
 
   Future<void> _sendPhoneOtp() async {
@@ -47,46 +67,57 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
       return;
     }
 
-    final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
-    final random = Random();
-    final otp = (100000 + random.nextInt(900000)).toString();
+    if (_cooldownSeconds > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please wait $_cooldownSeconds seconds before requesting another code.')));
+      return;
+    }
 
+    setState(() => _isOtpLoading = true);
     try {
-      final success = await ref.read(whatsappServiceProvider).sendOtp(formattedPhone, otp);
-      if (success) {
+      final res = await ref.read(whatsappServiceProvider).sendOtp(phone, 'VENDOR_ONBOARDING');
+      if (res.success) {
         setState(() => _isPhoneOtpSent = true);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification code sent to your WhatsApp.')));
+        _startCooldownTimer();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification code sent to your WhatsApp.'), backgroundColor: Colors.green));
       } else {
-        throw 'Failed to send WhatsApp message';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.errorMessage ?? 'Failed to send WhatsApp message'), backgroundColor: Colors.red));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    } finally {
+      setState(() => _isOtpLoading = false);
     }
   }
 
   Future<void> _verifyPhoneOtp() async {
     final otp = _otpController.text.trim();
     final phone = _phoneController.text.trim();
-    final formattedPhone = phone.startsWith('+') ? phone : '+91$phone';
 
     if (otp.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid 6-digit OTP.')));
       return;
     }
 
+    setState(() => _isOtpLoading = true);
     try {
-      final isVerified = await ref.read(whatsappServiceProvider).verifyOtp(formattedPhone, otp);
-      if (isVerified) {
+      final res = await ref.read(whatsappServiceProvider).verifyOtp(phone, otp, 'VENDOR_ONBOARDING');
+      if (res.success) {
         setState(() {
           _isPhoneVerified = true;
           _isPhoneOtpSent = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone number verified successfully!')));
+        _cooldownTimer?.cancel();
+        setState(() {
+          _cooldownSeconds = 0;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone number verified successfully!'), backgroundColor: Colors.green));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid OTP. Please try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.errorMessage ?? 'Invalid OTP. Please try again.'), backgroundColor: Colors.red));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    } finally {
+      setState(() => _isOtpLoading = false);
     }
   }
 
@@ -130,8 +161,19 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
       if (mounted) context.go('/vendor-pending');
     } catch (e) {
       if (mounted) {
+        String errMsg = 'Registration failed. Please try again.';
+        if (e is PostgrestException) {
+          errMsg = e.message;
+        } else if (e is Exception) {
+          errMsg = e.toString().replaceFirst('Exception: ', '');
+        } else {
+          errMsg = e.toString();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: $e')),
+          SnackBar(
+            content: Text(errMsg),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -189,7 +231,7 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
                   if (!_isPhoneVerified) ...[
                     const SizedBox(width: 8),
                     ElevatedButton(
-                      onPressed: _sendPhoneOtp,
+                      onPressed: (_isOtpLoading || _cooldownSeconds > 0) ? null : _sendPhoneOtp,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.saffron,
                         foregroundColor: Colors.white,
@@ -197,7 +239,21 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
                       ),
-                      child: const Text('Send OTP', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: _isOtpLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              _cooldownSeconds > 0
+                                  ? 'Resend ${_cooldownSeconds}s'
+                                  : (_isPhoneOtpSent ? 'Resend OTP' : 'Send OTP'),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ] else ...[
                     const SizedBox(width: 12),
@@ -219,14 +275,23 @@ class _VendorRegistrationPageState extends ConsumerState<VendorRegistrationPage>
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
-                      onPressed: _verifyPhoneOtp,
+                      onPressed: _isOtpLoading ? null : _verifyPhoneOtp,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: const Text('Verify', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: _isOtpLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('Verify', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),

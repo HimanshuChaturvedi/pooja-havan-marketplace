@@ -1,9 +1,30 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app/src/core/config/whatsapp_config.dart';
 import 'package:app/src/core/supabase/supabase_client.dart';
 import 'package:app/src/core/utils/logger.dart';
+import 'package:app/src/core/utils/phone_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+class OtpResponse {
+  final bool success;
+  final String? errorMessage;
+  final int? attemptsLeft;
+
+  OtpResponse({
+    required this.success,
+    this.errorMessage,
+    this.attemptsLeft,
+  });
+
+  factory OtpResponse.success() => OtpResponse(success: true);
+  factory OtpResponse.failure(String message, {int? attemptsLeft}) => OtpResponse(
+        success: false,
+        errorMessage: message,
+        attemptsLeft: attemptsLeft,
+      );
+}
 
 final whatsappServiceProvider = Provider((ref) => WhatsAppService(ref));
 
@@ -13,21 +34,47 @@ final lastMockMessageProvider = StateProvider<String?>((ref) => null);
 class WhatsAppService {
   final Ref _ref;
   WhatsAppService(this._ref);
-  /// 📲 SENDS OTP VIA WHATSAPP (MOCKED FOR NOW)
-  Future<bool> sendOtp(String phone, String code) async {
-    // 1. Log to Database for Verification
+  /// 📲 SENDS OTP VIA WHATSAPP
+  Future<OtpResponse> sendOtp(String phone, String purpose) async {
     try {
-      await supabase.from('otp_verifications').insert({
-        'phone': phone,
-        'code': code,
-        'expires_at': DateTime.now().add(const Duration(minutes: 15)).toIso8601String(),
-      });
+      final formattedPhone = normalizePhoneNumberForWhatsApp(phone);
+      final response = await supabase.functions.invoke(
+        'whatsapp-otp',
+        body: {
+          'action': 'send',
+          'phone': formattedPhone,
+          'purpose': purpose,
+        },
+      );
+
+      if (response.status == 200 || response.status == 201) {
+        AppLogger.info('✅ Secure OTP sent successfully to: $formattedPhone for $purpose');
+        return OtpResponse.success();
+      } else {
+        final errorMsg = response.data?['error'] ?? 'Failed to send OTP';
+        AppLogger.error('❌ Failed to send secure OTP: $errorMsg');
+        return OtpResponse.failure(errorMsg);
+      }
     } catch (e) {
-      print('DEBUG: OTP DB Log error: $e');
-      rethrow; // Throw the actual error (e.g. "Table not found")
+      AppLogger.error('❌ sendOtp Edge Function error: $e');
+      String errorMsg = 'Failed to connect to verification server';
+      int? attemptsLeft;
+
+      if (e is FormatException) {
+        errorMsg = e.message;
+      } else if (e is FunctionException) {
+        try {
+          final data = e.details is String ? jsonDecode(e.details) : e.details;
+          errorMsg = data?['error'] ?? (e.reasonPhrase ?? 'Edge Function error');
+          attemptsLeft = data?['attemptsLeft'];
+        } catch (_) {
+          errorMsg = e.reasonPhrase ?? 'Edge Function error';
+        }
+      } else {
+        errorMsg = e.toString();
+      }
+      return OtpResponse.failure(errorMsg, attemptsLeft: attemptsLeft);
     }
-    // 2. Send via WhatsApp Edge Function (Production Ready)
-    return _sendTemplate(phone, 'otp_verification', [code], language: WhatsAppConfig.otpLanguage);
   }
 
   // For Automated Booking Notifications
@@ -74,12 +121,8 @@ class WhatsAppService {
   }
 
   Future<bool> _sendTemplate(String phone, String templateName, List<String> parameters, {String? language}) async {
-    // 🔥 SANITIZE: Remove all non-digits
-    final sanitizedPhone = phone.replaceAll(RegExp(r'\D'), '');
-    // Prepend '91' if it is a 10-digit Indian phone number
-    final formattedPhone = sanitizedPhone.length == 10 ? '91$sanitizedPhone' : sanitizedPhone;
-
     try {
+      final formattedPhone = normalizePhoneNumberForWhatsApp(phone);
       final response = await supabase.functions.invoke(
         'whatsapp-notify',
         body: {
@@ -103,30 +146,47 @@ class WhatsAppService {
     }
   }
 
-  /// ✅ VERIFIES OTP AGAINST DATABASE
-  Future<bool> verifyOtp(String phone, String code) async {
+  /// ✅ VERIFIES OTP VIA EDGE FUNCTION
+  Future<OtpResponse> verifyOtp(String phone, String code, String purpose) async {
     try {
-      final response = await supabase
-          .from('otp_verifications')
-          .select()
-          .eq('phone', phone)
-          .eq('code', code)
-          .eq('is_verified', false)
-          .gt('expires_at', DateTime.now().toIso8601String())
-          .maybeSingle();
+      final formattedPhone = normalizePhoneNumberForWhatsApp(phone);
+      final response = await supabase.functions.invoke(
+        'whatsapp-otp',
+        body: {
+          'action': 'verify',
+          'phone': formattedPhone,
+          'purpose': purpose,
+          'code': code,
+        },
+      );
 
-      if (response != null) {
-        // Mark as verified to prevent reuse
-        await supabase
-            .from('otp_verifications')
-            .update({'is_verified': true})
-            .eq('id', response['id']);
-        return true;
+      if (response.status == 200 || response.status == 201) {
+        AppLogger.info('✅ Secure OTP verified successfully for: $formattedPhone');
+        return OtpResponse.success();
+      } else {
+        final errorMsg = response.data?['error'] ?? 'Invalid OTP code';
+        AppLogger.error('❌ Secure OTP verification failed: $errorMsg');
+        return OtpResponse.failure(errorMsg);
       }
-      return false;
     } catch (e) {
-      print('DEBUG: OTP Verification error: $e');
-      return false;
+      AppLogger.error('❌ verifyOtp Edge Function error: $e');
+      String errorMsg = 'Failed to connect to verification server';
+      int? attemptsLeft;
+
+      if (e is FormatException) {
+        errorMsg = e.message;
+      } else if (e is FunctionException) {
+        try {
+          final data = e.details is String ? jsonDecode(e.details) : e.details;
+          errorMsg = data?['error'] ?? (e.reasonPhrase ?? 'Edge Function error');
+          attemptsLeft = data?['attemptsLeft'];
+        } catch (_) {
+          errorMsg = e.reasonPhrase ?? 'Edge Function error';
+        }
+      } else {
+        errorMsg = e.toString();
+      }
+      return OtpResponse.failure(errorMsg, attemptsLeft: attemptsLeft);
     }
   }
 
