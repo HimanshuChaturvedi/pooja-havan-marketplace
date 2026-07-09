@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:app/src/features/home_booking/presentation/address/home_address_page.dart';
 import 'package:app/src/features/home_booking/presentation/address/state/address_provider.dart';
-import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
@@ -20,7 +20,7 @@ class SamagriAddressPage extends ConsumerWidget {
       return HomeAddressPage(
         city: 'Delivery Location',
         onAddressSaved: (address) {
-          SamagriSession.attachAddress(
+          ref.read(samagriSessionProvider.notifier).attachAddress(
             '${address.line1}, ${address.city}',
             addressId: address.id,
             latitude: address.latitude,
@@ -42,7 +42,7 @@ class SamagriAddressPage extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: GestureDetector(
               onTap: () {
-                SamagriSession.attachAddress(
+                ref.read(samagriSessionProvider.notifier).attachAddress(
                   '${address.line1}, ${address.city}',
                   addressId: address.id,
                   latitude: address.latitude,

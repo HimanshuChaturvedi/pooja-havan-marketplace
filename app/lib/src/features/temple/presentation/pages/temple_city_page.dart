@@ -183,7 +183,7 @@ class _TempleCityPageState extends ConsumerState<TempleCityPage> {
         child: PrimaryButton(
           label: 'Continue →',
           onTap: _selectedCityId != null
-              ? () => context.push('/temple-selection?city=$_selectedCityId')
+              ? () => context.push('/temple-select?city=$_selectedCityId')
               : null,
         ),
       ),

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app/src/core/config/whatsapp_config.dart';
 import 'package:app/src/core/supabase/supabase_client.dart';
@@ -205,46 +205,5 @@ class WhatsAppService {
 
     // Logic for Meta template "samagri_confirmation" would go here
     return true;
-  }
-
-  /// 🧪 TEST CONNECTION (Using default Meta hello_world template)
-  Future<bool> testConnection(String phone) async {
-    // 🔥 SANITIZE: Meta API expects digits only (e.g., 918287966676)
-    final sanitizedPhone = phone.replaceAll(RegExp(r'\D'), '');
-    
-    final url = Uri.parse('https://graph.facebook.com/v25.0/${WhatsAppConfig.phoneNumberId}/messages');
-    
-    AppLogger.debug('🚀 [WHATSAPP LIVE TEST] To: $sanitizedPhone');
-    
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer ${WhatsAppConfig.accessToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        "messaging_product": "whatsapp",
-        "to": sanitizedPhone,
-        "type": "template",
-        "template": {
-          "name": "hello_world",
-          "language": {"code": "en_US"}
-        }
-      }),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      AppLogger.info('✅ [WHATSAPP LIVE TEST] Success!');
-      return true;
-    } else {
-      // 🔥 CRITICAL: Show the user exactly what Meta is saying
-      final errorBody = response.body;
-      AppLogger.error('❌ [WHATSAPP LIVE TEST] Failed!');
-      AppLogger.error('   Status Code: ${response.statusCode}');
-      AppLogger.error('   Error Details: $errorBody');
-      
-      // If the error message is visible in the console, it will explain everything
-      return false;
-    }
   }
 }

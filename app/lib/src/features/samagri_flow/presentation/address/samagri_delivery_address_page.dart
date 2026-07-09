@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
-import 'package:app/src/features/samagri_flow/application/samagri_session.dart';
+import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
-class SamagriDeliveryAddressPage extends StatefulWidget {
+class SamagriDeliveryAddressPage extends ConsumerStatefulWidget {
   const SamagriDeliveryAddressPage({super.key});
 
   @override
-  State<SamagriDeliveryAddressPage> createState() => _SamagriDeliveryAddressPageState();
+  ConsumerState<SamagriDeliveryAddressPage> createState() => _SamagriDeliveryAddressPageState();
 }
 
-class _SamagriDeliveryAddressPageState extends State<SamagriDeliveryAddressPage> {
+class _SamagriDeliveryAddressPageState extends ConsumerState<SamagriDeliveryAddressPage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
   String _selectedCity = 'Varanasi';
@@ -257,7 +258,7 @@ class _SamagriDeliveryAddressPageState extends State<SamagriDeliveryAddressPage>
                         final fullAddress = pincode.isNotEmpty ? '$address - $pincode' : address;
                         
                         final coords = _cityCoords[_selectedCity];
-                        SamagriSession.attachAddress(
+                        ref.read(samagriSessionProvider.notifier).attachAddress(
                           fullAddress, 
                           latitude: coords?.$1, 
                           longitude: coords?.$2,

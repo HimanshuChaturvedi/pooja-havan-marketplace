@@ -9,7 +9,4 @@ class WhatsAppConfig {
   static const String otpLanguage = 'en';
   static const String bookingLanguage = 'en'; // Changed back to 'en' since Hinglish templates are registered in English in Meta
 
-  /// 🔑 META BUSINESS API KEYS (Live from Meta Dashboard)
-  static const String accessToken = 'EAARrdN6NrywBRRAWUH1HR4LQE6VLZCMJ6ZCvYCR3FEQLL8GAep76W7mir6EwgN9xe60YlQGznReoa8q9byQrZAukotd5VjNSn8KLZBGyxMMYj5XqPNPbHslvThgCWVqtZBRpscDIE2xf9E2b8OWX3Cy6w5coL5dZAWG306IdsoMIiMgT4s2SemKEBaJHKeiuyaiXahmjZC0MJrYdSuDn7oiyyzZC9An1bzims2SMtvEJQG7vOTakomvrblmJ50pShssyds3sLZBjoyWCrgwoTxxYZD';
-  static const String phoneNumberId = '1158595687330650';
 }
