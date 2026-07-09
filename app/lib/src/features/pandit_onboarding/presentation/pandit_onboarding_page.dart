@@ -10,6 +10,7 @@ import '../state/pandit_onboarding_provider.dart';
 import '../../../core/supabase/supabase_client.dart'; // To get current user id
 import '../../../core/utils/ritual_category_mapper.dart';
 import 'package:image_picker/image_picker.dart'; 
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'dart:async';
 import '../../../core/services/whatsapp_service.dart'; // [NEW]
@@ -99,20 +100,180 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
 
   Future<void> _pickImage(int type) async {
     // type: 0 = profile, 1 = aadhar front, 2 = aadhar back
-    final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
-    
-    if (image != null) {
-      setState(() {
-        if (type == 1) {
-          _aadharFrontPath = image.path;
-        } else if (type == 2) {
-          _aadharBackPath = image.path;
-        } else {
-          _profileImagePath = image.path;
-        }
-      });
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Upload Photo',
+                style: AppTextStyles.title.copyWith(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkCharcoal),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.saffron.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: AppColors.saffron),
+                ),
+                title: const Text('Take Photo', style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              const Divider(),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.saffron.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: AppColors.saffron),
+                ),
+                title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+              const Divider(),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.close_rounded, color: Colors.red.shade400),
+                ),
+                title: Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red.shade400)),
+                onTap: () => Navigator.pop(ctx, null),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    bool permissionGranted = false;
+    if (source == ImageSource.camera) {
+      permissionGranted = await _requestCameraPermission();
+    } else {
+      permissionGranted = true;
     }
+
+    if (!permissionGranted) return;
+
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: source, imageQuality: 70);
+      
+      if (image != null) {
+        setState(() {
+          if (type == 1) {
+            _aadharFrontPath = image.path;
+          } else if (type == 2) {
+            _aadharBackPath = image.path;
+          } else {
+            _profileImagePath = image.path;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
+  }
+
+  Future<bool> _requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    if (status.isGranted || status.isLimited) {
+      return true;
+    }
+    if (status.isPermanentlyDenied || status.isDenied) {
+      if (mounted) {
+        _showPermissionDeniedDialog('Camera');
+      }
+    }
+    return false;
+  }
+
+  void _showPermissionDeniedDialog(String permissionName) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 28),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                '$permissionName Access Required',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 300),
+          child: SingleChildScrollView(
+            child: Text(
+              '$permissionName permission is required to capture photos. '
+              'Please grant permission in your device settings.',
+              style: const TextStyle(fontSize: 14, height: 1.5),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.saffron,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Open Settings', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _removeImage(int type) {
+    setState(() {
+      if (type == 1) {
+        _aadharFrontPath = null;
+      } else if (type == 2) {
+        _aadharBackPath = null;
+      } else {
+        _profileImagePath = null;
+      }
+    });
   }
 
   void _verifyAadharMock() {
@@ -386,6 +547,7 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
                           path: _aadharFrontPath,
                           label: 'Front Side',
                           onTap: () => _pickImage(1),
+                          onRemove: () => _removeImage(1),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -394,6 +556,7 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
                           path: _aadharBackPath,
                           label: 'Back Side',
                           onTap: () => _pickImage(2),
+                          onRemove: () => _removeImage(2),
                         ),
                       ),
                     ],
@@ -409,11 +572,12 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
               key: _personalFormKey,
               child: Column(
                 children: [
-                   _buildImagePicker(
+                    _buildImagePicker(
                     path: _profileImagePath,
                     label: 'Profile Photo*',
                     isCircle: true,
                     onTap: () => _pickImage(0),
+                    onRemove: () => _removeImage(0),
                   ),
                   const SizedBox(height: 24),
                   // Fixed Name Row Alignment
@@ -634,41 +798,109 @@ class _PanditOnboardingPageState extends ConsumerState<PanditOnboardingPage> {
     );
   }
 
-  Widget _buildImagePicker({required String? path, required String label, required VoidCallback onTap, bool isCircle = false}) {
+  Widget _buildImagePicker({
+    required String? path,
+    required String label,
+    required VoidCallback onTap,
+    VoidCallback? onRemove,
+    bool isCircle = false,
+  }) {
+    final hasImage = path != null;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: hasImage ? null : onTap,
       child: Container(
         height: 120,
         width: isCircle ? 120 : double.infinity,
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(isCircle ? 60 : 16),
-          border: Border.all(color: AppColors.saffron.withOpacity(0.3), width: 2, style: BorderStyle.solid),
-          image: path != null ? DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover) : null,
+          border: Border.all(
+            color: AppColors.saffron.withOpacity(0.3),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+          image: hasImage
+              ? DecorationImage(
+                  image: FileImage(File(path)),
+                  fit: BoxFit.cover,
+                )
+              : null,
         ),
-        child: path == null
-            ? Column(
+        child: hasImage
+            ? Stack(
+                children: [
+                  // Change/Edit Photo button (top-right)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: onTap,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.edit_rounded, size: 16, color: AppColors.saffron),
+                      ),
+                    ),
+                  ),
+                  // Remove Photo button (top-left)
+                  if (onRemove != null)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: GestureDetector(
+                        onTap: onRemove,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red.shade400),
+                        ),
+                      ),
+                    ),
+                ],
+              )
+            : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(isCircle ? Icons.add_a_photo : Icons.add_photo_alternate, color: AppColors.saffron, size: isCircle ? 28 : 32),
+                  Icon(
+                    isCircle ? Icons.add_a_photo : Icons.add_photo_alternate,
+                    color: AppColors.saffron,
+                    size: isCircle ? 28 : 32,
+                  ),
                   const SizedBox(height: 4),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
-                      label, 
+                      label,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: isCircle ? 10 : 12, color: AppColors.saffron, fontWeight: FontWeight.bold)
+                      style: TextStyle(
+                        fontSize: isCircle ? 10 : 12,
+                        color: AppColors.saffron,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
-              )
-            : Align(
-                alignment: Alignment.topRight,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: const Icon(Icons.edit, size: 16, color: AppColors.saffron),
-                ),
               ),
       ),
     );
