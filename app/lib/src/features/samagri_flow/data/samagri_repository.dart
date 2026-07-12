@@ -152,7 +152,14 @@ class SupabaseSamagriRepository implements SamagriRepository {
 
       if (customerPhone != null) {
         AppLogger.debug('Triggering Samagri Confirmation: $customerPhone');
-        await _whatsApp.sendSamagriOrderConfirmation(customerPhone, refId, amount);
+        final custName = supabase.auth.currentUser?.userMetadata?['full_name'] as String? ?? 'Customer';
+        await _whatsApp.sendSamagriOrderConfirmation(
+          customerPhone,
+          customerName: custName,
+          items: const ['Samagri Items'],
+          deliveryType: 'Express Delivery',
+          amount: amount,
+        );
         // Sequential Delay
         await Future.delayed(const Duration(milliseconds: 1500));
       }

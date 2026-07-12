@@ -230,7 +230,7 @@ class _PanditList extends ConsumerWidget {
             
             // Deterministic mocks for card visuals
             final hash = pandit.id.hashCode;
-            final double rating = 4.6 + (hash % 4) * 0.1;
+            // rating: null — no real rating data from DB yet; fake values removed
             final int pujasCount = 20 + (hash % 35);
             final List<String> langs = hash % 3 == 0 
                 ? ['Hindi', 'Sanskrit']
@@ -247,7 +247,7 @@ class _PanditList extends ConsumerWidget {
                   name: '${pandit.firstName} ${pandit.lastName}',
                   experience: '${pandit.experienceYears} Years Exp',
                   profileImageUrl: pandit.profileImageUrl,
-                  rating: rating,
+                  rating: null,
                   pujasCount: pujasCount,
                   languages: langs,
                   onTap: () {
@@ -432,7 +432,7 @@ class _PanditCard extends StatelessWidget {
   final String name;
   final String experience;
   final String? profileImageUrl;
-  final double rating;
+  final double? rating;
   final int pujasCount;
   final List<String> languages;
   final VoidCallback onTap;
@@ -441,7 +441,7 @@ class _PanditCard extends StatelessWidget {
     required this.name,
     required this.experience,
     this.profileImageUrl,
-    required this.rating,
+    this.rating,
     required this.pujasCount,
     required this.languages,
     required this.onTap,
@@ -491,16 +491,26 @@ class _PanditCard extends StatelessWidget {
                   // Rating & Completed Pujas
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${rating.toStringAsFixed(1)} ',
-                        style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      Text(
-                        '($pujasCount Pujas)',
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.softGrey),
-                      ),
+                      if (rating != null) ...[
+                        const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${rating!.toStringAsFixed(1)} ',
+                          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Text(
+                          '($pujasCount Pujas)',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.softGrey),
+                        ),
+                      ] else
+                        Text(
+                          'No ratings yet',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.softGrey,
+                            fontStyle: FontStyle.italic,
+                            fontSize: 12,
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),

@@ -106,7 +106,16 @@ class WhatsAppService {
     return _sendTemplate(phone, 'new_assignment_alert', [ritualName, address, dateStr], language: WhatsAppConfig.bookingLanguage);
   }
 
-  Future<bool> sendVendorNewOrder(String phone, String ritualName, String address, double amount) async {
+  /// 📋 new_samagri_order template: {{1}}=Pooja, {{2}}=CustomerName, {{3}}=Mobile, {{4}}=Address, {{5}}=Items
+  Future<bool> sendVendorNewOrder(
+    String phone,
+    String ritualName,
+    String address,
+    double amount, {
+    String customerName = '',
+    String customerMobile = '',
+    String samagriItems = '',
+  }) async {
     if (WhatsAppConfig.useMockApi) {
       final msg = 'Jai Shree Ganesh! New Samagri Order for $ritualName. Delivery to $address. Total: ₹$amount. 🙏';
       AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone (Vendor)');
@@ -116,8 +125,13 @@ class WhatsAppService {
       _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Vendor $phone] ($timestamp)\n$msg';
       return true;
     }
-    // Parameters: {{1}} = Ritual Name (or Order Type), {{2}} = Address, {{3}} = Amount
-    return _sendTemplate(phone, 'new_samagri_order', [ritualName, address, amount.toStringAsFixed(0)], language: WhatsAppConfig.bookingLanguage);
+    // Template: new_samagri_order — 5 params as per approved Meta template
+    return _sendTemplate(
+      phone,
+      'new_samagri_order',
+      [ritualName, customerName, customerMobile, address, samagriItems],
+      language: WhatsAppConfig.bookingLanguage,
+    );
   }
 
   Future<bool> _sendTemplate(String phone, String templateName, List<String> parameters, {String? language}) async {
@@ -191,10 +205,22 @@ class WhatsAppService {
   }
 
 
-  /// 🛍️ SENDS SAMAGRI ORDER CONFIRMATION TO CUSTOMER
-  Future<bool> sendSamagriOrderConfirmation(String phone, String refId, double amount) async {
+  /// 🛍️ SENDS STANDALONE SAMAGRI ORDER CONFIRMATION TO CUSTOMER
+  /// Uses approved Meta template: standalone_samagri_order_confirmation
+  /// {{1}} = Customer Name, {{2}} = Samagri Items, {{3}} = Delivery Type, {{4}} = Total Amount
+  Future<bool> sendSamagriOrderConfirmation(
+    String phone, {
+    required String customerName,
+    required List<String> items,
+    required String deliveryType,
+    required double amount,
+  }) async {
     if (WhatsAppConfig.useMockApi) {
-      final msg = 'Jai Shree Ganesh! Your Samagri order ($refId) for ₹$amount is confirmed. 🙏';
+      const msg = 'Namaste 🙏\n\n'
+          'Aapka Samagri Order safaltapoorvak prapt ho gaya hai.\n\n'
+          'Hamara Vendor jaldi hi aapse sampark karega aur aapke order ki delivery karega.\n\n'
+          'Bharat Pooja Setu chunne ke liye dhanyavaad.';
+          
       AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone (Customer)');
       AppLogger.debug('💬 Message: $msg');
       
@@ -203,7 +229,60 @@ class WhatsAppService {
       return true;
     }
 
-    // Logic for Meta template "samagri_confirmation" would go here
-    return true;
+    final itemsText = items.join(', ');
+    return _sendTemplate(
+      phone,
+      'standalone_samagri_order_confirmation',
+      [customerName, itemsText, deliveryType, amount.toStringAsFixed(0)],
+      language: WhatsAppConfig.bookingLanguage,
+    );
+  }
+
+  /// 🛍️ SENDS STANDALONE SAMAGRI ORDER NOTIFICATION TO VENDOR
+  Future<bool> sendVendorStandaloneSamagriOrder({
+    required String vendorPhone,
+    required String customerName,
+    required String customerMobile,
+    required String deliveryAddress,
+    required List<String> orderedItems,
+    required String deliveryType,
+    required double totalBill,
+  }) async {
+    final itemsText = orderedItems.map((item) => '• $item').join('\n');
+
+    if (WhatsAppConfig.useMockApi) {
+      final msg = 'Hari Om Vendor Ji! 🙏\n\n'
+          'Aapko ek naya Samagri Order mila hai.\n\n'
+          'Customer Name:\n$customerName\n\n'
+          'Customer Mobile:\n$customerMobile\n\n'
+          'Delivery Address:\n$deliveryAddress\n\n'
+          'Ordered Items:\n$itemsText\n\n'
+          'Delivery Type:\n$deliveryType\n\n'
+          'Total Bill:\n₹${totalBill.toStringAsFixed(0)}\n\n'
+          'Kripya order samay par pack aur deliver karein.';
+          
+      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $vendorPhone (Vendor)');
+      AppLogger.debug('💬 Message: $msg');
+      
+      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
+      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Vendor $vendorPhone] ($timestamp)\n$msg';
+      return true;
+    }
+
+    // Template: new_samagri_order — 5 params: {{1}}=OrderType, {{2}}=CustomerName, {{3}}=Mobile, {{4}}=Address, {{5}}=Items
+    final cleanItemsText = orderedItems.join(', ');
+
+    return _sendTemplate(
+      vendorPhone,
+      'new_samagri_order',
+      [
+        'Standalone Samagri Order',  // {{1}} Order type
+        customerName,                // {{2}} Customer name
+        customerMobile,              // {{3}} Mobile
+        deliveryAddress,             // {{4}} Address
+        cleanItemsText,              // {{5}} Items
+      ],
+      language: WhatsAppConfig.bookingLanguage,
+    );
   }
 }

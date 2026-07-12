@@ -13,7 +13,6 @@ import 'package:app/src/core/supabase/supabase_client.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
-import 'package:app/src/core/utils/whatsapp_helper.dart';
 
 class BookingSuccessPage extends ConsumerStatefulWidget {
   const BookingSuccessPage({super.key});
@@ -101,8 +100,6 @@ class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> with Ti
   Widget build(BuildContext context) {
     final bookingSession = ref.watch(bookingSessionProvider);
     final booking = bookingSession.current;
-    final userId = supabase.auth.currentUser?.id ?? '0000';
-    final displayUserId = _shortUserId(userId);
 
     return AppScaffold(
       showAppBar: false,
@@ -228,40 +225,6 @@ class _BookingSuccessPageState extends ConsumerState<BookingSuccessPage> with Ti
                     delay: 1200,
                     child: Column(
                       children: [
-                        PrimaryButton(
-                          icon: Icons.share_outlined,
-                          label: 'Share Details on WhatsApp',
-                          onTap: booking == null
-                              ? () {}
-                              : () {
-                                  final samagri = ref.read(samagriSessionProvider);
-                                  final orderId = bookingSession.referenceId ?? bookingSession.bookingId ?? booking.referenceId ?? bookingSession.transactionId ?? '---';
-                                  final dateTime = '${booking.selectedDate?.toString().split(' ')[0] ?? "TBD"} at ${booking.selectedTime ?? "TBD"}';
-                                  
-                                  String msg = 'Namaste 🙏,\n\n'
-                                      'A new Pooja has been booked via Bharat Pooja Setu.\n\n'
-                                      '📝 *Order ID:* $orderId\n'
-                                      '📅 *Date & Time:* $dateTime\n'
-                                      '📍 *City:* ${booking.city}\n\n'
-                                      '*Price Details:*\n'
-                                      '- Ritual Dakshina: ₹${bookingSession.ritualDakshina.toInt()}\n';
-                                  
-                                  if (samagri.items.isNotEmpty) {
-                                    msg += '- Samagri Charges: ₹${bookingSession.samagriTotal.toInt()}\n';
-                                    msg += '\n*Samagri Items:*\n';
-                                    msg += samagri.items.map((e) => '• ${e.name} × ${e.quantity}').join('\n') + '\n';
-                                  }
-                                  
-                                  msg += '\n- Vendor Service Charge: ₹${bookingSession.deliveryFee.toInt()}\n'
-                                      '- Platform & Service Fee: ₹${bookingSession.platformFee.toInt()}\n'
-                                      '💰 *Total Paid:* ₹${bookingSession.totalAmount.toInt()}\n\n'
-                                      'Please confirm availability.\n\n'
-                                      '— Bharat Pooja Setu';
-
-                                  WhatsAppHelper.openChat(message: msg);
-                                },
-                        ),
-                        const SizedBox(height: 20),
                         TextButton(
                           onPressed: () {
                             ref.read(bookingSessionProvider.notifier).reset();

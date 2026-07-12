@@ -19,6 +19,7 @@ import '../../samagri_vendor/data/vendor_repository.dart';
 import '../../booking/domain/booking_draft.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app/src/core/services/whatsapp_service.dart';
+import 'package:app/src/core/utils/logger.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   const PaymentPage({super.key});
@@ -80,16 +81,72 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
             ? user!.phone 
             : user?.userMetadata?['whatsapp_number'] as String?;
             
+        AppLogger.debug('PaymentPage WA Trigger: userPhone=$userPhone, booking=$booking, orderId=$orderId');
+            
         if (userPhone != null && userPhone.isNotEmpty) {
           final waService = ref.read(whatsappServiceProvider);
           
           if (booking == null) {
-            // Standalone Samagri
-            await waService.sendBookingConfirmation(userPhone, "Samagri Order", "Express Delivery");
+            // Standalone Samagri — extract customer details for both notifications
+            final customerName = user?.userMetadata?['full_name'] as String? ?? 'Client';
+            final orderedItems = samagri.items.map((i) => i.name).toList();
+            const deliveryType = 'Express Delivery';
+
+            // A. Alert the Customer
+            AppLogger.debug('PaymentPage WA: Triggering customer confirmation');
+            await waService.sendSamagriOrderConfirmation(
+              userPhone,
+              customerName: customerName,
+              items: orderedItems,
+              deliveryType: deliveryType,
+              amount: samagri.finalTotal.toDouble(),
+            );
+            
+            // B. Alert the Vendor
+            AppLogger.debug('PaymentPage WA: Fetching order details for orderId=$orderId');
+            final orderData = await supabase
+                .from('samagri_orders')
+                .select('vendor_id')
+                .eq('id', orderId)
+                .maybeSingle();
+                
+            final String? vendorId = orderData?['vendor_id'];
+            AppLogger.debug('🔍 STANDALONE-VENDOR-DIAG: orderData=$orderData');
+            AppLogger.debug('🔍 STANDALONE-VENDOR-DIAG: vendorId=$vendorId');
+            if (vendorId != null) {
+              final vendorData = await supabase
+                  .from('samagri_vendors')
+                  .select('phone_number')
+                  .eq('id', vendorId)
+                  .maybeSingle();
+                  
+              final vendorPhone = vendorData?['phone_number'];
+              AppLogger.debug('🔍 STANDALONE-VENDOR-DIAG: vendorPhone=$vendorPhone');
+              if (vendorPhone != null && vendorPhone.isNotEmpty) {
+                final customerMobile = (user?.phone?.isNotEmpty == true)
+                    ? user!.phone!
+                    : (user?.userMetadata?['whatsapp_number'] as String? ?? 'N/A');
+                final deliveryAddress = samagri.addressText ?? 'N/A';
+                
+                await waService.sendVendorStandaloneSamagriOrder(
+                  vendorPhone: vendorPhone,
+                  customerName: customerName,
+                  customerMobile: customerMobile,
+                  deliveryAddress: deliveryAddress,
+                  orderedItems: orderedItems,
+                  deliveryType: deliveryType,
+                  totalBill: samagri.finalTotal.toDouble(),
+                );
+              } else {
+                AppLogger.warn('🔍 STANDALONE-VENDOR-DIAG: vendorPhone is null/empty — vendor notification SKIPPED');
+              }
+            } else {
+              AppLogger.warn('🔍 STANDALONE-VENDOR-DIAG: vendorId is null in samagri_orders — vendor notification SKIPPED');
+            }
           }
         }
       } catch (waError) {
-        debugPrint('PaymentPage: WhatsApp Trigger Error: $waError');
+        AppLogger.error('PaymentPage WA Error', waError);
         // Do not fail the booking if WhatsApp fails
       }
 

@@ -110,7 +110,7 @@ class _PoojaDetailsPageState extends ConsumerState<PoojaDetailsPage> with Single
                         _infoRow(
                           icon: Icons.inventory_2_outlined,
                           title: 'Samagri',
-                          value: 'Pandit will provide list', 
+                          value: 'Samagri can be ordered separately from the Samagri section of the app.', 
                         ),
                         const SizedBox(height: 12),
                         const Divider(height: 1, color: Colors.black12),

@@ -290,8 +290,29 @@ class BookingRepositoryImpl implements BookingRepository {
         final vendorPhone = vendorResponse?['phone_number'];
         if (vendorPhone != null) {
           AppLogger.debug('Triggering Vendor Notification: $vendorPhone');
-          final addressWithDetails = "${booking.address ?? 'Client Location'} (Pooja Date: $dateStr - Deliver 1 day before)";
-          await _whatsApp.sendVendorNewOrder(vendorPhone, booking.ritualName, addressWithDetails, booking.samagriCharges);
+          final custName = supabase.auth.currentUser?.userMetadata?['full_name'] as String? ?? 'Customer';
+          final custMobile = supabase.auth.currentUser?.phone?.isNotEmpty == true
+              ? supabase.auth.currentUser!.phone!
+              : (supabase.auth.currentUser?.userMetadata?['whatsapp_number'] as String? ?? '');
+
+          // Compute delivery deadline: 1 day before pooja date
+          String deliveryNote = '';
+          if (booking.selectedDate != null) {
+            final deliverBy = booking.selectedDate!.subtract(const Duration(days: 1));
+            final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            deliveryNote = ' | Deliver by: ${deliverBy.day} ${months[deliverBy.month - 1]} ${deliverBy.year}';
+          }
+          final addressWithDelivery = '${booking.address ?? 'Client Location'}$deliveryNote';
+
+          await _whatsApp.sendVendorNewOrder(
+            vendorPhone,
+            booking.ritualName,
+            addressWithDelivery,
+            booking.samagriCharges,
+            customerName: custName,
+            customerMobile: custMobile,
+            samagriItems: 'Samagri for ${booking.ritualName}',
+          );
         } else {
           AppLogger.warn('Skipping vendor notification: Vendor phone number not found.');
         }
@@ -422,6 +443,13 @@ class BookingRepositoryImpl implements BookingRepository {
         try {
           final bookingData = await supabase.from('bookings').select('*').eq('id', bookingId).single();
           final samagriData = await supabase.from('samagri_orders').select('vendor_id').eq('booking_id', bookingId).maybeSingle();
+
+          // 🔍 DIAGNOSTIC: Log what we found so we can trace vendor notification issues
+          AppLogger.debug('🔍 NOTIF-DIAG: bookingId=$bookingId');
+          AppLogger.debug('🔍 NOTIF-DIAG: pandit_id=${bookingData['pandit_id']}');
+          AppLogger.debug('🔍 NOTIF-DIAG: samagri_required=${bookingData['samagri_required']}');
+          AppLogger.debug('🔍 NOTIF-DIAG: samagriData row = $samagriData');
+          AppLogger.debug('🔍 NOTIF-DIAG: vendor_id from samagri_orders = ${samagriData?['vendor_id']}');
           
           final dummyDraft = BookingDraft(
             ritualName: bookingData['ritual_name'] ?? 'Pooja',

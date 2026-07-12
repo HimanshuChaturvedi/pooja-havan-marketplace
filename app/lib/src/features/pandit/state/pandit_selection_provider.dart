@@ -4,7 +4,7 @@ import '../../pandit_onboarding/domain/pandit_profile.dart';
 
 typedef PanditSelectionParams = ({String ritualSlug, String city});
 
-final panditsByRitualProvider = FutureProvider.family<List<PanditProfile>, PanditSelectionParams>((ref, params) async {
+final panditsByRitualProvider = FutureProvider.autoDispose.family<List<PanditProfile>, PanditSelectionParams>((ref, params) async {
   final repository = ref.watch(panditRepositoryProvider);
   return repository.getPanditsByRitual(params.ritualSlug, params.city);
 });

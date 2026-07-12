@@ -16,6 +16,8 @@ Deno.serve(async (req) => {
 
   const { phone, template_name, parameters, language = 'en' } = await req.json();
 
+  console.log(`[whatsapp-notify] template=${template_name} phone=${phone} params=${JSON.stringify(parameters)} lang=${language}`);
+
   if (!phone || !template_name) {
     return new Response(JSON.stringify({ error: 'Missing phone or template_name' }), { 
       status: 400,
@@ -54,6 +56,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    const payload = {
+      messaging_product: 'whatsapp',
+      to: formattedPhone,
+      type: 'template',
+      template: {
+        name: template_name,
+        language: { code: language },
+        components: bodyComponents,
+      },
+    };
+
+    console.log(`[whatsapp-notify] Meta API payload: ${JSON.stringify(payload)}`);
+
     const response = await fetch(
       `https://graph.facebook.com/${FACEBOOK_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
       {
@@ -62,25 +77,19 @@ Deno.serve(async (req) => {
           'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: formattedPhone,
-          type: 'template',
-          template: {
-            name: template_name,
-            language: { code: language },
-            components: bodyComponents,
-          },
-        }),
+        body: JSON.stringify(payload),
       }
     );
 
     const result = await response.json();
+    console.log(`[whatsapp-notify] Meta API response status=${response.status} body=${JSON.stringify(result)}`);
+
     return new Response(JSON.stringify(result), { 
       status: response.status,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   } catch (error: any) {
+    console.error(`[whatsapp-notify] Unexpected error: ${error.message}`);
     return new Response(JSON.stringify({ error: error.message }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }

@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/booking/state/booking_session_notifier.dart';
 
-import '../../features/booking/application/booking_session.dart';
+
 import '../supabase/supabase_client.dart';
 
 import '../../features/splash/presentation/splash_page.dart';
-import '../../features/landing/presentation/landing_page.dart';
+
 import '../../theme/components/app_colors.dart';
 import '../../theme/components/app_text_styles.dart';
 import '../../core/widgets/design_system.dart';

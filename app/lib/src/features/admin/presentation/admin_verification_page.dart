@@ -214,8 +214,9 @@ class _PanditVerificationCard extends ConsumerWidget {
                     children: [
                       Text('${pandit.firstName} ${pandit.lastName}',
                           style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-                      Text(pandit.emailAddress ?? 'No Email', style: AppTextStyles.bodySmall),
-                      Text('Exp: ${pandit.experienceYears} Years', style: AppTextStyles.bodySmall),
+                      Text('Email: ${pandit.emailAddress ?? "No Email"}', style: AppTextStyles.bodySmall),
+                      Text('Phone: ${pandit.phoneNumber.isNotEmpty ? pandit.phoneNumber : "Not Available"}', style: AppTextStyles.bodySmall),
+                      Text('Experience: ${pandit.experienceYears} Years', style: AppTextStyles.bodySmall),
                     ],
                   ),
                 ),

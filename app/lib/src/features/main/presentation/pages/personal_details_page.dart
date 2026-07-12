@@ -7,6 +7,7 @@ import 'package:app/src/core/widgets/design_system.dart';
 import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
+import 'package:app/src/features/pandit_onboarding/data/pandit_repository_provider.dart';
 
 class PersonalDetailsPage extends ConsumerStatefulWidget {
   const PersonalDetailsPage({super.key});
@@ -29,7 +30,25 @@ class _PersonalDetailsPageState extends ConsumerState<PersonalDetailsPage> {
     final user = supabase.auth.currentUser;
     final metadata = user?.userMetadata ?? {};
     
-    _nameController = TextEditingController(text: metadata['full_name'] ?? '');
+    // Read cached Pandit Profile name if available to prevent Google OAuth overwrite issues
+    String initialName = '';
+    if (user != null) {
+      try {
+        final panditProfileAsync = ref.read(panditProfileFutureProvider(user.id));
+        if (panditProfileAsync.hasValue && panditProfileAsync.value != null) {
+          final profile = panditProfileAsync.value!;
+          initialName = '${profile.firstName} ${profile.lastName}'.trim();
+        }
+      } catch (e) {
+        debugPrint('Error reading pandit profile in initState: $e');
+      }
+    }
+    
+    if (initialName.isEmpty) {
+      initialName = metadata['full_name'] ?? '';
+    }
+    
+    _nameController = TextEditingController(text: initialName);
     _whatsappController = TextEditingController(text: metadata['whatsapp_number'] ?? '');
     _email = user?.email ?? '';
   }
@@ -49,27 +68,55 @@ class _PersonalDetailsPageState extends ConsumerState<PersonalDetailsPage> {
       _errorMessage = null;
     });
 
-    try {
-      final name = _nameController.text.trim();
-      final whatsapp = _whatsappController.text.trim();
+      try {
+        final name = _nameController.text.trim();
+        final whatsapp = _whatsappController.text.trim();
 
-      // Format WhatsApp number cleanly (ensure prefix +91 if 10 digits)
-      var formattedWhatsapp = whatsapp;
-      if (whatsapp.length == 10 && RegExp(r'^[0-9]+$').hasMatch(whatsapp)) {
-        formattedWhatsapp = '+91$whatsapp';
-      }
+        // Format WhatsApp number cleanly (ensure prefix +91 if 10 digits)
+        var formattedWhatsapp = whatsapp;
+        if (whatsapp.length == 10 && RegExp(r'^[0-9]+$').hasMatch(whatsapp)) {
+          formattedWhatsapp = '+91$whatsapp';
+        }
 
-      await supabase.auth.updateUser(
-        UserAttributes(
-          data: {
-            'full_name': name,
-            'whatsapp_number': formattedWhatsapp,
-          },
-        ),
-      );
+        // Split full name into first and last name for pandit_profiles
+        final nameParts = name.split(' ');
+        final firstName = nameParts.first;
+        final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-      // Invalidate the provider to sync metadata changes app-wide immediately
-      ref.invalidate(supabaseUserProvider);
+        await supabase.auth.updateUser(
+          UserAttributes(
+            data: {
+              'full_name': name,
+              'whatsapp_number': formattedWhatsapp,
+            },
+          ),
+        );
+
+        // Check if user is a registered Pandit and update database table
+        final userId = supabase.auth.currentUser?.id;
+        if (userId != null) {
+          final existingPandit = await supabase
+              .from('pandit_profiles')
+              .select('id')
+              .eq('id', userId)
+              .maybeSingle();
+
+          if (existingPandit != null) {
+            await supabase
+                .from('pandit_profiles')
+                .update({
+                  'first_name': firstName,
+                  'last_name': lastName,
+                })
+                .eq('id', userId);
+            
+            // Invalidate the provider to sync metadata changes app-wide immediately
+            ref.invalidate(panditProfileFutureProvider(userId));
+          }
+        }
+
+        // Invalidate the provider to sync metadata changes app-wide immediately
+        ref.invalidate(supabaseUserProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -8,7 +8,7 @@ final panditRepositoryProvider = Provider<PanditRepository>((ref) {
   return PanditRepository(Supabase.instance.client);
 });
 
-final recommendationsProvider = FutureProvider<List<PanditProfile>>((ref) async {
+final recommendationsProvider = FutureProvider.autoDispose<List<PanditProfile>>((ref) async {
   final location = ref.watch(currentLocationProvider);
   final repository = ref.read(panditRepositoryProvider);
   

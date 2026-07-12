@@ -9,6 +9,7 @@ import 'package:app/src/core/widgets/design_system.dart';
 import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
 import 'package:app/src/features/pandit_onboarding/data/pandit_repository_provider.dart';
 import 'package:app/src/features/samagri_vendor/data/vendor_repository.dart';
+import 'package:app/src/features/landing/state/recommendations_provider.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -234,6 +235,7 @@ class ProfilePage extends ConsumerWidget {
                   // 🔄 Invalidate profile providers so they fetch fresh data on next login
                   ref.invalidate(panditProfileFutureProvider);
                   ref.invalidate(vendorProfileFutureProvider);
+                  ref.invalidate(recommendationsProvider);
                 },
               ),
             ],
