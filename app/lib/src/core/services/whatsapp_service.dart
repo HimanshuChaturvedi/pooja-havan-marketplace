@@ -285,4 +285,76 @@ class WhatsAppService {
       language: WhatsAppConfig.bookingLanguage,
     );
   }
+
+  /// 🛍️ SENDS ORDER REJECTION NOTIFICATION TO CUSTOMER
+  Future<bool> sendOrderRejectionToCustomer(String phone, String reason) async {
+    final msg = 'Your order could not be fulfilled by the vendor. Our team will reassess your request. Reason: $reason';
+    if (WhatsAppConfig.useMockApi) {
+      AppLogger.debug('🚀 [WHATSAPP MOCK] To: $phone (Customer Rejection)');
+      AppLogger.debug('💬 Message: $msg');
+      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
+      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Customer $phone] ($timestamp)\n$msg';
+      return true;
+    }
+
+    // 1. Try sending the new rejected_samagri_order template (expects reason in parameter {{1}})
+    final success = await _sendTemplate(
+      phone,
+      'rejected_samagri_order',
+      [reason],
+      language: WhatsAppConfig.bookingLanguage,
+    );
+
+    if (success) {
+      return true;
+    }
+
+    // 2. Fallback if new template fails (e.g., not yet approved by Meta)
+    AppLogger.warn('⚠️ rejected_samagri_order template failed, falling back to booking_confirmation template');
+    return _sendTemplate(
+      phone,
+      'booking_confirmation',
+      ['Order Reassessment Alert', 'Your order could not be fulfilled by the vendor. Our team will reassess your request. (Reason: $reason)'],
+      language: WhatsAppConfig.bookingLanguage,
+    );
+  }
+
+  /// 🛍️ SENDS ORDER REJECTION NOTIFICATION TO ADMIN
+  Future<bool> sendOrderRejectionToAdmin({
+    required String orderRefId,
+    required String reason,
+    String? details,
+  }) async {
+    final reasonStr = details != null && details.isNotEmpty ? '$reason ($details)' : reason;
+    final msg = 'Vendor rejected Order #$orderRefId. Reason: $reasonStr';
+    
+    if (WhatsAppConfig.useMockApi) {
+      AppLogger.debug('🚀 [WHATSAPP MOCK] To: ${WhatsAppConfig.adminNumber} (Admin Alert)');
+      AppLogger.debug('💬 Message: $msg');
+      final timestamp = DateTime.now().millisecondsSinceEpoch % 1000;
+      _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Admin ${WhatsAppConfig.adminNumber}] ($timestamp)\n$msg';
+      return true;
+    }
+
+    // 1. Try sending the new rejected_samagri_order template (expects reason in parameter {{1}})
+    final success = await _sendTemplate(
+      WhatsAppConfig.adminNumber,
+      'rejected_samagri_order',
+      ['Order #$orderRefId: $reasonStr'],
+      language: WhatsAppConfig.bookingLanguage,
+    );
+
+    if (success) {
+      return true;
+    }
+
+    // 2. Fallback if new template fails (e.g., not yet approved by Meta)
+    AppLogger.warn('⚠️ rejected_samagri_order template failed for Admin, falling back to booking_confirmation template');
+    return _sendTemplate(
+      WhatsAppConfig.adminNumber,
+      'booking_confirmation',
+      ['Vendor Rejection Alert', 'Vendor rejected Order #$orderRefId. Reason: $reasonStr'],
+      language: WhatsAppConfig.bookingLanguage,
+    );
+  }
 }

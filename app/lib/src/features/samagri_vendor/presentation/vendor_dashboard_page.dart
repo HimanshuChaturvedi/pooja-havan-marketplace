@@ -5,6 +5,8 @@ import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import '../data/vendor_repository.dart';
 import '../state/vendor_order.dart';
+import 'package:app/src/core/services/whatsapp_service.dart';
+import 'package:app/src/core/utils/logger.dart';
 
 class VendorDashboardPage extends ConsumerStatefulWidget {
   const VendorDashboardPage({super.key});
@@ -249,6 +251,188 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
     }
   }
 
+  Future<void> _showRejectDialog() async {
+    final List<String> reasons = [
+      'Out of Stock',
+      'Shop Closed',
+      'Outside Delivery Area',
+      'Busy',
+      'Other'
+    ];
+    String selectedReason = reasons.first;
+    final otherDetailsController = TextEditingController();
+    bool isSubmitting = false;
+    String? dialogError;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isOtherSelected = selectedReason == 'Other';
+
+            Future<void> submitRejection() async {
+              final details = otherDetailsController.text.trim();
+              if (isOtherSelected && details.isEmpty) {
+                setDialogState(() {
+                  dialogError = 'Please provide details for "Other" reason';
+                });
+                return;
+              }
+
+              setDialogState(() {
+                isSubmitting = true;
+                dialogError = null;
+              });
+
+              try {
+                // 1. Perform database reject update
+                await ref.read(samagriVendorRepositoryProvider).rejectOrder(
+                  widget.order.id,
+                  selectedReason,
+                  isOtherSelected ? details : null,
+                );
+
+                 // 2. Trigger Rejection WhatsApp notifications
+                try {
+                  final waService = ref.read(whatsappServiceProvider);
+                  final reasonStr = isOtherSelected && details.isNotEmpty ? '$selectedReason ($details)' : selectedReason;
+                  
+                  // Alert Customer: customer phone is not in order model (Auth metadata scoped),
+                  // so we use the default test number fallback
+                  await waService.sendOrderRejectionToCustomer('+919871966676', reasonStr);
+
+                  // Alert Admin:
+                  await waService.sendOrderRejectionToAdmin(
+                    orderRefId: widget.order.referenceId ?? widget.order.id.substring(0, 8),
+                    reason: selectedReason,
+                    details: isOtherSelected ? details : null,
+                  );
+                } catch (notifError) {
+                  AppLogger.error('Failed to dispatch rejection WhatsApp notifications', notifError);
+                }
+
+                // 3. UI feedback & Dismiss
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close dialog
+                  widget.onStatusUpdate(); // Refresh dashboard list
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Order rejected successfully. 🙏'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                setDialogState(() {
+                  isSubmitting = false;
+                  dialogError = 'Failed to reject order: $e';
+                });
+              }
+            }
+
+            return AlertDialog(
+              scrollable: true,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Reject Order',
+                style: AppTextStyles.title.copyWith(fontSize: 18, color: Colors.red),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Please select a reason for rejecting this order:',
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedReason,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    items: reasons.map((reason) {
+                      return DropdownMenuItem<String>(
+                        value: reason,
+                        child: Text(
+                          reason, 
+                          style: AppTextStyles.bodyMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: isSubmitting
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setDialogState(() {
+                                selectedReason = value;
+                                dialogError = null;
+                              });
+                            }
+                          },
+                  ),
+                  if (isOtherSelected) ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: otherDetailsController,
+                      enabled: !isSubmitting,
+                      decoration: InputDecoration(
+                        hintText: 'Please specify details...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
+                  if (dialogError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      dialogError!,
+                      style: AppTextStyles.bodySmall.copyWith(color: Colors.red, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                OverflowBar(
+                  alignment: MainAxisAlignment.end,
+                  spacing: 8,
+                  overflowSpacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
+                      child: Text('Cancel', style: AppTextStyles.button.copyWith(color: AppColors.softGrey)),
+                    ),
+                    ElevatedButton(
+                      onPressed: isSubmitting ? null : submitRejection,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : Text('Reject', style: AppTextStyles.button.copyWith(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -365,13 +549,41 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
                 ),
             ],
           ),
-          if (widget.order.status == 'pending') ...[
+          if (widget.order.status.toLowerCase() == 'pending') ...[
             const SizedBox(height: 20),
-            PrimaryButton(
-              label: widget.isUnassigned ? 'Claim Order' : 'Accept Order',
-              loading: _isUpdating,
-              onTap: () => _updateStatus('accepted'),
-            ),
+            if (widget.isUnassigned)
+              PrimaryButton(
+                label: 'Claim Order',
+                loading: _isUpdating,
+                onTap: () => _updateStatus('accepted'),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isUpdating ? null : () => _showRejectDialog(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        'Reject Order',
+                        style: AppTextStyles.button.copyWith(color: Colors.red, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: PrimaryButton(
+                      label: 'Accept Order',
+                      loading: _isUpdating,
+                      onTap: () => _updateStatus('accepted'),
+                    ),
+                  ),
+                ],
+              ),
           ] else if (widget.order.status == 'accepted') ...[
             const SizedBox(height: 20),
             PrimaryButton(
@@ -419,6 +631,10 @@ class _StatusBadge extends StatelessWidget {
       case 'delivered':
         color = Colors.green;
         label = 'DELIVERED';
+        break;
+      case 'rejected':
+        color = Colors.red;
+        label = 'REJECTED';
         break;
       default:
         color = AppColors.softGrey;

@@ -814,6 +814,7 @@ class _StatusBadge extends StatelessWidget {
         color = Colors.green;
         break;
       case BookingStatusDetailed.cancelled:
+      case BookingStatusDetailed.rejected:
         color = Colors.red;
         break;
     }

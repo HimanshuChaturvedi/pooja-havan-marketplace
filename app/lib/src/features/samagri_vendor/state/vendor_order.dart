@@ -10,6 +10,9 @@ class VendorOrder {
   final String? deliveryTime; // From joined booking
   final double deliveryFee; // Optional, defaults to 50 if missing
   final List<VendorOrderItem> items;
+  final String? rejectReason;
+  final String? rejectReasonDetails;
+  final DateTime? updatedAt;
 
   const VendorOrder({
     required this.id,
@@ -23,6 +26,9 @@ class VendorOrder {
     this.deliveryTime,
     this.deliveryFee = 50.0,
     this.items = const [],
+    this.rejectReason,
+    this.rejectReasonDetails,
+    this.updatedAt,
   });
 
   factory VendorOrder.fromJson(Map<String, dynamic> json, [List<VendorOrderItem> items = const []]) {
@@ -45,6 +51,9 @@ class VendorOrder {
         deliveryTime: booking?['selected_time']?.toString(),
         deliveryFee: (json['delivery_fee'] != null) ? (json['delivery_fee'] as num).toDouble() : 50.0,
         items: items,
+        rejectReason: json['reject_reason']?.toString(),
+        rejectReasonDetails: json['reject_reason_details']?.toString(),
+        updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
       );
     } catch (e) {
       // If one order fails, don't crash the list - but log it for debugging

@@ -53,8 +53,31 @@ class BookingDetailPage extends ConsumerWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
+
+            if (booking.status == BookingStatusDetailed.rejected) ...[
+              PrimaryCard(
+                color: Colors.red.shade50,
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Your order could not be fulfilled by the selected vendor. Our team has been notified and will reassess your request.',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.red.shade900,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // DETAILS CARD
             PrimaryCard(
@@ -220,6 +243,8 @@ Color _statusColor(BookingStatusDetailed status) {
       return Colors.green;
     case BookingStatusDetailed.cancelled:
       return Colors.red;
+    case BookingStatusDetailed.rejected:
+      return Colors.red;
   }
 }
  
@@ -240,6 +265,8 @@ IconData _statusIcon(BookingStatusDetailed status) {
     case BookingStatusDetailed.completed:
       return Icons.check_circle_outline;
     case BookingStatusDetailed.cancelled:
+      return Icons.cancel_outlined;
+    case BookingStatusDetailed.rejected:
       return Icons.cancel_outlined;
   }
 }

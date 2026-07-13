@@ -14,6 +14,7 @@ enum BookingStatusDetailed {
   inProgress,
   completed,
   cancelled,
+  rejected,
 }
 
 class BookingDraft {

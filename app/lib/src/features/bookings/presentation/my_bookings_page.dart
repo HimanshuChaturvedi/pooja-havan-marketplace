@@ -272,6 +272,8 @@ Color _statusColor(BookingStatusDetailed status) {
       return Colors.green;
     case BookingStatusDetailed.cancelled:
       return Colors.red;
+    case BookingStatusDetailed.rejected:
+      return Colors.red;
   }
 }
 

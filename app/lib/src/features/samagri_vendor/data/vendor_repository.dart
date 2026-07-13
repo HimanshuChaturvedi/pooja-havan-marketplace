@@ -8,6 +8,7 @@ import '../../../core/utils/phone_helper.dart';
 abstract class SamagriVendorRepository {
   Future<List<VendorOrder>> getVendorOrders();
   Future<void> updateOrderStatus(String orderId, String status);
+  Future<void> rejectOrder(String orderId, String reason, String? details);
   Future<void> registerVendor({
     required String shopName,
     required String phoneNumber,
@@ -83,6 +84,24 @@ class SupabaseSamagriVendorRepository implements SamagriVendorRepository {
           .eq('id', orderId);
     } catch (e) {
       AppLogger.error('Error updating vendor order status', e);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> rejectOrder(String orderId, String reason, String? details) async {
+    try {
+      await supabase
+          .from('samagri_orders')
+          .update({
+            'status': 'Rejected',
+            'reject_reason': reason,
+            'reject_reason_details': details,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', orderId);
+    } catch (e) {
+      AppLogger.error('Error rejecting vendor order', e);
       rethrow;
     }
   }
