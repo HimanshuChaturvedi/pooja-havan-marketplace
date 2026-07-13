@@ -113,6 +113,39 @@
 
 ---
 
+## Restore Pandit Details Experience
+
+> [!NOTE]
+> **Future Enhancement Only:** Do NOT modify the current active booking flow.
+
+- **Current State**:
+  - `PanditDetailsPage` still exists in the codebase.
+  - It is currently not reachable from the active customer booking flow.
+  - The current `PanditSelectionPage` immediately selects the Pandit and proceeds to the next booking step.
+  - The old `PanditListPage` is no longer part of the active application flow.
+  - The `/pandit-details` route still exists but is effectively orphaned.
+
+- **Recommended Future Implementation**:
+  - Preserve the current one-tap Pandit selection flow.
+  - Do NOT open `PanditDetailsPage` when the customer taps the Pandit card.
+  - Add a separate "View Profile" button/icon on each Pandit card.
+  - Tapping the card should continue selecting the Pandit immediately.
+  - Tapping "View Profile" should open `PanditDetailsPage`.
+  - Returning from `PanditDetailsPage` should return the customer to the same Pandit selection screen without losing booking progress.
+
+- **Future Profile Enhancements**:
+  - About Pandit
+  - Experience
+  - Languages
+  - Areas of Expertise
+  - Verification Badge
+  - Customer Ratings & Reviews
+  - Total Poojas Performed
+  - Availability
+  - Profile Gallery (optional)
+
+---
+
 ## ⚖️ Testing Governance
 
 ### Regression Suite Definition

@@ -7,6 +7,9 @@ import 'package:app/src/theme/components/app_colors.dart';
 import 'package:app/src/theme/components/app_text_styles.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 
+import 'package:go_router/go_router.dart';
+import 'package:app/src/features/main/presentation/state/main_navigation_provider.dart';
+
 class BookingDetailPage extends ConsumerWidget {
   final BookingDraft booking;
   const BookingDetailPage({super.key, required this.booking});
@@ -17,8 +20,28 @@ class BookingDetailPage extends ConsumerWidget {
     // Identification check: If current user is the one assigned as pandit_id, then treat as Pandit view
     final currentUserId = supabase.auth.currentUser?.id;
     final isPanditView = currentUserId == booking.panditId;
+    final showCustomerActions = !isPanditView && !isAdmin;
+
     return AppScaffold(
       title: 'Booking Details',
+      actions: showCustomerActions
+          ? [
+              IconButton(
+                icon: const Icon(Icons.home_outlined, color: AppColors.darkCharcoal),
+                onPressed: () {
+                  ref.read(mainNavigationProvider.notifier).state = 0;
+                  context.go('/home');
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.person_outline, color: AppColors.darkCharcoal),
+                onPressed: () {
+                  ref.read(mainNavigationProvider.notifier).state = 3;
+                  context.go('/home');
+                },
+              ),
+            ]
+          : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(

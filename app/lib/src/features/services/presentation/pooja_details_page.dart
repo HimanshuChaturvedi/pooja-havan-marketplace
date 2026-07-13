@@ -8,6 +8,8 @@ import 'package:app/src/features/booking/domain/booking_draft.dart';
 import 'package:app/src/core/widgets/design_system.dart';
 import '../data/ritual_repository_provider.dart';
 
+import 'package:app/src/features/main/presentation/state/main_navigation_provider.dart';
+
 class PoojaDetailsPage extends ConsumerStatefulWidget {
   final String poojaName;
   final String poojaSlug; // This is the ID in the route
@@ -49,8 +51,18 @@ class _PoojaDetailsPageState extends ConsumerState<PoojaDetailsPage> with Single
       actions: [
         IconButton(
           icon: const Icon(Icons.home_outlined, color: AppColors.darkCharcoal),
-          onPressed: () => context.go('/landing'),
-        )
+          onPressed: () {
+            ref.read(mainNavigationProvider.notifier).state = 0;
+            context.go('/home');
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.person_outline, color: AppColors.darkCharcoal),
+          onPressed: () {
+            ref.read(mainNavigationProvider.notifier).state = 3;
+            context.go('/home');
+          },
+        ),
       ],
       body: ritualAsync.when(
         data: (ritual) {

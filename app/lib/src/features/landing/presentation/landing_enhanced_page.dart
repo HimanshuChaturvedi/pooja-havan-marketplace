@@ -35,13 +35,6 @@ class LandingEnhancedPage extends ConsumerWidget {
       showAppBar: true,
       centerTitle: false,
       title: 'Namaste',
-      actions: [
-        IconButton(
-          tooltip: 'Profile',
-          icon: const Icon(Icons.person_outline, color: AppColors.darkCharcoal),
-          onPressed: () => context.push('/profile'),
-        ),
-      ],
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
         child: Column(
