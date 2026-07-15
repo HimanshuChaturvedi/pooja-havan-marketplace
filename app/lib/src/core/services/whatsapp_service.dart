@@ -106,7 +106,7 @@ class WhatsAppService {
     return _sendTemplate(phone, 'new_assignment_alert', [ritualName, address, dateStr], language: WhatsAppConfig.bookingLanguage);
   }
 
-  /// 📋 new_samagri_order template: {{1}}=Pooja, {{2}}=CustomerName, {{3}}=Mobile, {{4}}=Address, {{5}}=Items
+  /// 📋 new_samagri_order template (approved Meta): {{1}}=OrderType/Pooja, {{2}}=CustomerName, {{3}}=CustomerMobile, {{4}}=DeliveryAddress, {{5}}=SamagriItems
   Future<bool> sendVendorNewOrder(
     String phone,
     String ritualName,
@@ -125,11 +125,26 @@ class WhatsAppService {
       _ref.read(lastMockMessageProvider.notifier).state = '[MOCK WhatsApp to Vendor $phone] ($timestamp)\n$msg';
       return true;
     }
-    // Template: new_samagri_order — 5 params as per approved Meta template
+    // Template: new_samagri_order — approved Meta template variable order:
+    // {{1}} = Order Type / Pooja Name
+    // {{2}} = Customer Details (Name + Mobile)
+    // {{3}} = Samagri Items
+    // {{4}} = Delivery Schedule (Address + Date/Time)
+    // {{5}} = Total Bill (Amount)
+    final customerDetails = customerMobile.isNotEmpty
+        ? '$customerName | $customerMobile'
+        : customerName;
+
     return _sendTemplate(
       phone,
       'new_samagri_order',
-      [ritualName, customerName, customerMobile, address, samagriItems],
+      [
+        ritualName,
+        customerDetails,
+        samagriItems,
+        address,
+        amount.toStringAsFixed(0),
+      ],
       language: WhatsAppConfig.bookingLanguage,
     );
   }
@@ -269,18 +284,26 @@ class WhatsAppService {
       return true;
     }
 
-    // Template: new_samagri_order — 5 params: {{1}}=OrderType, {{2}}=CustomerName, {{3}}=Mobile, {{4}}=Address, {{5}}=Items
+    // Template: standalone_vendor_samagri_order — approved Meta template variable order:
+    // {{1}} = Customer Name & Customer Mobile (Name | Mobile)
+    // {{2}} = Actual Ordered Items
+    // {{3}} = Delivery Address
+    // {{4}} = Delivery Type (Express Delivery / Scheduled Delivery)
+    // {{5}} = Total Bill
     final cleanItemsText = orderedItems.join(', ');
+    final customerDetails = customerMobile.isNotEmpty
+        ? '$customerName | $customerMobile'
+        : customerName;
 
     return _sendTemplate(
       vendorPhone,
-      'new_samagri_order',
+      'standalone_vendor_samagri_order',
       [
-        'Standalone Samagri Order',  // {{1}} Order type
-        customerName,                // {{2}} Customer name
-        customerMobile,              // {{3}} Mobile
-        deliveryAddress,             // {{4}} Address
-        cleanItemsText,              // {{5}} Items
+        customerDetails,              // {{1}} Customer Details
+        cleanItemsText,               // {{2}} Ordered Items
+        deliveryAddress,              // {{3}} Delivery Address
+        deliveryType,                 // {{4}} Delivery Type
+        totalBill.toStringAsFixed(0), // {{5}} Total Bill (Amount)
       ],
       language: WhatsAppConfig.bookingLanguage,
     );

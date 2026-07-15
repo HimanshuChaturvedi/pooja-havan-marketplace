@@ -304,6 +304,11 @@ class BookingRepositoryImpl implements BookingRepository {
           }
           final addressWithDelivery = '${booking.address ?? 'Client Location'}$deliveryNote';
 
+          // Build actual samagri item names for the notification
+          final itemsText = booking.samagriItems.isNotEmpty
+              ? booking.samagriItems.join(', ')
+              : 'Samagri items for ${booking.ritualName}';
+
           await _whatsApp.sendVendorNewOrder(
             vendorPhone,
             booking.ritualName,
@@ -311,7 +316,7 @@ class BookingRepositoryImpl implements BookingRepository {
             booking.samagriCharges,
             customerName: custName,
             customerMobile: custMobile,
-            samagriItems: 'Samagri for ${booking.ritualName}',
+            samagriItems: itemsText,
           );
         } else {
           AppLogger.warn('Skipping vendor notification: Vendor phone number not found.');
@@ -442,7 +447,27 @@ class BookingRepositoryImpl implements BookingRepository {
       if (dbStatus == 'PAID') {
         try {
           final bookingData = await supabase.from('bookings').select('*').eq('id', bookingId).single();
-          final samagriData = await supabase.from('samagri_orders').select('vendor_id').eq('booking_id', bookingId).maybeSingle();
+          final samagriData = await supabase.from('samagri_orders').select('id, vendor_id').eq('booking_id', bookingId).maybeSingle();
+
+          // Fetch actual samagri item names from the database if they exist
+          List<String> samagriItems = [];
+          if (samagriData != null && samagriData['id'] != null) {
+            try {
+              final itemsResponse = await supabase
+                  .from('samagri_order_items')
+                  .select('samagri_items (name)')
+                  .eq('order_id', samagriData['id']);
+              
+              final List<dynamic> itemsData = itemsResponse as List<dynamic>;
+              samagriItems = itemsData
+                  .map((row) => (row['samagri_items'] as Map<String, dynamic>?)?['name'] as String?)
+                  .where((name) => name != null)
+                  .cast<String>()
+                  .toList();
+            } catch (e) {
+              AppLogger.error('Error fetching samagri items for vendor notification', e);
+            }
+          }
 
           // 🔍 DIAGNOSTIC: Log what we found so we can trace vendor notification issues
           AppLogger.debug('🔍 NOTIF-DIAG: bookingId=$bookingId');
@@ -450,6 +475,7 @@ class BookingRepositoryImpl implements BookingRepository {
           AppLogger.debug('🔍 NOTIF-DIAG: samagri_required=${bookingData['samagri_required']}');
           AppLogger.debug('🔍 NOTIF-DIAG: samagriData row = $samagriData');
           AppLogger.debug('🔍 NOTIF-DIAG: vendor_id from samagri_orders = ${samagriData?['vendor_id']}');
+          AppLogger.debug('🔍 NOTIF-DIAG: resolved samagriItems = $samagriItems');
           
           final dummyDraft = BookingDraft(
             ritualName: bookingData['ritual_name'] ?? 'Pooja',
@@ -460,6 +486,7 @@ class BookingRepositoryImpl implements BookingRepository {
             samagriCharges: (bookingData['samagri_charges'] ?? 0.0).toDouble(),
             bookingType: BookingType.home,
             samagriRequired: bookingData['samagri_required'] == true,
+            samagriItems: samagriItems,
           );
 
           await _sendBookingNotifications(
@@ -537,7 +564,27 @@ class BookingRepositoryImpl implements BookingRepository {
             
         // Trigger WABA notification to the new Pandit!
         try {
-          final samagriData = await supabase.from('samagri_orders').select('vendor_id').eq('booking_id', bookingId).maybeSingle();
+          final samagriData = await supabase.from('samagri_orders').select('id, vendor_id').eq('booking_id', bookingId).maybeSingle();
+          
+          List<String> samagriItems = [];
+          if (samagriData != null && samagriData['id'] != null) {
+            try {
+              final itemsResponse = await supabase
+                  .from('samagri_order_items')
+                  .select('samagri_items (name)')
+                  .eq('order_id', samagriData['id']);
+              
+              final List<dynamic> itemsData = itemsResponse as List<dynamic>;
+              samagriItems = itemsData
+                  .map((row) => (row['samagri_items'] as Map<String, dynamic>?)?['name'] as String?)
+                  .where((name) => name != null)
+                  .cast<String>()
+                  .toList();
+            } catch (e) {
+              AppLogger.error('Error fetching samagri items for vendor notification', e);
+            }
+          }
+
           final dummyDraft = BookingDraft(
             ritualName: bookingData['ritual_name'] ?? 'Pooja',
             selectedDate: bookingData['selected_date'] != null ? DateTime.parse(bookingData['selected_date']) : null,
@@ -547,6 +594,7 @@ class BookingRepositoryImpl implements BookingRepository {
             samagriCharges: (bookingData['samagri_charges'] ?? 0.0).toDouble(),
             bookingType: BookingType.home,
             samagriRequired: bookingData['samagri_required'] == true,
+            samagriItems: samagriItems,
           );
 
           await _sendBookingNotifications(
