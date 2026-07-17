@@ -299,8 +299,8 @@ async function edgeTriggerNotifications(supabaseClient: any, internalId: string,
       if (userErr) console.warn('[WA-NOTIF] Failed to fetch customer user record', userErr);
       const user = userRecord?.user;
       
-      const customerPhone = user?.phone || user?.userMetadata?.whatsapp_number as string || '';
-      const customerName = user?.userMetadata?.full_name as string || 'Devotee';
+      const customerPhone = user?.phone || user?.user_metadata?.whatsapp_number as string || '';
+      const customerName = user?.user_metadata?.full_name as string || 'Devotee';
 
       const dateStr = booking.selected_date 
         ? `${new Date(booking.selected_date).getDate()}/${new Date(booking.selected_date).getMonth() + 1}/${new Date(booking.selected_date).getFullYear()} ${booking.selected_time ?? ''}`
@@ -358,7 +358,7 @@ async function edgeTriggerNotifications(supabaseClient: any, internalId: string,
           const addressWithDelivery = `${booking.address ?? 'Client Location'}${deliveryNote}`;
           const vendorPhone = vendor.phone_number;
 
-          const customerMobile = user?.phone || user?.userMetadata?.whatsapp_number as string || '';
+          const customerMobile = user?.phone || user?.user_metadata?.whatsapp_number as string || '';
           const customerDetails = customerMobile ? `${customerName} | ${customerMobile}` : customerName;
 
           await sendWhatsAppTemplate(vendorPhone, 'new_samagri_order', [
@@ -383,8 +383,8 @@ async function edgeTriggerNotifications(supabaseClient: any, internalId: string,
       const { data: userRecord } = await supabaseClient.auth.admin.getUserById(order.user_id);
       const user = userRecord?.user;
 
-      const customerPhone = user?.phone || user?.userMetadata?.whatsapp_number as string || '';
-      const customerName = user?.userMetadata?.full_name as string || 'Client';
+      const customerPhone = user?.phone || user?.user_metadata?.whatsapp_number as string || '';
+      const customerName = user?.user_metadata?.full_name as string || 'Client';
 
       const { data: orderItems } = await supabaseClient
         .from('samagri_order_items')
@@ -414,7 +414,7 @@ async function edgeTriggerNotifications(supabaseClient: any, internalId: string,
           .maybeSingle();
 
         if (vendor?.phone_number) {
-          const customerMobile = user?.phone || user?.userMetadata?.whatsapp_number as string || '';
+          const customerMobile = user?.phone || user?.user_metadata?.whatsapp_number as string || '';
           const customerDetails = customerMobile ? `${customerName} | ${customerMobile}` : customerName;
 
           await sendWhatsAppTemplate(vendor.phone_number, 'standalone_vendor_samagri_order', [
