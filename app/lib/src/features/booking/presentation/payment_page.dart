@@ -7,18 +7,12 @@ import 'package:app/src/features/booking/state/booking_session_notifier.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_session_notifier.dart';
 import 'package:app/src/features/samagri_flow/state/samagri_cart_notifier.dart';
 import 'package:app/src/core/widgets/design_system.dart';
-import 'package:app/src/features/auth/presentation/state/auth_provider_impl.dart';
 import 'package:app/src/core/supabase/supabase_client.dart';
 import '../../booking/data/booking_providers.dart';
 import '../../samagri_flow/data/samagri_repository_provider.dart';
 import '../../../core/payment/razorpay_provider.dart';
-import '../../../core/payment/razorpay_service.dart';
-import '../data/payment_provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import '../../samagri_vendor/data/vendor_repository.dart';
-import '../../booking/domain/booking_draft.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:app/src/core/services/whatsapp_service.dart';
 import 'package:app/src/core/utils/logger.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
@@ -52,110 +46,62 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
   void _onPaymentSuccess(PaymentSuccessResponse response) async {
     final bookingSession = ref.read(bookingSessionProvider);
     final booking = bookingSession.current;
-    final samagri = ref.read(samagriSessionProvider);
 
     try {
       final String? orderId = _pendingOrderId;
       if (orderId == null) throw Exception('Pending order ID not found');
 
-      // 1. Record payment in Supabase
-      await ref.read(paymentRepositoryProvider).recordPayment(
-        razorpayPaymentId: response.paymentId!,
-        amount: bookingSession.totalAmount,
-        bookingId: booking != null ? orderId : null,
-        samagriOrderId: booking == null ? orderId : null,
-        status: 'captured',
+      final orderType = booking != null ? 'ritual' : 'samagri';
+      
+      // Perform server-side payment verification (Never trust the client)
+      AppLogger.info('PaymentPage: Initiating server-side signature verification...');
+      
+      var verifyResponse = await supabase.functions.invoke(
+        'razorpay-verify-payment',
+        body: {
+          'payment_id': response.paymentId,
+          'order_id': response.orderId,
+          'signature': response.signature,
+          'internal_id': orderId,
+          'type': orderType,
+        },
       );
 
-      // 2. Update Status to PAID
-      if (booking != null) {
-         await ref.read(bookingRepositoryProvider).updateBookingStatus(orderId, BookingStatusDetailed.paid);
-      } else {
-         await ref.read(samagriVendorRepositoryProvider).updateOrderStatus(orderId, 'paid');
+      // Auto-Retry logic: Retry once if verification failed (e.g. network timeout / transient server issue)
+      if (verifyResponse.status != 200) {
+        AppLogger.warn('Verification failed with status: ${verifyResponse.status}. Retrying verification once...');
+        await Future.delayed(const Duration(seconds: 2));
+        verifyResponse = await supabase.functions.invoke(
+          'razorpay-verify-payment',
+          body: {
+            'payment_id': response.paymentId,
+            'order_id': response.orderId,
+            'signature': response.signature,
+            'internal_id': orderId,
+            'type': orderType,
+          },
+        );
       }
 
-      // 3. Trigger Automated WhatsApp Notifications (Only for Standalone Samagri; Ritual Bookings are orchestrated in Repository)
-      try {
-        final user = supabase.auth.currentUser;
-        final userPhone = user?.phone?.isNotEmpty == true 
-            ? user!.phone 
-            : user?.userMetadata?['whatsapp_number'] as String?;
-            
-        AppLogger.debug('PaymentPage WA Trigger: userPhone=$userPhone, booking=$booking, orderId=$orderId');
-            
-        if (userPhone != null && userPhone.isNotEmpty) {
-          final waService = ref.read(whatsappServiceProvider);
-          
-          if (booking == null) {
-            // Standalone Samagri — extract customer details for both notifications
-            final customerName = user?.userMetadata?['full_name'] as String? ?? 'Client';
-            final orderedItems = samagri.items.map((i) => i.name).toList();
-            const deliveryType = 'Express Delivery';
-
-            // A. Alert the Customer
-            AppLogger.debug('PaymentPage WA: Triggering customer confirmation');
-            await waService.sendSamagriOrderConfirmation(
-              userPhone,
-              customerName: customerName,
-              items: orderedItems,
-              deliveryType: deliveryType,
-              amount: samagri.finalTotal.toDouble(),
-            );
-            
-            // B. Alert the Vendor
-            AppLogger.debug('PaymentPage WA: Fetching order details for orderId=$orderId');
-            final orderData = await supabase
-                .from('samagri_orders')
-                .select('vendor_id')
-                .eq('id', orderId)
-                .maybeSingle();
-                
-            final String? vendorId = orderData?['vendor_id'];
-            AppLogger.debug('🔍 STANDALONE-VENDOR-DIAG: orderData=$orderData');
-            AppLogger.debug('🔍 STANDALONE-VENDOR-DIAG: vendorId=$vendorId');
-            if (vendorId != null) {
-              final vendorData = await supabase
-                  .from('samagri_vendors')
-                  .select('phone_number')
-                  .eq('id', vendorId)
-                  .maybeSingle();
-                  
-              final vendorPhone = vendorData?['phone_number'];
-              AppLogger.debug('🔍 STANDALONE-VENDOR-DIAG: vendorPhone=$vendorPhone');
-              if (vendorPhone != null && vendorPhone.isNotEmpty) {
-                final customerMobile = (user?.phone?.isNotEmpty == true)
-                    ? user!.phone!
-                    : (user?.userMetadata?['whatsapp_number'] as String? ?? 'N/A');
-                final deliveryAddress = samagri.addressText ?? 'N/A';
-                
-                await waService.sendVendorStandaloneSamagriOrder(
-                  vendorPhone: vendorPhone,
-                  customerName: customerName,
-                  customerMobile: customerMobile,
-                  deliveryAddress: deliveryAddress,
-                  orderedItems: orderedItems,
-                  deliveryType: deliveryType,
-                  totalBill: samagri.finalTotal.toDouble(),
-                );
-              } else {
-                AppLogger.warn('🔍 STANDALONE-VENDOR-DIAG: vendorPhone is null/empty — vendor notification SKIPPED');
-              }
-            } else {
-              AppLogger.warn('🔍 STANDALONE-VENDOR-DIAG: vendorId is null in samagri_orders — vendor notification SKIPPED');
-            }
-          }
+      if (verifyResponse.status != 200) {
+        // Recovery mechanism: Do NOT fail the booking since payment succeeded. Let webhook reconciliation finalize it.
+        AppLogger.error('Verification failed after retry: ${verifyResponse.data}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment successful! Your order is being finalized and will update in a few moments.'),
+              duration: Duration(seconds: 5),
+              backgroundColor: Colors.orange,
+            ),
+          );
         }
-      } catch (waError) {
-        AppLogger.error('PaymentPage WA Error', waError);
-        // Do not fail the booking if WhatsApp fails
       }
 
-      // 4. Update UI State & Navigate
+      // Update UI State & Navigate (Proceed to success page since payment itself succeeded)
       if (booking != null) {
         ref.read(bookingSessionProvider.notifier).updateStatus(BookingStatus.confirmed);
-        ref.read(bookingSessionProvider.notifier).setTransactionId(response.paymentId!);
+        ref.read(bookingSessionProvider.notifier).setTransactionId(response.paymentId ?? '');
         ref.read(bookingSessionProvider.notifier).setBookingId(orderId);
-        // Note: Reference ID was already set during order creation
         if (mounted) {
           ref.invalidate(bookingsProvider);
           context.go('/booking-success');
@@ -169,9 +115,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
         }
       }
     } catch (e) {
+      AppLogger.error('Error in payment success handler:', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error finalizing booking: $e')),
+          SnackBar(content: Text('Error verifying payment: $e')),
         );
       }
     } finally {
@@ -327,7 +274,23 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       if (orderId == null) throw Exception('Failed to create pending order');
       setState(() => _pendingOrderId = orderId);
 
-      debugPrint('PaymentPage: Opening Razorpay SDK for Order ID: $orderId');
+      final orderType = bookingSession.current != null ? 'ritual' : 'samagri';
+      debugPrint('PaymentPage: Creating Razorpay Order for $orderType: $orderId');
+
+      final orderCreateResponse = await supabase.functions.invoke(
+        'razorpay-create-order',
+        body: {
+          'internal_order_id': orderId,
+          'order_type': orderType,
+        },
+      );
+
+      if (orderCreateResponse.status != 200) {
+        throw Exception(orderCreateResponse.data?['error'] ?? 'Failed to initiate secure Razorpay order');
+      }
+
+      final String razorpayOrderId = orderCreateResponse.data['razorpay_order_id'];
+      debugPrint('PaymentPage: Received Razorpay Order ID: $razorpayOrderId');
       
       // Fetch dynamic Razorpay API Key from Supabase
       final configResponse = await supabase
@@ -343,14 +306,15 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
       ref.read(razorpayServiceProvider).openCheckout(
         keyId: razorpayKey,
         amount: amountToPay,
-        contact: userPhone ?? '', 
+        contact: userPhone, 
         email: user.email ?? '',
         description: orderDescription,
+        razorpayOrderId: razorpayOrderId,
         notes: {
           'order_id': orderId,
           'reference_id': referenceId ?? 'N/A',
           'user_id': user.id,
-          'type': bookingSession.current != null ? 'ritual' : 'samagri',
+          'type': orderType,
         },
       );
     } catch (e) {
@@ -512,7 +476,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
                       children: [
                          const Icon(Icons.auto_awesome_rounded, color: AppColors.saffron, size: 20),
                          const SizedBox(width: 8),
-                         Text(booking.ritualName ?? 'Ritual Order', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w800, color: AppColors.darkCharcoal)),
+                         Text(booking.ritualName, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w800, color: AppColors.darkCharcoal)),
                       ],
                     ),
                   ],

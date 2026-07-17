@@ -21,9 +21,10 @@ class RazorpayService {
     required String contact,
     required String email,
     required String description,
+    String? razorpayOrderId,
     Map<String, dynamic>? notes,
   }) {
-    var options = {
+    final options = <String, dynamic>{
       'key': keyId,
       'amount': (amount * 100).toInt(), // Razorpay expects amount in paise
       'name': 'Pooja Havan Marketplace',
@@ -34,6 +35,10 @@ class RazorpayService {
       },
       'notes': notes ?? {},
     };
+
+    if (razorpayOrderId != null) {
+      options['order_id'] = razorpayOrderId;
+    }
 
     try {
       _razorpay.open(options);
