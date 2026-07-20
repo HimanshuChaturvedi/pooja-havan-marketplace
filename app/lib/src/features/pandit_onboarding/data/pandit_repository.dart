@@ -322,41 +322,48 @@ class PanditRepository {
 
   /// 🕐 TIME-SLOT BASED BOOKING SUPPORT
 
-  /// Get all booked time slots for a Pandit on a specific date
-  /// Returns list of BookedSlot objects from the pandit_time_slots_provider
+  /// Get all booked time slots for a Pandit on a specific date.
+  /// Returns list of BookedSlot objects from the pandit_time_slots_provider.
+  ///
+  /// Primary: uses the SECURITY DEFINER RPC so ALL users' bookings for this pandit
+  /// are visible — not just the current user's. RLS on the bookings table would
+  /// restrict a direct query to only the calling user's own rows, causing other
+  /// users' conflicting bookings to be invisible on the Date/Time selection page.
+  ///
+  /// Fallback: direct Dart client query (RLS-filtered) as a last resort if the RPC
+  /// is unavailable.
   Future<List<Map<String, dynamic>>> getBookedSlots(String panditId, String dateStr) async {
     try {
-      // Primary: query bookings table directly for the most accurate and real-time status check
-      final response = await _supabase
-          .from('bookings')
-          .select('selected_time, ritual_name, status')
-          .eq('pandit_id', panditId)
-          .gte('selected_date', '${dateStr}T00:00:00')
-          .lte('selected_date', '${dateStr}T23:59:59')
-          .neq('status', 'CANCELLED');
-
-      return (response as List).map((row) => {
-        'start_time': row['selected_time'] as String?,
-        'end_time': '', // Calculated client-side
-        'ritual_name': row['ritual_name'] ?? 'Pooja',
-        'booking_status': row['status'] ?? 'PAID',
-      }).toList();
+      final response = await _supabase.rpc('get_pandit_booked_slots', params: {
+        'p_id': panditId,
+        'p_date': dateStr,
+      });
+      return List<Map<String, dynamic>>.from(
+        (response as List).map((row) => Map<String, dynamic>.from(row)),
+      );
     } catch (e) {
-      debugPrint('⚠️ getBookedSlots direct query failed: $e. Falling back to RPC...');
+      debugPrint('⚠️ getBookedSlots RPC failed: $e. Falling back to direct query...');
       try {
-        final response = await _supabase.rpc('get_pandit_booked_slots', params: {
-          'p_id': panditId,
-          'p_date': dateStr,
-        });
-        if (response != null) {
-          return List<Map<String, dynamic>>.from(
-            (response as List).map((row) => Map<String, dynamic>.from(row)),
-          );
-        }
-      } catch (rpcErr) {
-        debugPrint('⚠️ RPC get_pandit_booked_slots failed: $rpcErr');
+        // Fallback: direct query (RLS-filtered — may miss other users' bookings,
+        // but kept as a last resort if the RPC is unavailable).
+        final response = await _supabase
+            .from('bookings')
+            .select('selected_time, ritual_name, status')
+            .eq('pandit_id', panditId)
+            .gte('selected_date', '${dateStr}T00:00:00')
+            .lte('selected_date', '${dateStr}T23:59:59')
+            .neq('status', 'CANCELLED');
+
+        return (response as List).map((row) => <String, dynamic>{
+          'start_time': row['selected_time'] as String?,
+          'end_time': '', // Calculated client-side via TimeSlotConfig.calculateEndTime
+          'ritual_name': row['ritual_name'] ?? 'Pooja',
+          'booking_status': row['status'] ?? 'PAID',
+        }).toList();
+      } catch (fallbackErr) {
+        debugPrint('⚠️ getBookedSlots fallback query also failed: $fallbackErr');
+        return [];
       }
-      return [];
     }
   }
 

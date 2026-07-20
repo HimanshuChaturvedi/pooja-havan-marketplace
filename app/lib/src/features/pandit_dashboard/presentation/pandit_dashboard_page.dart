@@ -664,11 +664,17 @@ class _PanditBookingCardState extends ConsumerState<_PanditBookingCard> {
   Future<void> _declineRequest() async {
     setState(() => _isUpdating = true);
     try {
-      await ref.read(bookingRepositoryProvider).rejectAndReassignBooking(widget.booking.id!, widget.panditProfileId);
+      final action = await ref.read(bookingRepositoryProvider).rejectAndReassignBooking(widget.booking.id!, widget.panditProfileId);
       widget.onRefresh();
       if (mounted) {
+        String msg;
+        if (action == 'reassigned') {
+          msg = 'Booking declined and reassigned to another pandit.';
+        } else {
+          msg = 'Booking declined. No replacement pandit is currently available. The booking has been returned to the dispatch queue.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking declined and auto-reassigned to next Pandit.'), backgroundColor: AppColors.saffron),
+          SnackBar(content: Text(msg), backgroundColor: AppColors.saffron),
         );
       }
     } catch (e) {
@@ -695,10 +701,15 @@ class _PanditBookingCardState extends ConsumerState<_PanditBookingCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  booking.ritualName,
-                  style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    booking.ritualName,
+                    style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 _StatusBadge(status: booking.status),
               ],
             ),

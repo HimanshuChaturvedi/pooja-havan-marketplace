@@ -241,7 +241,7 @@ async function edgeTriggerNotifications(supabaseClient: any, internalId: string,
         const displayName = booking.samagri_required 
             ? `${booking.ritual_name} (with Samagri)` 
             : booking.ritual_name;
-        await sendWhatsAppTemplate(customerPhone, 'booking_confirm_v2', [displayName, dateStr]);
+        await sendWhatsAppTemplate(customerPhone, 'booking_confirmation', [displayName, dateStr]);
       }
 
       // B. Alert Pandit (if assigned)

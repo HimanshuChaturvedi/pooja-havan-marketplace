@@ -301,7 +301,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> with SingleTickerProv
 
       final String razorpayKey = configResponse != null && configResponse['value'] != null
           ? configResponse['value'] as String
-          : 'rzp_test_ScYLqSFPxxnfo5'; // Fallback to test key if missing
+          : 'rzp_test_TEzGVctDPRlVM3'; // Fallback to test key if missing
 
       ref.read(razorpayServiceProvider).openCheckout(
         keyId: razorpayKey,

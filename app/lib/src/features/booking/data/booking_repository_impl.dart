@@ -418,7 +418,10 @@ class BookingRepositoryImpl implements BookingRepository {
   @override
   Future<void> updateBookingStatus(String bookingId, BookingStatusDetailed status) async {
     try {
-      // PROVEN DB LABELS: CREATED, PAID, CONFIRMED, COMPLETED, CANCELLED
+      // DB status labels — must round-trip through _parseBookingStatus
+      // _parseBookingStatus: lowercases + strips '_', then matches e.name.toLowerCase()
+      // onWay.name   = 'onWay'   → lower = 'onway'   → DB write: 'ONWAY'
+      // inProgress.name = 'inProgress' → lower = 'inprogress' → DB write: 'INPROGRESS'
       String dbStatus;
       switch (status) {
         case BookingStatusDetailed.completed:
@@ -433,8 +436,14 @@ class BookingRepositoryImpl implements BookingRepository {
         case BookingStatusDetailed.created:
           dbStatus = 'CREATED';
           break;
+        case BookingStatusDetailed.onWay:
+          dbStatus = 'ONWAY';
+          break;
+        case BookingStatusDetailed.inProgress:
+          dbStatus = 'INPROGRESS';
+          break;
         default:
-          // Map all intermediate "active" states (assigned, onWay, inProgress) to CONFIRMED
+          // assigned, confirmed → CONFIRMED
           dbStatus = 'CONFIRMED';
       }
 
@@ -507,7 +516,7 @@ class BookingRepositoryImpl implements BookingRepository {
   }
 
   @override
-  Future<void> rejectAndReassignBooking(String bookingId, String currentPanditId) async {
+  Future<String> rejectAndReassignBooking(String bookingId, String currentPanditId) async {
     try {
       AppLogger.debug('🚨 REJECT AND REASSIGN START for Booking: $bookingId, currentPandit: $currentPanditId');
       
@@ -550,19 +559,31 @@ class BookingRepositoryImpl implements BookingRepository {
           .where((id) => id != currentPanditId)
           .toList();
 
-      if (candidates.isNotEmpty) {
-        final nextPanditId = candidates.first;
+      // Use SECURITY DEFINER RPC to bypass RLS.
+      // The RPC internally validates that auth.uid() == bookings.pandit_id
+      // before performing any update, so security is fully preserved.
+      final nextPanditId = candidates.isNotEmpty ? candidates.first : null;
+      if (nextPanditId != null) {
         AppLogger.debug('Reassigning to next Pandit: $nextPanditId');
-        
-        await supabase
-            .from('bookings')
-            .update({
-              'pandit_id': nextPanditId,
-              'status': 'PAID', // reset status so new pandit can accept
-            })
-            .eq('id', bookingId);
-            
-        // Trigger WABA notification to the new Pandit!
+      } else {
+        AppLogger.debug('No other pandits found. Releasing pandit assignment for admin manual dispatch.');
+      }
+
+      final rpcResult = await supabase.rpc(
+        'pandit_reject_and_reassign_booking',
+        params: {
+          'p_booking_id': bookingId,
+          if (nextPanditId != null) 'p_next_pandit_id': nextPanditId,
+        },
+      );
+
+      final Map<String, dynamic> result = Map<String, dynamic>.from(rpcResult as Map);
+      if (result['success'] != true) {
+        throw Exception('RPC error: ${result['error']}');
+      }
+
+      // Trigger WABA notification to the new Pandit (if reassigned)
+      if (nextPanditId != null) {
         try {
           final samagriData = await supabase.from('samagri_orders').select('id, vendor_id').eq('booking_id', bookingId).maybeSingle();
           
@@ -607,16 +628,9 @@ class BookingRepositoryImpl implements BookingRepository {
         } catch (e) {
           AppLogger.error('Failed to notify reassigned pandit', e);
         }
-      } else {
-        AppLogger.debug('No other pandits found. Releasing pandit assignment for admin manual dispatch.');
-        await supabase
-            .from('bookings')
-            .update({
-              'pandit_id': null,
-              'status': 'PAID',
-            })
-            .eq('id', bookingId);
       }
+
+      return result['action']?.toString() ?? 'released';
     } catch (e) {
       AppLogger.error('Error in rejectAndReassignBooking', e);
       rethrow;
